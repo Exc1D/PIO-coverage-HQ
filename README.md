@@ -2,7 +2,13 @@
 
 Coverage tracking for the Provincial Information Office (PIO) of Camarines Norte: every event the office covers, from request to the published Facebook post, plus weekly and monthly output reports.
 
-> **Status:** Phase 3 of 5. Schema, seed data, PIN sign-in, workflow/metrics rules, the pipeline board, the event drawer, the **HQ dashboard** and **reports with CSV export** are in. Calendars, Needs assignment, the public request form and admin come in later phases.
+> **Status:** Phase 4 of 5. Everything except the Admin screen and the final polish/E2E/deploy pass is in: PIN sign-in, the pipeline board and event drawer, the HQ dashboard, reports with CSV export, **calendars**, **Needs assignment** and the **public request form**.
+
+## Calendars, assignment and requests
+
+- **Calendar (`/calendar`)**: month grid (Monday first). **Events** shows events by event date; **Published** shows posts by the date they went up on Facebook. Colours follow the event source. On a computer, hover a chip for details and click it to open the event. On a phone, tap a day to list its events below the grid.
+- **Assign (`/needs-assignment`)**: requested or scheduled events in the next 14 days that have no writer, or no photographer or videographer. The head picks people from the dropdowns right on the page; each name shows how many other events that person already has that day. Fully assigned events move to "Already assigned" below.
+- **Public request form (`/request`)**: no sign-in. Organisers enter the event, their name and one contact detail; it arrives on the board as *Requested*. Protected by a hidden honeypot field and a limit of 5 requests per connection per hour. Share this link with LGUs and organisers.
 
 ## Dashboard and reports
 

@@ -20,11 +20,14 @@ export function EventFields({
   values = {},
   errors = {},
   requireSourceAndPlace = true,
+  requireAll = false,
   idPrefix = "ev",
 }: {
   values?: EventFieldValues;
   errors?: Record<string, string>;
   requireSourceAndPlace?: boolean;
+  /** Public form: venue, requester and contact are required too, and labels say so. */
+  requireAll?: boolean;
   idPrefix?: string;
 }) {
   const id = (k: string) => `${idPrefix}-${k}`;
@@ -61,7 +64,7 @@ export function EventFields({
       </div>
       <div className="grid gap-2">
         <Label htmlFor={id("venue")}>Venue</Label>
-        <Input id={id("venue")} name="venue" maxLength={200} defaultValue={v("venue")} className="h-11" {...aria("venue")} />
+        <Input id={id("venue")} name="venue" required={requireAll} maxLength={200} defaultValue={v("venue")} className="h-11" {...aria("venue")} />
         {err("venue")}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -78,7 +81,7 @@ export function EventFields({
           {err("municipality")}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor={id("source")}>Event source</Label>
+          <Label htmlFor={id("source")}>{requireAll ? "Who is organising it?" : "Event source"}</Label>
           <select id={id("source")} name="source" required={requireSourceAndPlace} defaultValue={v("source")} className={select} {...aria("source")}>
             <option value="">Choose…</option>
             {SOURCES.map((s) => (
@@ -92,13 +95,13 @@ export function EventFields({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label htmlFor={id("requested_by")}>Requested by (optional)</Label>
-          <Input id={id("requested_by")} name="requested_by" maxLength={120} defaultValue={v("requested_by")} className="h-11" {...aria("requested_by")} />
+          <Label htmlFor={id("requested_by")}>{requireAll ? "Your name" : "Requested by (optional)"}</Label>
+          <Input id={id("requested_by")} name="requested_by" required={requireAll} autoComplete={requireAll ? "name" : undefined} maxLength={120} defaultValue={v("requested_by")} className="h-11" {...aria("requested_by")} />
           {err("requested_by")}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor={id("contact")}>Contact (optional)</Label>
-          <Input id={id("contact")} name="contact" maxLength={120} defaultValue={v("contact")} className="h-11" {...aria("contact")} />
+          <Label htmlFor={id("contact")}>{requireAll ? "Mobile number or email" : "Contact (optional)"}</Label>
+          <Input id={id("contact")} name="contact" required={requireAll} autoComplete={requireAll ? "tel" : undefined} maxLength={120} defaultValue={v("contact")} className="h-11" {...aria("contact")} />
           {err("contact")}
         </div>
       </div>

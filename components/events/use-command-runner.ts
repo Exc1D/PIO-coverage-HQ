@@ -3,7 +3,8 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { runEventCommand } from "@/app/actions/events";
-import { parseCommand, type CommandPayload } from "@/lib/commands";
+import { previewCommand } from "@/lib/command-preview";
+import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS } from "@/lib/constants";
 import type { EventRow, Staff } from "@/lib/types";
 import { applyCommand, type Actor } from "@/lib/workflow";
@@ -18,12 +19,17 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
   const [pending, startTransition] = useTransition();
   const actor: Actor | null = me ? { id: me.id, roles: me.roles } : null;
 
-  function run(event: EventRow, payload: CommandPayload, showOptimistic?: (next: Partial<EventRow>) => void) {
+  function run(
+    event: EventRow,
+    payload: CommandPayload,
+    showOptimistic?: (next: Partial<EventRow>) => void,
+    successMessage?: string,
+  ) {
     if (!actor) {
       toast.error("Sign in with your PIN to make changes.");
       return;
     }
-    const parsed = parseCommand(payload, staff);
+    const parsed = previewCommand(payload, staff);
     if (!parsed.ok) {
       toast.error(parsed.message);
       return;
@@ -37,6 +43,7 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
       showOptimistic?.(preview.next);
       const res = await runEventCommand(event.id, event.version, payload);
       if (!res.ok) toast.error(res.message);
+      else if (successMessage) toast.success(successMessage);
       else if (preview.next.status !== event.status) toast.success(`Moved to ${STATUS_LABELS[preview.next.status]}`);
     });
   }

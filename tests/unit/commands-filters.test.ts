@@ -105,3 +105,18 @@ describe("board filters", () => {
     ).toBe(true);
   });
 });
+
+describe("previewCommand (client, no zod)", () => {
+  it("matches the server conversion for normal payloads", async () => {
+    const { previewCommand } = await import("@/lib/command-preview");
+    expect(previewCommand({ type: "schedule_post", scheduledPostAt: "2026-10-21T18:00" }, staff)).toEqual(
+      parseCommand({ type: "schedule_post", scheduledPostAt: "2026-10-21T18:00" }, staff),
+    );
+    expect(previewCommand({ type: "assign", slot: "writer", staffId: staff[0].id }, staff)).toEqual(
+      parseCommand({ type: "assign", slot: "writer", staffId: staff[0].id }, staff),
+    );
+    expect(previewCommand({ type: "edit_details", changes: { title: " New ", venue: " ", municipality: null } }, staff)).toEqual(
+      parseCommand({ type: "edit_details", changes: { title: " New ", venue: " ", municipality: null } }, staff),
+    );
+  });
+});

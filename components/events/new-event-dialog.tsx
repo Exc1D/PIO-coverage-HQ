@@ -54,7 +54,9 @@ export function NewEventDialog() {
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
-          <EventFields values={state?.createdId ? {} : state?.values} errors={state?.fieldErrors} idPrefix="new" />
+          <EventFields
+            key={JSON.stringify(state?.values ?? {})}
+            values={state?.createdId ? {} : state?.values} errors={state?.fieldErrors} idPrefix="new" />
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Discard

@@ -86,3 +86,23 @@ export async function listPostedInPeriod(period: Range): Promise<EventRow[]> {
   if (error) throw new Error(`Could not load posts: ${error.message}`);
   return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
 }
+
+/** Non-cancelled events held between two Manila dates (inclusive). */
+export async function listEventsByDate(from: string, to: string): Promise<EventRow[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("events")
+    .select("*")
+    .neq("status", "cancelled")
+    .gte("event_date", from)
+    .lte("event_date", to)
+    .order("event_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false });
+  if (error) throw new Error(`Could not load events: ${error.message}`);
+  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+}
+
+/** Posted events whose posted_at falls between two instants. */
+export async function listPostedBetween(start: Date, end: Date): Promise<EventRow[]> {
+  return listPostedInPeriod({ start, end, startDate: "", endDate: "" });
+}

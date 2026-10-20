@@ -159,7 +159,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
               {[!e.writer_id && "No writer", !e.photographer_id && !e.videographer_id && "No photo/video"].filter(Boolean).join(" · ")}
             </span>
           )}
-          href={{ label: "Open board", to: "/board" }}
+          href={{ label: "Assign people", to: "/needs-assignment" }}
         />
         <EventList
           title="Stuck"

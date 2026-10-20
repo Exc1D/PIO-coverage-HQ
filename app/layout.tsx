@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
+import { Suspense } from "react";
+import { HideOnPublic } from "@/components/app/hide-on-public";
 import { SiteHeader } from "@/components/app/site-header";
 import "./globals.css";
 
@@ -25,10 +28,26 @@ export default function RootLayout({ children, drawer }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <SiteHeader />
+        {/* usePathname() needs Suspense on dynamic routes; the fallback is the normal header. */}
+        <Suspense fallback={<SiteHeader />}>
+          <HideOnPublic>
+            <SiteHeader />
+          </HideOnPublic>
+        </Suspense>
         <div id="main" className="flex flex-1 flex-col">
           {children}
         </div>
+        <Suspense fallback={null}>
+          <HideOnPublic>
+            <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden">
+              Public coverage request form:{" "}
+              <Link href="/request" className="font-medium text-foreground underline underline-offset-4">
+                /request
+              </Link>{" "}
+              (share this link with LGUs and organisers)
+            </footer>
+          </HideOnPublic>
+        </Suspense>
         {drawer}
         <Toaster position="top-center" richColors closeButton />
       </body>

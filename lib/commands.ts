@@ -1,13 +1,14 @@
 // The wire format for event commands. Browsers send a CommandPayload
 // (JSON-safe: dates are Manila wall-clock strings, people are IDs); the server
-// validates it with zod and turns it into a workflow Command. The board runs
-// the same conversion locally to preview optimistic moves.
+// validates it with zod and turns it into a workflow Command. Server-only at
+// runtime: browsers import just the types, and preview with command-preview.ts
+// so zod never ships to the client.
 
 import { z } from "zod";
 import { MUNICIPALITIES, SLOTS, SOURCES } from "./constants";
-import { isDateString, manilaDateTime } from "./time";
+import { toCommand, type ToCommandResult } from "./command-preview";
+import { isDateString } from "./time";
 import type { Staff } from "./types";
-import type { Command, EditableDetails } from "./workflow";
 
 const reason = z.string().trim().min(1, "A reason is required.").max(500, "Keep the reason under 500 characters.");
 /** "yyyy-MM-ddTHH:mm" as produced by <input type="datetime-local">, in Manila time. */
@@ -65,34 +66,7 @@ export const commandPayloadSchema = z.discriminatedUnion("type", [
 ]);
 
 export type CommandPayload = z.input<typeof commandPayloadSchema>;
-type ParsedPayload = z.output<typeof commandPayloadSchema>;
-
-export type ToCommandResult = { ok: true; command: Command } | { ok: false; message: string };
-
-/** Turn a validated payload into a workflow Command. */
-export function toCommand(p: ParsedPayload, staff: readonly Staff[]): ToCommandResult {
-  const at = (v: string) => manilaDateTime(v.slice(0, 10), v.slice(11));
-  switch (p.type) {
-    case "schedule_post":
-    case "reschedule_post":
-      return { ok: true, command: { type: p.type, scheduledPostAt: at(p.scheduledPostAt) } };
-    case "mark_posted":
-      return {
-        ok: true,
-        command: { type: "mark_posted", postLink: p.postLink, postedAt: p.postedAt ? at(p.postedAt) : undefined },
-      };
-    case "assign": {
-      if (p.staffId === null) return { ok: true, command: { type: "assign", slot: p.slot, assignee: null } };
-      const s = staff.find((x) => x.id === p.staffId);
-      if (!s) return { ok: false, message: "That staff member no longer exists." };
-      return { ok: true, command: { type: "assign", slot: p.slot, assignee: { id: s.id, roles: s.roles, active: s.active } } };
-    }
-    case "edit_details":
-      return { ok: true, command: { type: "edit_details", changes: p.changes as Partial<EditableDetails> } };
-    default:
-      return { ok: true, command: p };
-  }
-}
+export type ParsedPayload = z.output<typeof commandPayloadSchema>;
 
 /** Parse untrusted input; returns a Command or a readable error. */
 export function parseCommand(input: unknown, staff: readonly Staff[]): ToCommandResult {
