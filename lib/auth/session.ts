@@ -1,6 +1,7 @@
 import "server-only";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies, headers } from "next/headers";
+import { connection } from "next/server";
 import { cache } from "react";
 import type { Role } from "@/lib/constants";
 import { getStaffAuthRecord } from "@/lib/data/staff";
@@ -63,6 +64,8 @@ async function readToken(): Promise<{ staffId: string; sv: number } | null> {
  * deactivation, role changes and PIN resets take effect immediately.
  */
 export const getCurrentStaff = cache(async (): Promise<Staff | null> => {
+  // Token expiry is checked against the clock, so this is request-time only.
+  await connection();
   const token = await readToken();
   if (!token) return null;
   const record = await getStaffAuthRecord(token.staffId);

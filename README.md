@@ -2,7 +2,17 @@
 
 Coverage tracking for the Provincial Information Office (PIO) of Camarines Norte: every event the office covers, from request to the published Facebook post, plus weekly and monthly output reports.
 
-> **Status:** Phase 1 of 5. Schema, seed data, PIN sign-in, and the workflow/metrics rules are in. The board, dashboard, calendars, reports and admin screens come in later phases.
+> **Status:** Phase 2 of 5. Schema, seed data, PIN sign-in, workflow/metrics rules, the **pipeline board** and the **event drawer** are in. Dashboard, reports, calendars, the public request form and admin come in later phases.
+
+## Using the board
+
+- `/board` shows one column per status. Anyone can view; sign in to make changes.
+- Drag a card **by its handle** one column forward to run that step, or one column back (head only) to step back with a reason. Columns that would accept the card turn green while dragging; an illegal drop snaps back with a message explaining why.
+- Tick **Photos/Video** and **Caption** right on the card. When both are done the event moves to *For proofreading* by itself.
+- Click a card title to open the event in a side drawer: all details, the allowed actions, team assignment, Drive link, caption text, and the activity timeline. "Full page" opens `/events/<id>`, which is also the link to share.
+- Filters (source, municipality, person, event dates, show cancelled) live in the URL, so a filtered board can be shared. Without a date range the Posted column shows the last 14 days.
+- The head adds events with **New event**; the new event opens in the drawer ready to schedule and assign.
+- Changes appear immediately and roll back if the server refuses them. If two people edit the same event, the second gets "Someone else just updated this event" and sees the fresh version.
 
 ## Stack
 
