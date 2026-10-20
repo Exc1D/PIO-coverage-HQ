@@ -22,7 +22,11 @@ function LiveNav() {
 
 function NavLinks({ pathname }: { pathname: string | null }) {
   return (
-    <nav aria-label="Main" className="-mx-1 flex gap-1 overflow-x-auto">
+    <nav
+      aria-label="Main"
+      // On phones the row scrolls; the faded right edge hints there's more.
+      className="-mx-1 flex gap-1 overflow-x-auto [mask-image:linear-gradient(to_right,black_85%,transparent)] sm:[mask-image:none]"
+    >
       {LINKS.map((l) => {
         const current = pathname !== null && (l.href === "/" ? pathname === "/" : pathname.startsWith(l.href));
         return (

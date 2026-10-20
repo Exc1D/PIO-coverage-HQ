@@ -79,7 +79,9 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
       {/* Header */}
       <div className="grid gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge status={event.status} />
+          <span data-testid="event-status" data-status={event.status}>
+            <StatusBadge status={event.status} />
+          </span>
           <SourceChip source={event.source} />
           {stuck && <OverdueFlag dueDate={event.due_date} />}
         </div>

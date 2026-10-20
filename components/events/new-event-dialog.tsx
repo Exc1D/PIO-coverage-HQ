@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { OFFLINE_MESSAGE } from "@/lib/offline";
 import { EventFields } from "./event-fields";
 
 /** Head-only: add an event. On save it opens in the drawer for scheduling and assigning. */
@@ -24,7 +25,12 @@ export function NewEventDialog() {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [state, action, pending] = useActionState(async (prev: CreateEventState, formData: FormData) => {
-    const result = await createEventAction(prev, formData);
+    let result: CreateEventState;
+    try {
+      result = await createEventAction(prev, formData);
+    } catch {
+      return { error: OFFLINE_MESSAGE, values: Object.fromEntries([...formData.entries()].map(([k, v]) => [k, String(v)])) };
+    }
     if (result?.createdId) {
       setOpen(false);
       setFormKey((k) => k + 1);

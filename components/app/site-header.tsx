@@ -40,7 +40,12 @@ async function SessionBadge() {
     );
   }
   return (
-    <form action={signOutAction} className="flex items-center gap-2">
+    <form action={signOutAction} className="flex items-center gap-1 sm:gap-2">
+      {staff.roles.includes("head") && (
+        <Button asChild size="sm" variant="ghost">
+          <Link href="/admin">Staff</Link>
+        </Button>
+      )}
       <span className="text-sm text-muted-foreground">
         <span className="sr-only">Signed in as </span>
         <span aria-hidden className="inline-flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground sm:hidden" title={staff.display_name}>

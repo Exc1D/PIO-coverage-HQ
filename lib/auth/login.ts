@@ -71,6 +71,8 @@ export async function attemptLogin(staffId: string, pin: string): Promise<LoginR
   }
 
   await createSession(staff.id, staff.session_version);
+  // Occasional housekeeping on successful sign-ins keeps the security tables small.
+  if (Math.random() < 0.1) await pruneSecurityLogs(now).catch((e) => console.error("prune failed", e));
   return { ok: true };
 }
 
@@ -80,4 +82,35 @@ export async function clearLockout(staffId: string, clearedById: string): Promis
     .from("pin_attempts")
     .insert({ staff_id: staffId, ip_hash: "admin-clear", success: false, cleared_by_id: clearedById });
   if (error) throw new Error(`Could not clear the lock: ${error.message}`);
+}
+
+/** Staff currently locked out of PIN sign-in, with when the lock lifts. */
+export async function lockedStaff(now = new Date()): Promise<Map<string, Date>> {
+  const { data, error } = await db()
+    .from("pin_attempts")
+    .select("staff_id, success, cleared_by_id, created_at")
+    .not("staff_id", "is", null)
+    .gt("created_at", new Date(now.getTime() - LOCKOUT_WINDOW_MS).toISOString());
+  if (error) throw new Error(`Could not check locks: ${error.message}`);
+  const byStaff = new Map<string, Attempt[]>();
+  for (const r of data as (AttemptRow & { staff_id: string })[]) {
+    const list = byStaff.get(r.staff_id) ?? [];
+    list.push({ success: r.success, cleared: r.cleared_by_id !== null, created_at: r.created_at });
+    byStaff.set(r.staff_id, list);
+  }
+  const out = new Map<string, Date>();
+  for (const [id, attempts] of byStaff) {
+    const s = lockoutState(attempts, now, STAFF_THRESHOLD);
+    if (s.locked) out.set(id, s.until);
+  }
+  return out;
+}
+
+/** Housekeeping: drop sign-in attempts older than 30 days and rate-limit hits older than 2 days. */
+export async function pruneSecurityLogs(now = new Date()): Promise<void> {
+  const day = 86_400_000;
+  await Promise.all([
+    db().from("pin_attempts").delete().lt("created_at", new Date(now.getTime() - 30 * day).toISOString()),
+    db().from("rate_limit_hits").delete().lt("created_at", new Date(now.getTime() - 2 * day).toISOString()),
+  ]);
 }

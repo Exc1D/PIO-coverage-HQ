@@ -1,53 +1,58 @@
 # PIO Coverage HQ
 
-Coverage tracking for the Provincial Information Office (PIO) of Camarines Norte: every event the office covers, from request to the published Facebook post, plus weekly and monthly output reports.
+Coverage tracking for the **Provincial Information Office (PIO) of Camarines Norte**. Every event the office covers is tracked from request to the published Facebook post, with weekly and monthly reports of who did what.
 
-> **Status:** Phase 4 of 5. Everything except the Admin screen and the final polish/E2E/deploy pass is in: PIN sign-in, the pipeline board and event drawer, the HQ dashboard, reports with CSV export, **calendars**, **Needs assignment** and the **public request form**.
+It replaces chat threads and memory with one place to:
 
-## Calendars, assignment and requests
+- assign people quickly and see gaps before the event, not after;
+- see every event's status until it's posted, and catch stuck events early;
+- report output by week and month: total posts, the split by event source, and each person's work by role.
 
-- **Calendar (`/calendar`)**: month grid (Monday first). **Events** shows events by event date; **Published** shows posts by the date they went up on Facebook. Colours follow the event source. On a computer, hover a chip for details and click it to open the event. On a phone, tap a day to list its events below the grid.
-- **Assign (`/needs-assignment`)**: requested or scheduled events in the next 14 days that have no writer, or no photographer or videographer. The head picks people from the dropdowns right on the page; each name shows how many other events that person already has that day. Fully assigned events move to "Already assigned" below.
-- **Public request form (`/request`)**: no sign-in. Organisers enter the event, their name and one contact detail; it arrives on the board as *Requested*. Protected by a hidden honeypot field and a limit of 5 requests per connection per hour. Share this link with LGUs and organisers.
+All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. Timestamps are stored in UTC.
 
-## Dashboard and reports
+---
 
-- **Dashboard (`/`)**: switch between This week, This month, or a custom date range (all in Asia/Manila; weeks run Monday–Sunday). Shows posts published and events covered (with the change vs the previous period), what's in the pipeline now, what's stuck, posts by source, work by person (written, proofread, photographed/videographed: counted only from events *posted* in the period), and the Needs assignment, Stuck and Next 7 days lists. Every chart has a "Show as table" view.
-- **Reports (`/reports`)**: pick Monthly or Weekly and step back/forward. Posted events are grouped by source with subtotals, and a per-person table shows written / proofread / photographed / videographed. **Posts CSV** and **People CSV** download the same tables (UTF-8, opens in Excel). **Print** produces an A4 layout with a letterhead and "Prepared by / Noted by" lines for submitting to the head.
-- Source colours are the same everywhere: Provincial Government blue, Other LGU purple, Community green, Private orange. They were checked for colour-blind separation and always appear with a text label.
+## What's in the app
 
-## Using the board
+| Page | Who | What it's for |
+|---|---|---|
+| **Dashboard** `/` | everyone | This week / This month / custom range. Posts published and events covered (vs the previous period), in the pipeline now, stuck, posts by source, work by person, pipeline now, and the Needs assignment, Stuck and Next 7 days lists. Every chart has a "Show as table" view. |
+| **Board** `/board` | everyone; changes need a PIN | One column per status. Drag a card by its handle one step forward, or one step back (head, with a reason). Illegal drops snap back with the reason. Tick Photos/Video and Caption on the card. Filters (source, municipality, person, dates, cancelled) live in the URL. |
+| **Event** (drawer or `/events/<id>`) | everyone; changes need a PIN | All details, the actions you're allowed to take (with the reason when one is blocked), team assignment, Drive link, caption text, posting details, and the full activity timeline. |
+| **Calendar** `/calendar` | everyone | Month grid of **Events** (by event date) or **Published** posts (by posting date), coloured by source. Hover a chip for details on a computer; tap a day on a phone. Click an event to open it. |
+| **Assign** `/needs-assignment` | head assigns; others view | Requested or scheduled events in the next 14 days missing a writer or photo/video. Pick people inline; each option shows how many other events that person has that day. |
+| **Reports** `/reports` | everyone | Monthly or weekly. Posted events grouped by source with subtotals, a per-person table (written / proofread / photographed / videographed), **CSV downloads**, and an **A4 print layout** with "Prepared by / Noted by" lines. |
+| **Staff** `/admin` | head | Add people, set roles, reset PINs, deactivate leavers, clear sign-in locks. |
+| **Request coverage** `/request` | public, no sign-in | Organisers and LGUs request coverage. Lands on the board as *Requested*. |
+| **First-run setup** `/setup` | once | Creates the first head when there are no staff yet. |
 
-- `/board` shows one column per status. Anyone can view; sign in to make changes.
-- Drag a card **by its handle** one column forward to run that step, or one column back (head only) to step back with a reason. Columns that would accept the card turn green while dragging; an illegal drop snaps back with a message explaining why.
-- Tick **Photos/Video** and **Caption** right on the card. When both are done the event moves to *For proofreading* by itself.
-- Click a card title to open the event in a side drawer: all details, the allowed actions, team assignment, Drive link, caption text, and the activity timeline. "Full page" opens `/events/<id>`, which is also the link to share.
-- Filters (source, municipality, person, event dates, show cancelled) live in the URL, so a filtered board can be shared. Without a date range the Posted column shows the last 14 days.
-- The head adds events with **New event**; the new event opens in the drawer ready to schedule and assign.
-- Changes appear immediately and roll back if the server refuses them. If two people edit the same event, the second gets "Someone else just updated this event" and sees the fresh version.
-
-## Stack
-
-Next.js 16 (App Router, Server Components, Server Actions, Cache Components) · Supabase Postgres (no Supabase Auth) · Tailwind CSS 4 + shadcn/ui · zod · date-fns-tz · Vitest · Playwright.
-
-All dates and periods are computed in **Asia/Manila**. Timestamps are stored in UTC.
+Source colours are the same everywhere: **Provincial Government** blue, **Other LGU** purple, **Community** green, **Private** orange. They were checked for colour-blind separation and always appear with a text label.
 
 ## How access works
 
-- Anyone with the link can **view**.
-- To **change** anything, staff pick their name and enter a personal 4–6 digit PIN. This sets an 8-hour, httpOnly, signed session cookie.
-- 5 wrong PINs for one person, or 20 from one IP address, lock sign-in for 15 minutes. The head can clear a person's lock.
-- The database has Row Level Security on every table with **no** policies. All access goes through server code using the service-role key, which never reaches the browser.
-- Optional `VIEW_KEY`: if set, viewers must open the app once with `?k=<VIEW_KEY>`. The public request form stays open to everyone.
+- **Anyone with the link can view** the dashboard, board, calendars and reports.
+- **To change anything**, staff pick their name and enter a personal 4–6 digit **PIN**. That sets a signed, httpOnly session cookie for 8 hours. Every change is attributed to that person in the event's activity log.
+- **Lockout:** 5 wrong PINs for one person, or 20 from one IP address, lock sign-in for 15 minutes. The head can clear a person's lock from Staff.
+- **Roles** (a person can have several): head (admin), photographer, videographer, writer, proofreader, page admin.
+- Resetting someone's PIN or deactivating them signs them out on every device at once.
+- **Requester names and contacts** are hidden from anyone not signed in.
+- **Optional view key:** set `VIEW_KEY` and viewers must open the app once with `?k=<VIEW_KEY>`. A cookie then remembers the device. The public request form stays open to everyone.
+- **Database security:** Row Level Security is on for every table, with **no** policies, and the anon/authenticated roles are revoked. All reads and writes go through server code using the service-role key, which never reaches the browser. Every input is validated with zod on the server.
+
+## Stack
+
+Next.js 16 (App Router, Server Components, Server Actions, Cache Components), Supabase Postgres (SQL migrations; Supabase Auth is not used), Tailwind CSS 4 + shadcn/ui, Recharts, @dnd-kit, zod, date-fns / date-fns-tz, Vitest and Playwright. Deploys to Vercel + Supabase on their free tiers.
+
+---
 
 ## Local setup
 
-Requirements: Node 22+, pnpm 10+, Docker (for local Supabase).
+**You need:** Node 22+, pnpm 10+, and Docker (for local Supabase).
 
 ```bash
 pnpm install
 cp .env.example .env.local
-pnpm db:start            # starts local Supabase; prints the API URL and service_role key
+pnpm db:start              # starts local Supabase and prints the API URL and keys
 ```
 
 Fill in `.env.local`:
@@ -55,68 +60,184 @@ Fill in `.env.local`:
 | Variable | Value |
 |---|---|
 | `SUPABASE_URL` | `http://127.0.0.1:54321` locally |
-| `SUPABASE_SERVICE_ROLE_KEY` | the `service_role` / secret key from `pnpm db:start` |
-| `SESSION_SECRET` | `openssl rand -hex 32` |
+| `SUPABASE_SERVICE_ROLE_KEY` | the **service_role** (or **secret**, `sb_secret_…`) key printed by `pnpm db:start` |
+| `SESSION_SECRET` | 32+ random characters: `openssl rand -hex 32` |
 | `VIEW_KEY` | optional; leave blank for open viewing |
 
 Then:
 
 ```bash
-pnpm db:reset            # apply migrations in supabase/migrations/ to a clean database
-pnpm seed                # 8 placeholder staff (PIN 1234) + 28 sample events
-pnpm dev                 # http://localhost:3000
+pnpm db:reset              # apply supabase/migrations/ to a clean local database
+pnpm seed                  # 8 placeholder staff (PIN 1234) + 28 sample events
+pnpm dev                   # http://localhost:3000
 ```
 
-Sign in as **Grace S.** (head + proofreader) with PIN `1234`, or as any other seeded person.
+Sign in as **Grace S.** (head + proofreader) with PIN **1234**, or as anyone else below. To try the first-run setup screen instead, run `pnpm db:reset` without seeding and open `/setup`.
 
-To try the first-run setup screen instead, run `pnpm db:reset` without seeding and open `/setup`.
+> Open `http://localhost:3000`, not `127.0.0.1:3000`. In development Next.js only serves its scripts to `localhost`, so pages wouldn't become interactive.
 
-### Seed data
+### Seed data (development only)
 
-`scripts/seed.ts` loads `supabase/seed/pio-coverage-pipeline.csv`. It shifts all dates so the newest event is 14 days from today, which keeps the demo looking current. It ignores the CSV's Platform column (Facebook is the only platform), sets placeholder Drive links and Facebook post links, and refuses to run with `NODE_ENV=production` or against a non-local database unless you pass `--allow-remote`.
+`scripts/seed.ts` loads `supabase/seed/pio-coverage-pipeline.csv`:
 
-| Staff | Roles |
+- It shifts all dates so the newest event is 14 days from today, which keeps the demo current.
+- It ignores the CSV's Platform column; Facebook is the only platform.
+- It sets placeholder Drive and Facebook links.
+- It **refuses** to run with `NODE_ENV=production`, or against a non-local database without `--allow-remote`.
+
+| Staff (PIN 1234) | Roles |
 |---|---|
 | Grace S. | head, proofreader |
-| Joel B. | proofreader, page_admin |
+| Joel B. | proofreader, page admin |
 | Rico M., Jessa T. | photographer |
 | Paolo D. | videographer |
 | Ana R., Mark V., Liza C. | writer |
 
-## Scripts
+### Migrations
 
-| Command | What it does |
+SQL migrations live in `supabase/migrations/`. Locally, `pnpm db:reset` rebuilds the database from them. For a hosted project, see [Deploy](#deploy-to-vercel--supabase). To add a change, create a new file (`supabase migration new <name>`) rather than editing an applied one.
+
+## Tests
+
+| Command | What it runs |
 |---|---|
-| `pnpm dev` | Dev server |
-| `pnpm check` | Typecheck + lint + unit tests with coverage |
-| `pnpm test` / `pnpm test:coverage` | Vitest (workflow and metrics are held to 100% branch coverage) |
-| `pnpm db:reset` | Recreate the local database from migrations |
-| `pnpm seed` | Load development seed data |
+| `pnpm check` | typecheck + lint + unit tests with coverage |
+| `pnpm test` / `pnpm test:coverage` | Vitest. `lib/workflow.ts` and `lib/metrics.ts` are held to **100% branch coverage**, including Manila timezone edge cases. |
+| `pnpm test:e2e` | Playwright: builds and starts the app, then runs the full flow on a phone (Pixel 7) and a desktop viewport. |
+
+The end-to-end test needs local Supabase running and the seed loaded (`pnpm db:reset && pnpm seed`). It follows one event through its whole life:
+
+1. Someone submits it through the public request form.
+2. The head schedules it, assigns people and confirms coverage.
+3. The photographer marks it covered and ticks Photos/Video done.
+4. The writer ticks Caption done, which auto-advances it to For proofreading.
+5. The proofreader approves it.
+6. The page admin schedules and posts it.
+7. The dashboard's post count and the writer's credit go up by one.
+
+It is safe to rerun. Set `E2E_BASE_URL` to test a server that's already running. If you use a preinstalled Chromium instead of `npx playwright install`, set `PLAYWRIGHT_CHROMIUM_PATH`.
+
+---
+
+## Deploy to Vercel + Supabase
+
+Both free tiers are enough for one office.
+
+### 1. Create the Supabase project
+
+1. At [supabase.com](https://supabase.com), create a project. Choose the **Southeast Asia (Singapore)** region, which is closest to Camarines Norte, and save the database password.
+2. Apply the schema from your machine:
+
+   ```bash
+   pnpm exec supabase login
+   pnpm exec supabase link --project-ref <your-project-ref>   # from the project URL
+   pnpm exec supabase db push                                  # applies supabase/migrations/
+   ```
+
+3. In **Project Settings → API Keys**, copy the **Project URL** and the **service_role / secret** key. Treat that key like a password: it bypasses all database security.
+
+Do **not** run `pnpm seed` against production; it creates staff with a shared PIN.
+
+### 2. Create the Vercel project
+
+1. At [vercel.com](https://vercel.com), choose **Add New → Project** and import this GitHub repository. Vercel detects Next.js and pnpm automatically.
+2. Under **Environment Variables**, add these for Production (and Preview if you use it):
+
+   | Name | Value |
+   |---|---|
+   | `SUPABASE_URL` | the Project URL |
+   | `SUPABASE_SERVICE_ROLE_KEY` | the service_role / secret key |
+   | `SESSION_SECRET` | a new `openssl rand -hex 32` (different from development) |
+   | `VIEW_KEY` | optional: a long random string if viewing should need the shared link |
+
+   Never prefix these with `NEXT_PUBLIC_`; that would send them to browsers.
+3. Optional: in **Settings → Functions**, set the region to **Singapore (sin1)** so the app runs next to the database.
+4. Deploy.
+
+### 3. First run
+
+1. Open `https://<your-app>.vercel.app/setup` and create the **head's** account and PIN.
+2. As the head, open **Staff** and add the team, with roles and PINs. Give each person their PIN in person.
+3. Share the links:
+   - **Staff and viewers:** `https://<your-app>.vercel.app/`. Add `?k=<VIEW_KEY>` if you set one.
+   - **Organisers and LGUs:** `https://<your-app>.vercel.app/request`.
+
+### Updating
+
+- **Code:** pushing to the production branch redeploys on Vercel.
+- **Schema:** when a commit adds a migration, run `pnpm exec supabase db push` before or right after the deploy.
+
+### Running it on free tiers
+
+- **Inactivity pause:** Supabase free projects pause after about a week with no activity. Daily use keeps it awake; if it pauses, restore it from the Supabase dashboard.
+- **Backups:** the free tier has no point-in-time recovery. Download the monthly Posts and People CSVs from Reports for the office's records. For a full copy, run `pnpm exec supabase db dump --data-only > backup.sql` now and then.
+- **Housekeeping:** sign-in attempts older than 30 days and rate-limit entries older than 2 days are pruned automatically during normal sign-ins.
+
+---
 
 ## Workflow rules
 
-`lib/workflow.ts` is the single source of truth. The server enforces it and the UI uses it to show only allowed actions.
+`lib/workflow.ts` is the single source of truth. It's a pure module with full test coverage; the server enforces it on every change, and the UI uses it to show only the actions that will work.
 
-`requested → scheduled → covered → in_production → for_proofreading → approved → scheduled_for_posting → posted`, plus `cancelled` (head, with reason) from any status before posted. The head can restore a cancelled event, or move an event back one step with a reason.
+`requested → scheduled → covered → in_production → for_proofreading → approved → scheduled_for_posting → posted`. The head can **cancel** an event from any status before posted, with a reason, and can restore it later. The head can also move an event **back one step**, with a reason.
 
 | Step | Who | Needs |
 |---|---|---|
 | requested → scheduled | head | source and municipality |
-| scheduled → covered | assigned photographer/videographer, or head | head has ticked **Coverage confirmed** |
-| covered → in_production | assigned team or head; also automatic when a checkbox is ticked | — |
-| in_production → for_proofreading | automatic | **Photos/Video done** and **Caption done** both ticked |
-| for_proofreading → approved | proofreader or head | sets proofreader to the approver if empty |
-| approved → scheduled_for_posting | page admin or head | posting date/time |
-| scheduled_for_posting → posted | page admin or head | facebook.com / fb.watch post link; posted time defaults to now |
+| scheduled → covered | assigned photographer/videographer, or head | the head has ticked **Coverage confirmed** |
+| covered → in_production | assigned team or head; also automatic when either checkbox is ticked | — |
+| in_production → for_proofreading | **automatic** | **Photos/Video done** (photographer/videographer or head) and **Caption done** (writer or head), whichever is ticked last |
+| for_proofreading → approved | proofreader or head | becomes the proofreader if none was assigned |
+| approved → scheduled_for_posting | page admin or head | posting date and time |
+| scheduled_for_posting → posted | page admin or head | a facebook.com or fb.watch post link; posted time defaults to now |
 
-The Drive folder link and caption text are optional references and are not required by any rule.
+Only the head assigns people and edits event details. The Drive folder link and caption text are optional references; no rule requires them. **Every** change is written to the append-only `event_activity` log.
 
-Reporting definitions (posts, stuck, needs assignment, credit) live in `lib/metrics.ts`.
+**Concurrent edits:** if two people change the same event at once, the second gets "Someone else just updated this event" and sees the fresh version, so nobody overwrites anyone. On the board, changes appear immediately and roll back if the server refuses them or the connection drops.
+
+## Reporting definitions
+
+These live in `lib/metrics.ts` and are covered by unit tests.
+
+- **Post:** status is posted and `posted_at` falls inside the period, in Manila time. Cancelled events never count.
+- **Events covered:** the event date is in the period and the status is covered or later.
+- **Stuck:** not posted or cancelled, and today (Manila) is after the due date. The due date is the event date + 2 days.
+- **Needs assignment:** requested or scheduled, event date from today through 14 days ahead, and no writer, or no photographer *and* no videographer.
+- **Credit**, counted only for posted events: the writer gets "written", the proofreader "proofread", the photographer "photographed", the videographer "videographed".
+
+## Project layout
+
+```
+app/                 routes (dashboard, board, calendar, needs-assignment, reports, admin,
+                     events/[id], request, login, setup) and Server Actions in app/actions/
+app/@drawer/         intercepted /events/[id] → side drawer over the current page
+components/          UI by area (board, events, dashboard, calendar, assign, reports, admin, ui = shadcn)
+lib/workflow.ts      transition rules (pure, 100% tested)
+lib/metrics.ts       reporting definitions (pure, 100% tested)
+lib/commands.ts      zod schema for event commands (server); lib/command-preview.ts for the browser
+lib/data/            database reads (server only)
+lib/auth/            PIN hashing, sessions, lockout
+lib/notify.ts        hook for future notifications (currently a no-op)
+supabase/migrations/ SQL schema
+scripts/seed.ts      development seed
+tests/unit, tests/e2e
+```
+
+Notifications such as email or SMS are out of scope. `lib/notify.ts` is called after every saved change with the activity it produced, so a channel can be added there later.
 
 ## Troubleshooting
 
-**`supabase start` can't pull images** (registry rate limits): run only the database with `supabase db start`, then follow the comments in `scripts/dev/rest-proxy.mjs` to run PostgREST in Docker behind a small `/rest/v1` proxy.
+- **The page loads but nothing is clickable in development:** open `localhost:3000`, not `127.0.0.1:3000`.
+- **"Invalid server environment" error:** `.env.local` is missing a value; `SESSION_SECRET` needs at least 32 characters.
+- **`supabase start` can't pull images** (registry rate limits): run only the database with `supabase db start`, then follow the comments in `scripts/dev/rest-proxy.mjs` to run PostgREST behind a small `/rest/v1` proxy.
+- **Someone is locked out:** wait 15 minutes, or have the head open Staff and press **Clear lock**.
+- **Lost the only head's PIN:** in the Supabase SQL editor, run `update staff set roles = array_append(roles, 'head') where display_name = '<someone>';` for another staff member, then have that person reset the PIN from Staff.
 
 ## Privacy
 
-In keeping with RA 10173 (Data Privacy Act), the app stores only staff names and roles, plus the requester's name and contact on events. IP addresses used for rate limiting are stored only as keyed hashes.
+In keeping with the Data Privacy Act of 2012 (RA 10173), the app stores only:
+
+- staff names and roles;
+- each requester's name and one contact detail on their event, visible only to signed-in staff.
+
+IP addresses used for rate limiting and lockout are stored only as keyed hashes, and old entries are deleted automatically.

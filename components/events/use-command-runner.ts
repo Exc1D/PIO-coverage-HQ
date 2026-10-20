@@ -6,6 +6,7 @@ import { runEventCommand } from "@/app/actions/events";
 import { previewCommand } from "@/lib/command-preview";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS } from "@/lib/constants";
+import { OFFLINE_MESSAGE } from "@/lib/offline";
 import type { EventRow, Staff } from "@/lib/types";
 import { applyCommand, type Actor } from "@/lib/workflow";
 
@@ -41,7 +42,14 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
     }
     startTransition(async () => {
       showOptimistic?.(preview.next);
-      const res = await runEventCommand(event.id, event.version, payload);
+      let res;
+      try {
+        res = await runEventCommand(event.id, event.version, payload);
+      } catch {
+        // Network failure: the optimistic change rolls back when the transition ends.
+        toast.error(OFFLINE_MESSAGE);
+        return;
+      }
       if (!res.ok) toast.error(res.message);
       else if (successMessage) toast.success(successMessage);
       else if (preview.next.status !== event.status) toast.success(`Moved to ${STATUS_LABELS[preview.next.status]}`);

@@ -196,7 +196,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.proofreader}</td>
                       <td className={cn(td, "print:hidden")}>
                         {r.link && (
-                          <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
+                          <a href={r.link} target="_blank" rel="noopener noreferrer" className="-my-1 inline-flex min-h-7 items-center px-1 text-sm underline underline-offset-4">
                             Open
                           </a>
                         )}

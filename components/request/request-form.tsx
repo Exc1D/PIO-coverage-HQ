@@ -6,11 +6,18 @@ import { submitRequestAction, type RequestState } from "@/app/actions/request";
 import { EventFields } from "@/components/events/event-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { OFFLINE_MESSAGE } from "@/lib/offline";
 import { HONEYPOT_FIELD } from "@/lib/request-constants";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
 
 export function RequestForm() {
-  const [state, action, pending] = useActionState<RequestState, FormData>(submitRequestAction, undefined);
+  const [state, action, pending] = useActionState<RequestState, FormData>(async (prev, formData) => {
+    try {
+      return await submitRequestAction(prev, formData);
+    } catch {
+      return { error: OFFLINE_MESSAGE, values: Object.fromEntries([...formData.entries()].map(([k, v]) => [k, String(v)])) };
+    }
+  }, undefined);
   // The action state can't be reset, so remember which confirmation was dismissed.
   const [dismissed, setDismissed] = useState<RequestState>(undefined);
 

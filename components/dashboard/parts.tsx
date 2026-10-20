@@ -29,9 +29,11 @@ export function StatTile({
   const d = delta?.value ?? 0;
   const Icon = d > 0 ? ArrowUpRightIcon : d < 0 ? ArrowDownRightIcon : MinusIcon;
   return (
-    <div className={cn("rounded-xl border bg-card p-4", tone === "alert" && value > 0 && "border-red-200 bg-red-50/40")}>
+    <div role="group" aria-label={label} className={cn("rounded-xl border bg-card p-4", tone === "alert" && value > 0 && "border-red-200 bg-red-50/40")}>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tracking-tight">{value.toLocaleString("en-PH")}</p>
+      <p className="mt-1 text-3xl font-semibold tracking-tight" data-value={value}>
+        {value.toLocaleString("en-PH")}
+      </p>
       {delta ? (
         <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <Icon
