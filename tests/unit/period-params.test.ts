@@ -29,3 +29,13 @@ describe("reportPeriod", () => {
     expect(reportPeriod({ kind: "month", date: "2026-02-31" }, now).startDate).toBe("2026-10-01");
   });
 });
+
+describe("out-of-range dates from URLs fall back instead of crashing", () => {
+  it("dashboard custom ranges outside 2000–2099 → this week", () => {
+    expect(dashboardPeriod({ period: "custom", from: "0001-01-01", to: "2026-01-01" }, now).kind).toBe("week");
+    expect(dashboardPeriod({ period: "custom", from: "2026-01-01", to: "2100-01-01" }, now).kind).toBe("week");
+  });
+  it("report dates outside 2000–2099 → current month", () => {
+    expect(reportPeriod({ kind: "month", date: "0000-01-15" }, now).startDate).toBe("2026-10-01");
+  });
+});

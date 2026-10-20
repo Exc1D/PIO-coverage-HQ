@@ -38,7 +38,13 @@ export async function destroySession(): Promise<void> {
 function cookieFromHeader(header: string | null, name: string): string | undefined {
   for (const part of header?.split(";") ?? []) {
     const eq = part.indexOf("=");
-    if (eq > -1 && part.slice(0, eq).trim() === name) return decodeURIComponent(part.slice(eq + 1).trim());
+    if (eq > -1 && part.slice(0, eq).trim() === name) {
+      try {
+        return decodeURIComponent(part.slice(eq + 1).trim());
+      } catch {
+        return undefined; // malformed cookie: treat as signed out
+      }
+    }
   }
   return undefined;
 }

@@ -17,10 +17,19 @@ function parseHttps(value: string): URL | null {
   }
 }
 
+/** Same shape as the database's post_link CHECK, so the app never accepts a link the DB rejects. */
+const FACEBOOK_PATTERN = /^https:\/\/((www|m|web|business|mbasic)\.)?(facebook\.com|fb\.watch)\/\S+$/i;
+
 /** A Facebook post URL on facebook.com (or a subdomain we know) or fb.watch, with a path. */
 export function isFacebookPostUrl(value: string): boolean {
-  const url = parseHttps(value);
-  return url !== null && FACEBOOK_HOSTS.has(url.hostname.toLowerCase()) && url.pathname.length > 1;
+  const raw = value.trim();
+  const url = parseHttps(raw);
+  return (
+    url !== null &&
+    FACEBOOK_HOSTS.has(url.hostname.toLowerCase()) &&
+    url.pathname.length > 1 &&
+    FACEBOOK_PATTERN.test(raw)
+  );
 }
 
 export function isHttpsUrl(value: string): boolean {

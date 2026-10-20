@@ -41,7 +41,9 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
       return;
     }
     startTransition(async () => {
-      showOptimistic?.(preview.next);
+      // The server bumps the version once per saved command; mirror that so a second
+      // quick action on the same event (e.g. ticking both boxes) sends the right one.
+      showOptimistic?.({ ...preview.next, version: event.version + 1 });
       let res;
       try {
         res = await runEventCommand(event.id, event.version, payload);

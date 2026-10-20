@@ -1,7 +1,7 @@
 // Reading periods from URL query strings (dashboard and reports).
 
 import { currentPeriod, customPeriod, monthPeriod, weekPeriod, type Period } from "./metrics";
-import { isDateString, manilaDate } from "./time";
+import { isSupportedDate, manilaDate } from "./time";
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -18,7 +18,7 @@ export function dashboardPeriod(params: Params, now: Date): Period {
   if (period === "custom") {
     const from = one(params.from);
     const to = one(params.to);
-    if (from && to && isDateString(from) && isDateString(to) && from <= to) return customPeriod(from, to);
+    if (from && to && isSupportedDate(from) && isSupportedDate(to) && from <= to) return customPeriod(from, to);
   }
   return currentPeriod("week", now);
 }
@@ -30,6 +30,6 @@ export function dashboardPeriod(params: Params, now: Date): Period {
 export function reportPeriod(params: Params, now: Date): Period {
   const kind = one(params.kind) === "week" ? "week" : "month";
   const raw = one(params.date);
-  const date = raw && isDateString(raw) ? raw : manilaDate(now);
+  const date = raw && isSupportedDate(raw) ? raw : manilaDate(now);
   return kind === "week" ? weekPeriod(date) : monthPeriod(date);
 }

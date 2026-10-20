@@ -13,6 +13,14 @@ export function redactForViewer<T extends Pick<EventRow, "requested_by" | "conta
 }
 
 /**
+ * Lists (board, dashboard, calendars, reports) never carry requester details
+ * (personal data) or caption bodies. Add new personal-data columns here.
+ */
+function forList(e: EventRow): EventRow {
+  return { ...e, requested_by: null, contact: null, caption_text: null };
+}
+
+/**
  * Events for the board: everything still in progress, plus finished events
  * from roughly the last 90 days. Requester details and caption bodies are
  * dropped (cards don't need them).
@@ -27,7 +35,7 @@ export async function listBoardEvents(today: string): Promise<EventRow[]> {
     .order("event_date", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw new Error(`Could not load events: ${error.message}`);
-  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+  return (data as EventRow[]).map(forList);
 }
 
 export async function getEvent(id: string): Promise<EventRow | null> {
@@ -70,7 +78,7 @@ export async function listEventsForDashboard(periods: Range[]): Promise<EventRow
     .or(clauses.join(","))
     .order("event_date", { ascending: true });
   if (error) throw new Error(`Could not load dashboard data: ${error.message}`);
-  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+  return (data as EventRow[]).map(forList);
 }
 
 /** Posted events whose posted_at falls inside the period (for reports). */
@@ -84,7 +92,7 @@ export async function listPostedInPeriod(period: Range): Promise<EventRow[]> {
     .lt("posted_at", period.end.toISOString())
     .order("posted_at", { ascending: true });
   if (error) throw new Error(`Could not load posts: ${error.message}`);
-  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+  return (data as EventRow[]).map(forList);
 }
 
 /** Non-cancelled events held between two Manila dates (inclusive). */
@@ -99,7 +107,7 @@ export async function listEventsByDate(from: string, to: string): Promise<EventR
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false });
   if (error) throw new Error(`Could not load events: ${error.message}`);
-  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+  return (data as EventRow[]).map(forList);
 }
 
 /** Posted events whose posted_at falls between two instants. */

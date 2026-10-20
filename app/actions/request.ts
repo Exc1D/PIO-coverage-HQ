@@ -3,7 +3,7 @@
 import { clientIpHash } from "@/lib/auth/ip";
 import { db } from "@/lib/db/server";
 import { notify } from "@/lib/notify";
-import { recentHits, recordHit } from "@/lib/rate-limit";
+import { recordHit, releaseSlot, takeSlot } from "@/lib/rate-limit";
 import { isBot, parseRequest, REQUEST_FIELDS, REQUESTS_PER_HOUR } from "@/lib/request-form";
 import { manilaDate } from "@/lib/time";
 import type { EventRow } from "@/lib/types";
@@ -29,15 +29,17 @@ export async function submitRequestAction(_prev: RequestState, formData: FormDat
     return { submitted: true, title: raw.title, date: raw.event_date };
   }
 
-  if ((await recentHits(BUCKET, ipHash, HOUR)) >= REQUESTS_PER_HOUR) {
+  const parsed = parseRequest(raw, manilaDate(new Date()));
+  if (!parsed.ok) return { fieldErrors: parsed.fieldErrors, values };
+
+  // Only valid requests take a slot (typos shouldn't use up someone's hourly allowance).
+  const slot = await takeSlot(BUCKET, ipHash, REQUESTS_PER_HOUR, HOUR);
+  if (slot === null) {
     return {
       error: "We’ve received several requests from your connection in the last hour. Please try again later or contact the PIO directly.",
       values,
     };
   }
-
-  const parsed = parseRequest(raw, manilaDate(new Date()));
-  if (!parsed.ok) return { fieldErrors: parsed.fieldErrors, values };
 
   const activity = [{ actor_id: null, action: "created", from_status: null, to_status: "requested", details: { public_request: true } }];
   const { data, error } = await db()
@@ -45,9 +47,9 @@ export async function submitRequestAction(_prev: RequestState, formData: FormDat
     .single<EventRow>();
   if (error) {
     console.error("public request failed", error.code, error.message);
+    await releaseSlot(slot); // a failed save shouldn't use up the hourly allowance
     return { error: "Your request couldn’t be sent. Please try again.", values };
   }
-  await recordHit(BUCKET, ipHash);
   await notify({
     eventId: data.id,
     title: data.title,

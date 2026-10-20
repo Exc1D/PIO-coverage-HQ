@@ -1,11 +1,11 @@
 // Month grid for the calendars: Monday-first weeks (matching report weeks),
 // including the leading/trailing days of neighbouring months.
 
-import { addDays, endOfMonth, isDateString, startOfWeek } from "./time";
+import { addDays, endOfMonth, isSupportedDate, startOfWeek } from "./time";
 
-/** "yyyy-MM" → true if it names a real month. */
+/** "yyyy-MM" → true if it names a real month in the supported range. */
 export function isMonthString(value: string): boolean {
-  return /^\d{4}-\d{2}$/.test(value) && isDateString(`${value}-01`);
+  return /^\d{4}-\d{2}$/.test(value) && isSupportedDate(`${value}-01`);
 }
 
 export function monthOf(date: string): string {

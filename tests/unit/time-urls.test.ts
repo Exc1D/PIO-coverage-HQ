@@ -6,6 +6,7 @@ import {
   formatManila,
   isDateString,
   isoWeekday,
+  isSupportedDate,
   manilaDate,
   manilaDateTime,
   manilaStartOfDay,
@@ -15,6 +16,13 @@ import {
 import { isFacebookPostUrl, isHttpsUrl } from "@/lib/urls";
 
 describe("time", () => {
+  it("bounds supported dates to 2000–2099", () => {
+    expect(isSupportedDate("2026-10-20")).toBe(true);
+    expect(isSupportedDate("1999-12-31")).toBe(false);
+    expect(isSupportedDate("2100-01-01")).toBe(false);
+    expect(isSupportedDate("2026-02-30")).toBe(false);
+  });
+
   it("validates date strings", () => {
     expect(isDateString("2026-02-28")).toBe(true);
     expect(isDateString("2026-02-30")).toBe(false);
@@ -50,6 +58,10 @@ describe("urls", () => {
     expect(isFacebookPostUrl("https://facebook.com.evil.example/x")).toBe(false);
     expect(isFacebookPostUrl("https://notfacebook.com/x")).toBe(false);
     expect(isFacebookPostUrl("not a url")).toBe(false);
+    // Must match the database CHECK exactly: no explicit port, no userinfo
+    expect(isFacebookPostUrl("https://www.facebook.com:443/PIO/posts/1")).toBe(false);
+    expect(isFacebookPostUrl("https://user@facebook.com/PIO/posts/1")).toBe(false);
+    expect(isFacebookPostUrl("https://www.facebook.com/PIO/posts/1 extra")).toBe(false);
   });
   it("checks https", () => {
     expect(isHttpsUrl("https://drive.google.com/x")).toBe(true);

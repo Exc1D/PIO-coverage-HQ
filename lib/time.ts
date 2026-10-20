@@ -14,6 +14,11 @@ export function isDateString(value: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
+/** Dates the app accepts from URLs and forms: years 2000–2099 (keeps date maths well away from year 0). */
+export function isSupportedDate(value: string): boolean {
+  return isDateString(value) && value >= "2000-01-01" && value <= "2099-12-31";
+}
+
 /** The Manila calendar date of an instant. */
 export function manilaDate(instant: Date | string): string {
   return formatInTimeZone(instant, TIMEZONE, "yyyy-MM-dd");

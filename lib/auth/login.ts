@@ -40,35 +40,56 @@ function lockedMessage(until: Date, now: Date): string {
   return `Too many wrong PINs. Try again in ${m} minute${m === 1 ? "" : "s"}, or ask the head to clear the lock.`;
 }
 
-/** Verify a PIN with lockout, record the attempt, and start a session on success. */
+/**
+ * Verify a PIN with lockout, record the attempt, and start a session on success.
+ *
+ * The attempt is recorded as a failure *before* the lockout is checked, so
+ * concurrent guesses see each other: the k-th parallel attempt counts at
+ * least k failures, which caps PIN checks at the threshold even under a burst.
+ * An attempt refused because of a lock is removed again so it doesn't extend
+ * the lock; a correct PIN flips its row to success.
+ */
 export async function attemptLogin(staffId: string, pin: string): Promise<LoginResult> {
   const now = new Date();
   const ipHash = await clientIpHash();
-
-  const ipState = lockoutState(await recentAttempts("ip_hash", ipHash, now), now, IP_THRESHOLD);
-  if (ipState.locked) return { ok: false, message: lockedMessage(ipState.until, now) };
-
   const staff = await getStaffAuthRecord(staffId);
-  if (!staff || !staff.active) {
+  const known = staff !== null && staff.active;
+
+  const { data: reserved, error: insertError } = await db()
+    .from("pin_attempts")
+    .insert({ staff_id: known ? staff.id : null, ip_hash: ipHash, success: false })
+    .select("id")
+    .single<{ id: number }>();
+  if (insertError) throw new Error(`Could not record sign-in attempt: ${insertError.message}`);
+
+  // Counts include this attempt, so "locked" means the threshold was already reached before it.
+  const [ipAttempts, staffAttempts] = await Promise.all([
+    recentAttempts("ip_hash", ipHash, now),
+    known ? recentAttempts("staff_id", staff.id, now) : Promise.resolve([]),
+  ]);
+  const ipState = lockoutState(ipAttempts, now, IP_THRESHOLD + 1);
+  const staffState = lockoutState(staffAttempts, now, STAFF_THRESHOLD + 1);
+  const lock = ipState.locked ? ipState : staffState.locked ? staffState : null;
+  if (lock) {
+    await db().from("pin_attempts").delete().eq("id", reserved.id);
+    return { ok: false, message: lockedMessage(lock.until, now) };
+  }
+
+  if (!known) {
     await verifyAgainstDummy(pin);
-    // Still counts against the IP.
-    await db().from("pin_attempts").insert({ staff_id: null, ip_hash: ipHash, success: false });
     return { ok: false, message: WRONG };
   }
 
-  const staffState = lockoutState(await recentAttempts("staff_id", staff.id, now), now, STAFF_THRESHOLD);
-  if (staffState.locked) return { ok: false, message: lockedMessage(staffState.until, now) };
-
   const success = await verifyPin(pin, staff.pin_hash);
-  const { error } = await db().from("pin_attempts").insert({ staff_id: staff.id, ip_hash: ipHash, success });
-  if (error) throw new Error(`Could not record sign-in attempt: ${error.message}`);
-
   if (!success) {
-    if (staffState.failures + 1 >= STAFF_THRESHOLD) {
+    if (staffState.failures >= STAFF_THRESHOLD) {
       return { ok: false, message: lockedMessage(new Date(now.getTime() + LOCKOUT_WINDOW_MS), now) };
     }
     return { ok: false, message: WRONG };
   }
+
+  const { error } = await db().from("pin_attempts").update({ success: true }).eq("id", reserved.id);
+  if (error) throw new Error(`Could not record sign-in attempt: ${error.message}`);
 
   await createSession(staff.id, staff.session_version);
   // Occasional housekeeping on successful sign-ins keeps the security tables small.

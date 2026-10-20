@@ -102,13 +102,17 @@ export async function updateStaffAction(staffId: string, _prev: StaffFormState, 
   return { ok: true, message: `${parsed.data.display_name} updated.` };
 }
 
-/** Bump session_version so every existing session for this person ends now. */
-async function revokeSessions(staffId: string): Promise<number> {
+/**
+ * Apply `changes` and bump session_version in one UPDATE, so every existing
+ * session for this person ends now and a failure can't leave half the change
+ * applied (e.g. a new PIN with old sessions still valid).
+ */
+async function updateAndRevoke(staffId: string, changes: Record<string, unknown>): Promise<number> {
   const { data, error } = await db().from("staff").select("session_version").eq("id", staffId).single<{ session_version: number }>();
   if (error) throw new Error(`Could not load staff: ${error.message}`);
   const next = data.session_version + 1;
-  const { error: upd } = await db().from("staff").update({ session_version: next }).eq("id", staffId);
-  if (upd) throw new Error(`Could not revoke sessions: ${upd.message}`);
+  const { error: upd } = await db().from("staff").update({ ...changes, session_version: next }).eq("id", staffId);
+  if (upd) throw new Error(`Could not update staff: ${upd.message}`);
   return next;
 }
 
@@ -119,9 +123,13 @@ export async function resetPinAction(staffId: string, _prev: StaffFormState, for
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
   if (!z.uuid().safeParse(staffId).success) return { error: "Invalid request." };
 
-  const { error } = await db().from("staff").update({ pin_hash: await hashPin(parsed.data.pin) }).eq("id", staffId);
-  if (error) return { error: "Couldn’t reset the PIN. Please try again." };
-  const version = await revokeSessions(staffId);
+  let version: number;
+  try {
+    version = await updateAndRevoke(staffId, { pin_hash: await hashPin(parsed.data.pin) });
+  } catch (e) {
+    console.error("reset PIN failed", e);
+    return { error: "Couldn’t reset the PIN. Please try again." };
+  }
   await clearLockout(staffId, me.id);
   // Resetting your own PIN keeps you signed in on this device.
   if (staffId === me.id) await createSession(me.id, version);
@@ -135,9 +143,17 @@ export async function setActiveAction(staffId: string, active: boolean): Promise
   const rule = checkStaffChange(me.id, await listStaff(), staffId, { type: "active", active });
   if (!rule.ok) return { ok: false, message: rule.message };
 
-  const { error } = await db().from("staff").update({ active }).eq("id", staffId);
-  if (error) return { ok: false, message: "Couldn’t save the change. Please try again." };
-  if (!active) await revokeSessions(staffId);
+  try {
+    if (active) {
+      const { error } = await db().from("staff").update({ active: true }).eq("id", staffId);
+      if (error) throw new Error(error.message);
+    } else {
+      await updateAndRevoke(staffId, { active: false });
+    }
+  } catch (e) {
+    console.error("set active failed", e);
+    return { ok: false, message: "Couldn’t save the change. Please try again." };
+  }
   refresh();
   return { ok: true, message: active ? "Reactivated." : "Deactivated and signed out. Their past work still counts in reports." };
 }

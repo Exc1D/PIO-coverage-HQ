@@ -6,6 +6,8 @@ describe("calendar grid", () => {
     expect(isMonthString("2026-10")).toBe(true);
     expect(isMonthString("2026-13")).toBe(false);
     expect(isMonthString("2026-1")).toBe(false);
+    expect(isMonthString("0001-01")).toBe(false);
+    expect(isMonthString("2100-01")).toBe(false);
     expect(monthOf("2026-10-20")).toBe("2026-10");
     expect(shiftMonth("2026-12", 1)).toBe("2027-01");
     expect(shiftMonth("2026-01", -1)).toBe("2025-12");
