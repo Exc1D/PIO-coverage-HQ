@@ -6,7 +6,7 @@ import Link from "next/link";
 import { initials, OverdueFlag, SourceChip } from "@/components/app/labels";
 import { MUNICIPALITY_LABELS } from "@/lib/constants";
 import { isStuck } from "@/lib/metrics";
-import { formatManila, manilaStartOfDay } from "@/lib/time";
+import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { availability, type Actor } from "@/lib/workflow";
@@ -19,14 +19,6 @@ type Props = {
   onToggle: (event: EventRow, field: "photos_done" | "caption_done", value: boolean) => void;
   overlay?: boolean;
 };
-
-export function formatEventDate(e: Pick<EventRow, "event_date" | "start_time">): string {
-  const day = formatManila(manilaStartOfDay(e.event_date), "EEE, MMM d");
-  if (!e.start_time) return day;
-  const [h, m] = e.start_time.split(":").map(Number);
-  const t = `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-  return `${day} · ${t}`;
-}
 
 function Assignee({ label, id, staffById }: { label: string; id: string | null; staffById: Map<string, Staff> }) {
   if (!id) return null;

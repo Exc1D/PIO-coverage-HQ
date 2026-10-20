@@ -25,8 +25,8 @@
   --ring: oklch(0.708 0 0);
 
   /* Event source colors (keep in sync with lib/constants.ts) */
-  --source-provincial-government: #2563eb;
-  --source-other-lgu: #7c3aed;
+  --source-provincial-government: #1d4ed8;
+  --source-other-lgu: #a855f7;
   --source-community: #16a34a;
   --source-private: #ea580c;
 }
@@ -63,5 +63,20 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body {
+    background: #fff;
+  }
+  /* Toasts and the dev indicator never belong on paper. */
+  [data-sonner-toaster],
+  nextjs-portal {
+    display: none !important;
   }
 }

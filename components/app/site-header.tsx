@@ -8,21 +8,23 @@ import { getCurrentStaff } from "@/lib/auth/session";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link href="/" className="shrink-0 rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="sm:hidden">PIO HQ</span>
-            <span className="hidden sm:inline">PIO Coverage HQ</span>
-          </Link>
+    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
+      {/* Phones: brand + session on the first row, nav scrolls on its own row. Larger screens: one row. */}
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 px-4 sm:h-14 sm:flex-nowrap">
+        <Link href="/" className="flex h-12 shrink-0 items-center rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring sm:h-auto">
+          PIO Coverage HQ
+        </Link>
+        <div className="order-last -mx-4 w-[calc(100%+2rem)] border-t px-4 py-1.5 sm:order-none sm:mx-0 sm:w-auto sm:flex-1 sm:border-0 sm:p-0">
           {/* usePathname() needs a Suspense boundary on dynamic routes; the fallback is the same nav without the active state. */}
           <Suspense fallback={<MainNav static />}>
             <MainNav />
           </Suspense>
         </div>
-        <Suspense fallback={<span className="h-8 w-20 animate-pulse rounded-md bg-muted" aria-hidden />}>
-          <SessionBadge />
-        </Suspense>
+        <div className="ml-auto">
+          <Suspense fallback={<span className="block h-8 w-20 animate-pulse rounded-md bg-muted" aria-hidden />}>
+            <SessionBadge />
+          </Suspense>
+        </div>
       </div>
     </header>
   );

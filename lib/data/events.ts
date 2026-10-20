@@ -48,3 +48,41 @@ export async function getActivity(eventId: string): Promise<ActivityRow[]> {
   if (error) throw new Error(`Could not load the activity log: ${error.message}`);
   return data as ActivityRow[];
 }
+
+type Range = { start: Date; end: Date; startDate: string; endDate: string };
+
+/**
+ * Everything the dashboard needs in one query: events still in progress
+ * (pipeline, stuck, needs assignment, next 7 days), plus events posted or
+ * held within any of the given periods (current and previous, for deltas).
+ * Requester details are dropped; the dashboard never shows them.
+ */
+export async function listEventsForDashboard(periods: Range[]): Promise<EventRow[]> {
+  await connection();
+  const clauses = ["status.not.in.(posted,cancelled)"];
+  for (const p of periods) {
+    clauses.push(`and(posted_at.gte.${p.start.toISOString()},posted_at.lt.${p.end.toISOString()})`);
+    clauses.push(`and(event_date.gte.${p.startDate},event_date.lte.${p.endDate})`);
+  }
+  const { data, error } = await db()
+    .from("events")
+    .select("*")
+    .or(clauses.join(","))
+    .order("event_date", { ascending: true });
+  if (error) throw new Error(`Could not load dashboard data: ${error.message}`);
+  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+}
+
+/** Posted events whose posted_at falls inside the period (for reports). */
+export async function listPostedInPeriod(period: Range): Promise<EventRow[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("events")
+    .select("*")
+    .eq("status", "posted")
+    .gte("posted_at", period.start.toISOString())
+    .lt("posted_at", period.end.toISOString())
+    .order("posted_at", { ascending: true });
+  if (error) throw new Error(`Could not load posts: ${error.message}`);
+  return (data as EventRow[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
+}

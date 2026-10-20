@@ -39,10 +39,11 @@ export const SOURCE_LABELS: Record<Source, string> = {
   private: "Private",
 };
 
-/** App-wide source colors (blue, purple, green, orange). */
+/** App-wide source colors (blue, purple, green, orange). Steps chosen to pass the
+ *  colour-blind separation checks (dataviz validate_palette.js); always shown with a text label. */
 export const SOURCE_COLORS: Record<Source, string> = {
-  provincial_government: "#2563eb",
-  other_lgu: "#7c3aed",
+  provincial_government: "#1d4ed8",
+  other_lgu: "#a855f7",
   community: "#16a34a",
   private: "#ea580c",
 };

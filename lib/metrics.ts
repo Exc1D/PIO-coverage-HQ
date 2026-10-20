@@ -10,6 +10,7 @@ import {
 } from "./constants";
 import {
   addDays,
+  daysBetween,
   endOfMonth,
   formatManila,
   isDateString,
@@ -91,6 +92,21 @@ export function customPeriod(startDate: string, endDate: string): Period {
   );
 }
 
+/** The period of the same kind immediately before `period`. */
+export function previousPeriod(period: Period): Period {
+  if (period.kind === "week") return weekPeriod(addDays(period.startDate, -7));
+  if (period.kind === "month") return monthPeriod(addDays(period.startDate, -1));
+  const length = daysBetween(period.startDate, period.endDate) + 1;
+  return customPeriod(addDays(period.startDate, -length), addDays(period.startDate, -1));
+}
+
+/** The period of the same kind immediately after `period` (weeks and months). */
+export function nextPeriod(period: Period): Period {
+  return period.kind === "week"
+    ? weekPeriod(addDays(period.startDate, 7))
+    : monthPeriod(addDays(period.endDate, 1));
+}
+
 /** "This week" / "This month" relative to `now`, in Manila. */
 export function currentPeriod(kind: "week" | "month", now: Date): Period {
   const today = manilaDate(now);
@@ -141,6 +157,27 @@ export function needsAssignment(e: MetricEvent, today: string): boolean {
   );
 }
 
+/** Whole days an event is past its posting target (0 if not overdue). */
+export function daysOverdue(e: Pick<MetricEvent, "due_date">, today: string): number {
+  return Math.max(0, daysBetween(e.due_date, today));
+}
+
+/** Non-cancelled events happening from today through the next `days - 1` days. */
+export function upcoming<T extends MetricEvent & { start_time: string | null }>(
+  events: readonly T[],
+  today: string,
+  days = 7,
+): T[] {
+  const last = addDays(today, days - 1);
+  return events
+    .filter((e) => e.status !== "cancelled" && e.event_date >= today && e.event_date <= last)
+    .sort((a, b) =>
+      a.event_date === b.event_date
+        ? (a.start_time ?? "99").localeCompare(b.start_time ?? "99")
+        : a.event_date.localeCompare(b.event_date),
+    );
+}
+
 /** Covered in period = event_date in the period and status covered or later. */
 export function countsAsCovered(e: MetricEvent, period: Period): boolean {
   return COVERED_OR_LATER.includes(e.status) && dateInPeriod(e.event_date, period);
@@ -160,6 +197,21 @@ export function postsBySource(events: readonly MetricEvent[], period: Period): R
     if (e.source) out[e.source] += 1;
   }
   return out;
+}
+
+/** Posts in the period grouped by source (sources in fixed order), each group oldest first. */
+export function postsGroupedBySource<T extends MetricEvent>(
+  events: readonly T[],
+  period: Period,
+): { source: Source | null; posts: T[] }[] {
+  const posts = postsInPeriod(events, period).sort((a, b) => (a.posted_at as string).localeCompare(b.posted_at as string));
+  const groups: { source: Source | null; posts: T[] }[] = SOURCES.map((source) => ({
+    source,
+    posts: posts.filter((p) => p.source === source),
+  }));
+  const unknown = posts.filter((p) => p.source === null);
+  if (unknown.length) groups.push({ source: null, posts: unknown });
+  return groups.filter((g) => g.posts.length > 0);
 }
 
 export type PipelineStatus = Exclude<Status, "posted" | "cancelled">;

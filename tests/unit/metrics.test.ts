@@ -7,6 +7,11 @@ import {
   currentPeriod,
   customPeriod,
   dateInPeriod,
+  daysOverdue,
+  nextPeriod,
+  postsGroupedBySource,
+  previousPeriod,
+  upcoming,
   inPipeline,
   instantInPeriod,
   isStuck,
@@ -229,5 +234,65 @@ describe("summarize", () => {
     expect(s.bySource.provincial_government).toBe(1);
     expect(s.pipeline.in_production).toBe(1);
     expect(s.credits.get("ana")?.written).toBe(1);
+  });
+});
+
+describe("period navigation and lists", () => {
+  it("previous/next periods", () => {
+    expect(previousPeriod(weekPeriod("2026-10-21")).startDate).toBe("2026-10-12");
+    expect(previousPeriod(monthPeriod("2026-03-15"))).toMatchObject({ startDate: "2026-02-01", endDate: "2026-02-28" });
+    expect(previousPeriod(customPeriod("2026-10-10", "2026-10-14"))).toMatchObject({
+      kind: "custom",
+      startDate: "2026-10-05",
+      endDate: "2026-10-09",
+    });
+    expect(nextPeriod(weekPeriod("2026-10-21")).startDate).toBe("2026-10-26");
+    expect(nextPeriod(monthPeriod("2026-12-05")).startDate).toBe("2027-01-01");
+  });
+
+  it("days overdue", () => {
+    expect(daysOverdue({ due_date: "2026-10-12" }, "2026-10-15")).toBe(3);
+    expect(daysOverdue({ due_date: "2026-10-16" }, "2026-10-15")).toBe(0);
+  });
+
+  it("upcoming: today through 6 days ahead, no cancelled, ordered by date then time", () => {
+    const list = upcoming(
+      [
+        { ...ev({ status: "scheduled", event_date: "2026-10-22" }), start_time: "14:00:00" },
+        { ...ev({ status: "scheduled", event_date: "2026-10-22" }), start_time: null },
+        { ...ev({ status: "scheduled", event_date: "2026-10-22" }), start_time: "08:00:00" },
+        { ...ev({ status: "requested", event_date: "2026-10-20" }), start_time: null },
+        { ...ev({ status: "cancelled", event_date: "2026-10-21" }), start_time: null },
+        { ...ev({ status: "scheduled", event_date: "2026-10-27" }), start_time: null },
+        { ...ev({ status: "scheduled", event_date: "2026-10-19" }), start_time: null },
+      ],
+      "2026-10-20",
+    );
+    expect(list.map((e) => `${e.event_date} ${e.start_time}`)).toEqual([
+      "2026-10-20 null",
+      "2026-10-22 08:00:00",
+      "2026-10-22 14:00:00",
+      "2026-10-22 null",
+    ]);
+  });
+
+  it("groups posts by source in fixed order, oldest first, with unknown last", () => {
+    const october = monthPeriod("2026-10-01");
+    const groups = postsGroupedBySource(
+      [
+        ev({ source: "private", posted_at: "2026-10-05T02:00:00Z" }),
+        ev({ source: "provincial_government", posted_at: "2026-10-09T02:00:00Z" }),
+        ev({ source: "provincial_government", posted_at: "2026-10-03T02:00:00Z" }),
+        ev({ source: null, posted_at: "2026-10-04T02:00:00Z" }),
+        ev({ source: "community", status: "approved" }),
+      ],
+      october,
+    );
+    expect(groups.map((g) => [g.source, g.posts.map((p) => p.posted_at!.slice(8, 10))])).toEqual([
+      ["provincial_government", ["03", "09"]],
+      ["private", ["05"]],
+      [null, ["04"]],
+    ]);
+    expect(postsGroupedBySource([ev({ source: "community" })], october).map((g) => g.source)).toEqual(["community"]);
   });
 });

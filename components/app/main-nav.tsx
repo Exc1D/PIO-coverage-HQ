@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/board", label: "Board" },
+  { href: "/reports", label: "Reports" },
 ];
 
 export function MainNav(props: { static?: boolean }) {

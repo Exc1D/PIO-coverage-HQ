@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useOptimistic, useState } from "react";
 import { OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
-import { formatEventDate } from "@/components/board/event-card";
+import { formatEventDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

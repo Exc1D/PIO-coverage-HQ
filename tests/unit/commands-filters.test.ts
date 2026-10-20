@@ -37,6 +37,11 @@ describe("parseCommand", () => {
     });
   });
 
+  it("keeps non-empty optional text and times", () => {
+    const r = parseCommand({ type: "edit_details", changes: { notes: " Bring ID ", start_time: "09:30", venue: "Capitol" } }, staff);
+    expect(r.ok && r.command).toEqual({ type: "edit_details", changes: { notes: "Bring ID", start_time: "09:30", venue: "Capitol" } });
+  });
+
   it("rejects malformed input with a readable message", () => {
     expect(parseCommand({ type: "cancel", reason: "  " }, staff)).toEqual({ ok: false, message: "A reason is required." });
     expect(parseCommand({ type: "schedule_post", scheduledPostAt: "tomorrow" }, staff)).toMatchObject({ ok: false });

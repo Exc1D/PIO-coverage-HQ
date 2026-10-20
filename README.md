@@ -2,7 +2,13 @@
 
 Coverage tracking for the Provincial Information Office (PIO) of Camarines Norte: every event the office covers, from request to the published Facebook post, plus weekly and monthly output reports.
 
-> **Status:** Phase 2 of 5. Schema, seed data, PIN sign-in, workflow/metrics rules, the **pipeline board** and the **event drawer** are in. Dashboard, reports, calendars, the public request form and admin come in later phases.
+> **Status:** Phase 3 of 5. Schema, seed data, PIN sign-in, workflow/metrics rules, the pipeline board, the event drawer, the **HQ dashboard** and **reports with CSV export** are in. Calendars, Needs assignment, the public request form and admin come in later phases.
+
+## Dashboard and reports
+
+- **Dashboard (`/`)**: switch between This week, This month, or a custom date range (all in Asia/Manila; weeks run Monday–Sunday). Shows posts published and events covered (with the change vs the previous period), what's in the pipeline now, what's stuck, posts by source, work by person (written, proofread, photographed/videographed: counted only from events *posted* in the period), and the Needs assignment, Stuck and Next 7 days lists. Every chart has a "Show as table" view.
+- **Reports (`/reports`)**: pick Monthly or Weekly and step back/forward. Posted events are grouped by source with subtotals, and a per-person table shows written / proofread / photographed / videographed. **Posts CSV** and **People CSV** download the same tables (UTF-8, opens in Excel). **Print** produces an A4 layout with a letterhead and "Prepared by / Noted by" lines for submitting to the head.
+- Source colours are the same everywhere: Provincial Government blue, Other LGU purple, Community green, Private orange. They were checked for colour-blind separation and always appear with a text label.
 
 ## Using the board
 
