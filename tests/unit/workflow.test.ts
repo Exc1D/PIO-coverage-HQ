@@ -20,6 +20,7 @@ const NOW = new Date("2026-10-20T04:00:00Z");
 const head: Actor = { id: "head", roles: ["head", "proofreader"] };
 const photog: Actor = { id: "photog", roles: ["photographer"] };
 const video: Actor = { id: "video", roles: ["videographer"] };
+const editor: Actor = { id: "editor", roles: ["editor"] };
 const writer: Actor = { id: "writer", roles: ["writer"] };
 const proof: Actor = { id: "proof", roles: ["proofreader", "page_admin"] };
 const admin: Actor = { id: "admin", roles: ["page_admin"] };
@@ -40,6 +41,7 @@ function ev(overrides: Partial<WorkflowEvent> = {}): WorkflowEvent {
     cancelled_from_status: null,
     photographer_id: "photog",
     videographer_id: "video",
+    editor_id: "editor",
     writer_id: "writer",
     proofreader_id: null,
     approved_by_id: null,
@@ -170,6 +172,15 @@ describe("checkboxes and auto-advance", () => {
 
   it("videographer can tick photos/video done", () =>
     ok(run(prod, { type: "set_photos_done", value: true }, video)));
+
+  it("assigned editor can tick photos/video done", () => {
+    const r = ok(run(prod, { type: "set_photos_done", value: true }, editor));
+    expect(r.patch).toMatchObject({ photos_done: true });
+    expect(r.next.photos_done).toBe(true);
+  });
+
+  it("an editor who isn't assigned can't tick photos/video done", () =>
+    err(run({ ...prod, editor_id: null }, { type: "set_photos_done", value: true }, editor), "forbidden"));
 
   it("whichever is ticked last advances to for_proofreading", () => {
     const a = ok(run({ ...prod, caption_done: true }, { type: "set_photos_done", value: true }, photog));
@@ -394,6 +405,14 @@ describe("assign", () => {
   });
   it("works after posting (credit correction)", () =>
     ok(run(ev({ status: "posted", proofreader_id: null }), { type: "assign", slot: "proofreader", assignee: { id: "p", roles: ["proofreader"], active: true } }, head)));
+  it("a multi-role person can fill several slots, including editor", () => {
+    const multi = { id: "m", roles: ["photographer", "editor", "writer"] as const, active: true };
+    const a = ok(run(ev({ editor_id: null }), { type: "assign", slot: "editor", assignee: multi }, head));
+    expect(a.patch).toEqual({ editor_id: "m" });
+    const b = ok(run(a.next, { type: "assign", slot: "photographer", assignee: multi }, head));
+    const c = ok(run(b.next, { type: "assign", slot: "writer", assignee: multi }, head));
+    expect(c.next).toMatchObject({ photographer_id: "m", editor_id: "m", writer_id: "m" });
+  });
   it("validates the assignee", () => {
     err(run(ev(), { type: "assign", slot: "writer", assignee: { ...ana, active: false } }, head), "invalid_input");
     err(run(ev(), { type: "assign", slot: "photographer", assignee: ana }, head), "invalid_input");

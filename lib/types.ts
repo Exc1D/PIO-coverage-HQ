@@ -16,6 +16,7 @@ export type EventRow = {
   cancelled_from_status: Status | null;
   photographer_id: string | null;
   videographer_id: string | null;
+  editor_id: string | null;
   writer_id: string | null;
   proofreader_id: string | null;
   approved_by_id: string | null;

@@ -8,6 +8,7 @@ import {
   GripVerticalIcon,
   MapPinIcon,
   PenLineIcon,
+  ScissorsIcon,
   SpellCheckIcon,
   UserIcon,
   VideoIcon,
@@ -38,12 +39,14 @@ type Props = {
 const SLOT_ICON: Partial<Record<Slot, LucideIcon>> = {
   photographer: CameraIcon,
   videographer: VideoIcon,
+  editor: ScissorsIcon,
   writer: PenLineIcon,
   proofreader: SpellCheckIcon,
 };
 const SLOT_TONE: Partial<Record<Slot, string>> = {
   photographer: "bg-sky-50 text-sky-900 ring-sky-200",
   videographer: "bg-violet-50 text-violet-900 ring-violet-200",
+  editor: "bg-rose-50 text-rose-900 ring-rose-200",
   writer: "bg-amber-50 text-amber-900 ring-amber-200",
   proofreader: "bg-emerald-50 text-emerald-900 ring-emerald-200",
 };

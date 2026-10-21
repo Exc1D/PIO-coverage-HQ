@@ -35,7 +35,7 @@ function workload(events: EventRow[]): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   for (const e of events) {
     const day = (out[e.event_date] ??= {});
-    const people = new Set([e.photographer_id, e.videographer_id, e.writer_id, e.proofreader_id].filter(Boolean) as string[]);
+    const people = new Set([e.photographer_id, e.videographer_id, e.editor_id, e.writer_id, e.proofreader_id].filter(Boolean) as string[]);
     for (const id of people) day[id] = (day[id] ?? 0) + 1;
   }
   return out;

@@ -167,6 +167,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                   <th scope="col" className={th}>Municipality</th>
                   <th scope="col" className={th}>Writer</th>
                   <th scope="col" className={th}>Photo / Video</th>
+                  <th scope="col" className={th}>Editor</th>
                   <th scope="col" className={th}>Proofreader</th>
                   <th scope="col" className={cn(th, "print:hidden")}>Post</th>
                 </tr>
@@ -174,7 +175,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
               {report.groups.map((g) => (
                 <tbody key={g.label} className="border-b last:border-0">
                   <tr className="bg-muted/30 print:bg-transparent">
-                    <th scope="rowgroup" colSpan={8} className="px-2 py-2 text-left font-semibold">
+                    <th scope="rowgroup" colSpan={9} className="px-2 py-2 text-left font-semibold">
                       <span className="inline-flex items-center gap-2">
                         {g.source && <span aria-hidden className="size-2.5 rounded-[3px] print:hidden" style={{ backgroundColor: SOURCE_COLORS[g.source] }} />}
                         {g.label}
@@ -193,6 +194,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                       <td className={td}>{r.municipality}</td>
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.writer}</td>
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.photoVideo}</td>
+                      <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.editor}</td>
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.proofreader}</td>
                       <td className={cn(td, "print:hidden")}>
                         {r.link && (
@@ -238,6 +240,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                 <th scope="col" className={cn(th, "text-right")}>Proofread</th>
                 <th scope="col" className={cn(th, "text-right")}>Photographed</th>
                 <th scope="col" className={cn(th, "text-right")}>Videographed</th>
+                <th scope="col" className={cn(th, "text-right")}>Edited</th>
                 <th scope="col" className={cn(th, "text-right")}>Total</th>
               </tr>
             </thead>
@@ -248,7 +251,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                     {p.name}
                     <span className="block text-xs font-normal text-muted-foreground print:hidden">{p.roles}</span>
                   </th>
-                  {[p.written, p.proofread, p.photographed, p.videographed].map((v, i) => (
+                  {[p.written, p.proofread, p.photographed, p.videographed, p.edited].map((v, i) => (
                     <td key={i} className={cn(td, "text-right tabular-nums", v === 0 && "text-muted-foreground")}>
                       {v}
                     </td>
@@ -260,7 +263,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
             <tbody className="border-t-2 font-semibold">
               <tr>
                 <th scope="row" className={cn(td, "text-left")}>Total</th>
-                {[t.written, t.proofread, t.photographed, t.videographed, t.total].map((v, i) => (
+                {[t.written, t.proofread, t.photographed, t.videographed, t.edited, t.total].map((v, i) => (
                   <td key={i} className={cn(td, "text-right tabular-nums")}>
                     {v}
                   </td>

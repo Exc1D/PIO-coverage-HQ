@@ -30,6 +30,7 @@ export type MetricEvent = Pick<
   | "source"
   | "photographer_id"
   | "videographer_id"
+  | "editor_id"
   | "writer_id"
   | "proofreader_id"
 >;
@@ -226,9 +227,9 @@ export function pipelineCounts(events: readonly MetricEvent[]): Record<PipelineS
   return out;
 }
 
-export type Credit = { written: number; proofread: number; photographed: number; videographed: number };
+export type Credit = { written: number; proofread: number; photographed: number; videographed: number; edited: number };
 
-const emptyCredit = (): Credit => ({ written: 0, proofread: 0, photographed: 0, videographed: 0 });
+const emptyCredit = (): Credit => ({ written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0 });
 
 /** Per-person credit by role, counted only from events posted in the period. */
 export function creditsByPerson(events: readonly MetricEvent[], period: Period): Map<string, Credit> {
@@ -244,6 +245,7 @@ export function creditsByPerson(events: readonly MetricEvent[], period: Period):
     bump(e.proofreader_id, "proofread");
     bump(e.photographer_id, "photographed");
     bump(e.videographer_id, "videographed");
+    bump(e.editor_id, "edited");
   }
   return out;
 }

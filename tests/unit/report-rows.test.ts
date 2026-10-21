@@ -24,6 +24,7 @@ const ev = (o: Partial<EventRow>): EventRow =>
     municipality: "daet",
     photographer_id: "rico",
     videographer_id: null,
+    editor_id: null,
     writer_id: "ana",
     proofreader_id: "grace",
     post_link: "https://fb.watch/x",
@@ -60,7 +61,14 @@ describe("report rows", () => {
       ["Paolo D. (inactive)", 0, 0, 0, 1, 1],
     ]);
     expect(rows.find((r) => r.name === "Grace S.")?.roles).toBe("proofreader");
-    expect(peopleTotals(rows)).toEqual({ written: 2, proofread: 1, photographed: 2, videographed: 1, total: 6 });
+    expect(peopleTotals(rows)).toEqual({ written: 2, proofread: 1, photographed: 2, videographed: 1, edited: 0, total: 6 });
+  });
+
+  it("credits editors and counts them in totals", () => {
+    const rows = peopleRows([ev({ editor_id: "rico" }), ev({ editor_id: "rico" })], october, staff);
+    const rico = rows.find((r) => r.name === "Rico M.");
+    expect(rico).toMatchObject({ photographed: 2, edited: 2, total: 4 });
+    expect(peopleTotals(rows)).toMatchObject({ edited: 2 });
   });
 
   it("names files by period", () => {

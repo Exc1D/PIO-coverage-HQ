@@ -173,7 +173,7 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
             <Tick
               id="photos"
               label="Photos/Video done"
-              hint="Edited and branded · photographer or videographer"
+              hint="Edited and branded · photographer, videographer or editor"
               checked={event.photos_done}
               enabled={avail.set_photos_done.state === "available" && !pending}
               onChange={(v) => run({ type: "set_photos_done", value: v })}

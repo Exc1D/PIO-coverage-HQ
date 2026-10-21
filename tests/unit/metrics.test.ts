@@ -36,6 +36,7 @@ function ev(o: Partial<MetricEvent> = {}): MetricEvent {
     source: "provincial_government",
     photographer_id: "rico",
     videographer_id: null,
+    editor_id: null,
     writer_id: "ana",
     proofreader_id: "grace",
     ...o,
@@ -205,16 +206,16 @@ describe("credits", () => {
       october,
     );
     expect(Object.fromEntries(credits)).toEqual({
-      ana: { written: 1, proofread: 0, photographed: 0, videographed: 0 },
-      liza: { written: 1, proofread: 0, photographed: 0, videographed: 0 },
-      grace: { written: 0, proofread: 1, photographed: 0, videographed: 0 },
-      rico: { written: 0, proofread: 0, photographed: 2, videographed: 0 },
-      paolo: { written: 0, proofread: 0, photographed: 0, videographed: 1 },
+      ana: { written: 1, proofread: 0, photographed: 0, videographed: 0, edited: 0 },
+      liza: { written: 1, proofread: 0, photographed: 0, videographed: 0, edited: 0 },
+      grace: { written: 0, proofread: 1, photographed: 0, videographed: 0, edited: 0 },
+      rico: { written: 0, proofread: 0, photographed: 2, videographed: 0, edited: 0 },
+      paolo: { written: 0, proofread: 0, photographed: 0, videographed: 1, edited: 0 },
     });
   });
   it("one person in several roles gets each credit", () => {
-    const c = creditsByPerson([ev({ writer_id: "x", proofreader_id: "x", photographer_id: "x", videographer_id: "x" })], october);
-    expect(c.get("x")).toEqual({ written: 1, proofread: 1, photographed: 1, videographed: 1 });
+    const c = creditsByPerson([ev({ writer_id: "x", proofreader_id: "x", photographer_id: "x", videographer_id: "x", editor_id: "x" })], october);
+    expect(c.get("x")).toEqual({ written: 1, proofread: 1, photographed: 1, videographed: 1, edited: 1 });
   });
 });
 

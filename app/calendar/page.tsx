@@ -38,6 +38,7 @@ function toItem(e: EventRow, view: View, staff: Staff[]): CalItem {
   const people = [
     name(e.photographer_id) && `P: ${name(e.photographer_id)}`,
     name(e.videographer_id) && `V: ${name(e.videographer_id)}`,
+    name(e.editor_id) && `E: ${name(e.editor_id)}`,
     name(e.writer_id) && `W: ${name(e.writer_id)}`,
   ].filter(Boolean);
   const posted = view === "published" && e.posted_at;

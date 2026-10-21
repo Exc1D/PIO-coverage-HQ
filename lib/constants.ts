@@ -83,6 +83,7 @@ export const ROLES = [
   "head",
   "photographer",
   "videographer",
+  "editor",
   "writer",
   "proofreader",
   "page_admin",
@@ -93,12 +94,13 @@ export const ROLE_LABELS: Record<Role, string> = {
   head: "Head",
   photographer: "Photographer",
   videographer: "Videographer",
+  editor: "Editor",
   writer: "Writer",
   proofreader: "Proofreader",
   page_admin: "Page admin",
 };
 
-export const SLOTS = ["photographer", "videographer", "writer", "proofreader"] as const;
+export const SLOTS = ["photographer", "videographer", "editor", "writer", "proofreader"] as const;
 export type Slot = (typeof SLOTS)[number];
 
 export const TIMEZONE = "Asia/Manila";
