@@ -42,6 +42,19 @@ const STATUS_TONE: Record<Status, string> = {
   cancelled: "bg-zinc-100 text-zinc-700 border-zinc-300 line-through decoration-1",
 };
 
+/** Solid accent per status, for column headers and stripes. Always paired with the status label. */
+export const STATUS_ACCENT: Record<Status, string> = {
+  requested: "#64748b",
+  scheduled: "#0284c7",
+  covered: "#4f46e5",
+  in_production: "#d97706",
+  for_proofreading: "#ca8a04",
+  approved: "#0d9488",
+  scheduled_for_posting: "#0891b2",
+  posted: "#16a34a",
+  cancelled: "#71717a",
+};
+
 export function StatusBadge({ status, className }: { status: Status; className?: string }) {
   return (
     <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium", STATUS_TONE[status], className)}>

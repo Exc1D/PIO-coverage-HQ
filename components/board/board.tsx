@@ -18,6 +18,7 @@ import { useOptimistic, useState } from "react";
 import { toast } from "sonner";
 import { CommandDialog, type InputCommand } from "@/components/events/command-dialog";
 import { useCommandRunner } from "@/components/events/use-command-runner";
+import { STATUS_ACCENT } from "@/components/app/labels";
 import type { CommandPayload } from "@/lib/commands";
 import { PIPELINE, STATUS_LABELS, type Status } from "@/lib/constants";
 import type { EventRow, Staff } from "@/lib/types";
@@ -164,8 +165,9 @@ function Column({
       ref={setNodeRef}
       role="listitem"
       aria-label={`${STATUS_LABELS[status]}, ${count} event${count === 1 ? "" : "s"}`}
+      style={{ borderTopColor: STATUS_ACCENT[status] }}
       className={cn(
-        "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72",
+        "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border border-t-4 bg-muted/40 sm:w-72",
         legal === true && "border-green-500/60 bg-green-50/60",
         legal === false && "opacity-60",
         isOver && legal === true && "ring-2 ring-green-500",
@@ -173,7 +175,10 @@ function Column({
       )}
     >
       <header className="flex items-center justify-between px-3 py-2.5">
-        <h2 className="text-sm font-semibold">{STATUS_LABELS[status]}</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: STATUS_ACCENT[status] }} />
+          {STATUS_LABELS[status]}
+        </h2>
         <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
           {count}
         </span>
