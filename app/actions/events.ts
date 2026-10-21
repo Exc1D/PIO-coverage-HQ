@@ -127,3 +127,35 @@ export async function createEventAction(_prev: CreateEventState, formData: FormD
   refresh();
   return { createdId: data.id };
 }
+
+// ---------------------------------------------------------------------------
+// Delete event (head)
+// ---------------------------------------------------------------------------
+
+export type DeleteResult = { ok: true } | Extract<CommandResult, { ok: false }>;
+
+/** Permanently delete an event and its activity. Cancelling is the reversible option. */
+export async function deleteEventAction(eventId: string, version: number): Promise<DeleteResult> {
+  const me = await actor();
+  if ("ok" in me) return me;
+  if (!me.roles.includes("head")) return { ok: false, code: "rejected", message: "Only the head can delete events." };
+
+  if (!idSchema.safeParse(eventId).success || !Number.isInteger(version)) {
+    return { ok: false, code: "rejected", message: "Invalid request." };
+  }
+
+  const { error } = await db().rpc("delete_event", { p_event_id: eventId, p_expected_version: version });
+  if (error) {
+    refresh();
+    if (error.code === DB_ERRORS.conflict) {
+      return { ok: false, code: "conflict", message: "Someone else just updated this event. It has been reloaded; please check it before deleting." };
+    }
+    if (error.code === DB_ERRORS.notFound) return { ok: false, code: "not_found", message: "This event no longer exists." };
+    console.error("delete_event failed", error.code, error.message);
+    return { ok: false, code: "error", message: "The event couldn't be deleted. Please try again." };
+  }
+  // No refresh here: re-rendering the deleted event's page would 404. The
+  // client navigates away and refreshes the page it lands on.
+  console.info("event deleted", { eventId, by: me.id });
+  return { ok: true };
+}
