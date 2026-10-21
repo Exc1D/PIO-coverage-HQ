@@ -117,6 +117,7 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
       <div className="mt-2 flex flex-wrap gap-1">
         <Assignee label="Photographer" id={event.photographer_id} staffById={staffById} />
         <Assignee label="Videographer" id={event.videographer_id} staffById={staffById} />
+        <Assignee label="Editor" id={event.editor_id} staffById={staffById} />
         <Assignee label="Writer" id={event.writer_id} staffById={staffById} />
         <Assignee label="Proofreader" id={event.proofreader_id} staffById={staffById} />
         {!event.writer_id && <span className="text-[11px] text-amber-700">No writer</span>}

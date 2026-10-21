@@ -31,6 +31,7 @@ export type WorkflowEvent = Pick<
   | "cancelled_from_status"
   | "photographer_id"
   | "videographer_id"
+  | "editor_id"
   | "writer_id"
   | "proofreader_id"
   | "approved_by_id"
@@ -145,6 +146,7 @@ const isHead = (a: Actor) => a.roles.includes("head");
 const hasRole = (a: Actor, r: Role) => a.roles.includes(r);
 const isAssignedMedia = (e: WorkflowEvent, a: Actor) =>
   e.photographer_id === a.id || e.videographer_id === a.id;
+const isAssignedEditor = (e: WorkflowEvent, a: Actor) => e.editor_id === a.id;
 const isAssignedWriter = (e: WorkflowEvent, a: Actor) => e.writer_id === a.id;
 
 const label = (s: Status) => STATUS_LABELS[s];
@@ -226,7 +228,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
     first(
       () => inStatus(e, ["covered"], "Starting production"),
       () =>
-        isHead(a) || isAssignedMedia(e, a) || isAssignedWriter(e, a)
+        isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a) || isAssignedWriter(e, a)
           ? OK
           : fail("forbidden", "Only the assigned team or the head can start production."),
     ),
@@ -235,9 +237,9 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
     first(
       () => inStatus(e, ["covered", "in_production"], "Changing “Photos/Video done”"),
       () =>
-        isHead(a) || isAssignedMedia(e, a)
+        isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a)
           ? OK
-          : fail("forbidden", "Only the assigned photographer/videographer or the head can tick this."),
+          : fail("forbidden", "Only the assigned photographer/videographer/editor or the head can tick this."),
     ),
 
   set_caption_done: (e, a) =>
@@ -334,9 +336,9 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
     first(
       () => notCancelled(e, "Editing the Drive link"),
       () =>
-        isHead(a) || isAssignedMedia(e, a)
+        isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a)
           ? OK
-          : fail("forbidden", "Only the assigned photographer/videographer or the head can edit the Drive link."),
+          : fail("forbidden", "Only the assigned photographer/videographer/editor or the head can edit the Drive link."),
     ),
 };
 

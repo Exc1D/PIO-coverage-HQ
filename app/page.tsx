@@ -68,6 +68,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
     (c) => c.photographed + c.videographed,
     (c) => `${c.photographed} photographed · ${c.videographed} videographed`,
   );
+  const edited = personSeries(s.credits, staff, (c) => c.edited);
 
   const needs = events.filter((e) => needsAssignment(e, today));
   const stuck = events.filter((e) => isStuck(e, today)).sort((a, b) => a.due_date.localeCompare(b.due_date));
@@ -141,10 +142,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           </h2>
           <p className="text-sm text-muted-foreground">Counted from events posted in this period.</p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
           {personCard("Articles written", "Writer credits", written)}
           {personCard("Captions proofread", "Proofreader credits", proofread)}
           {personCard("Events photographed / videographed", "Photographer and videographer credits", media)}
+          {personCard("Photos and video edited", "Editor credits", edited)}
         </div>
       </section>
 

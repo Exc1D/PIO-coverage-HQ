@@ -14,6 +14,7 @@ export type PostRow = {
   municipality: string;
   writer: string;
   photoVideo: string;
+  editor: string;
   proofreader: string;
   link: string;
 };
@@ -22,7 +23,7 @@ export type SourceGroup = { source: Source | null; label: string; rows: PostRow[
 
 export type PersonRow = { id: string; name: string; roles: string } & Credit & { total: number };
 
-const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer"] as const;
+const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer", "editor"] as const;
 
 export function postGroups(events: readonly EventRow[], period: Period, staff: readonly Staff[]): SourceGroup[] {
   const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : "");
@@ -37,6 +38,7 @@ export function postGroups(events: readonly EventRow[], period: Period, staff: r
       municipality: e.municipality ? MUNICIPALITY_LABELS[e.municipality] : "",
       writer: name(e.writer_id),
       photoVideo: [name(e.photographer_id), name(e.videographer_id)].filter(Boolean).join(" / "),
+      editor: name(e.editor_id),
       proofreader: name(e.proofreader_id),
       link: e.post_link ?? "",
     })),
@@ -52,13 +54,13 @@ export function peopleRows(events: readonly EventRow[], period: Period, staff: r
   return staff
     .filter((s) => credits.has(s.id) || (s.active && s.roles.some((r) => (PEOPLE_ROLES as readonly string[]).includes(r))))
     .map((s) => {
-      const c = credits.get(s.id) ?? { written: 0, proofread: 0, photographed: 0, videographed: 0 };
+      const c = credits.get(s.id) ?? { written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0 };
       return {
         id: s.id,
         name: s.display_name + (s.active ? "" : " (inactive)"),
         roles: s.roles.filter((r) => r !== "head" && r !== "page_admin").join(", "),
         ...c,
-        total: c.written + c.proofread + c.photographed + c.videographed,
+        total: c.written + c.proofread + c.photographed + c.videographed + c.edited,
       };
     })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
@@ -71,9 +73,10 @@ export function peopleTotals(rows: readonly PersonRow[]): Credit & { total: numb
       proofread: t.proofread + r.proofread,
       photographed: t.photographed + r.photographed,
       videographed: t.videographed + r.videographed,
+      edited: t.edited + r.edited,
       total: t.total + r.total,
     }),
-    { written: 0, proofread: 0, photographed: 0, videographed: 0, total: 0 },
+    { written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0, total: 0 },
   );
 }
 

@@ -68,6 +68,7 @@ describe("board filters", () => {
       posted_at: null,
       photographer_id: "p",
       videographer_id: null,
+      editor_id: null,
       writer_id: "w",
       proofreader_id: null,
       ...o,

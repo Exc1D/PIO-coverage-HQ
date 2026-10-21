@@ -38,7 +38,7 @@ export function hasFilters(f: BoardFilters): boolean {
 export function matchesFilters(e: EventRow, f: BoardFilters, today: string): boolean {
   if (f.source && e.source !== f.source) return false;
   if (f.municipality && e.municipality !== f.municipality) return false;
-  if (f.person && ![e.photographer_id, e.videographer_id, e.writer_id, e.proofreader_id].includes(f.person)) return false;
+  if (f.person && ![e.photographer_id, e.videographer_id, e.editor_id, e.writer_id, e.proofreader_id].includes(f.person)) return false;
   if (f.from && e.event_date < f.from) return false;
   if (f.to && e.event_date > f.to) return false;
   if (e.status === "cancelled" && !f.cancelled) return false;
