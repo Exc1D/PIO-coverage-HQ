@@ -96,11 +96,10 @@ function EventPeek({ event, staffById }: { event: EventRow; staffById: Map<strin
             {place}
           </p>
         )}
-        {event.requested_by && (
+        {(event.requested_by || event.contact) && (
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <UserIcon className="size-3.5 shrink-0" aria-hidden />
-            Requested by {event.requested_by}
-            {event.contact && <> · {event.contact}</>}
+            {[event.requested_by && `Requested by ${event.requested_by}`, event.contact].filter(Boolean).join(" · ")}
           </p>
         )}
       </div>
