@@ -19,7 +19,7 @@ type Props = {
   load: Record<string, Record<string, number>>;
 };
 
-const SLOTS: Slot[] = ["writer", "photographer", "videographer"];
+const SLOTS: Slot[] = ["writer", "photographer", "videographer", "editor"];
 
 const select =
   "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60";

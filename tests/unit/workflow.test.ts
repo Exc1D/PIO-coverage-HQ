@@ -173,8 +173,11 @@ describe("checkboxes and auto-advance", () => {
   it("videographer can tick photos/video done", () =>
     ok(run(prod, { type: "set_photos_done", value: true }, video)));
 
-  it("assigned editor can tick photos/video done", () =>
-    ok(run(prod, { type: "set_photos_done", value: true }, editor)));
+  it("assigned editor can tick photos/video done", () => {
+    const r = ok(run(prod, { type: "set_photos_done", value: true }, editor));
+    expect(r.patch).toMatchObject({ photos_done: true });
+    expect(r.next.photos_done).toBe(true);
+  });
 
   it("an editor who isn't assigned can't tick photos/video done", () =>
     err(run({ ...prod, editor_id: null }, { type: "set_photos_done", value: true }, editor), "forbidden"));

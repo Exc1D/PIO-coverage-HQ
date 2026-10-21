@@ -64,6 +64,13 @@ describe("report rows", () => {
     expect(peopleTotals(rows)).toEqual({ written: 2, proofread: 1, photographed: 2, videographed: 1, edited: 0, total: 6 });
   });
 
+  it("credits editors and counts them in totals", () => {
+    const rows = peopleRows([ev({ editor_id: "rico" }), ev({ editor_id: "rico" })], october, staff);
+    const rico = rows.find((r) => r.name === "Rico M.");
+    expect(rico).toMatchObject({ photographed: 2, edited: 2, total: 4 });
+    expect(peopleTotals(rows)).toMatchObject({ edited: 2 });
+  });
+
   it("names files by period", () => {
     expect(periodSlug(october)).toBe("2026-10");
     expect(periodSlug(weekPeriod("2026-10-21"))).toBe("week-of-2026-10-19");
