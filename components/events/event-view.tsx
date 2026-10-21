@@ -5,6 +5,7 @@ import {
   FolderOpenIcon,
   LockIcon,
   PencilIcon,
+  Trash2Icon,
   Undo2Icon,
   XCircleIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { availability, nextStatus, type CommandType } from "@/lib/workflow";
 import { CommandDialog, type InputCommand } from "./command-dialog";
+import { DeleteEventDialog } from "./delete-event-dialog";
 import { EditDetailsDialog } from "./edit-details-dialog";
 import { useCommandRunner } from "./use-command-runner";
 
@@ -63,6 +65,7 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
   const [event, setOptimistic] = useOptimistic(initial, (s: EventRow, next: Partial<EventRow>) => ({ ...s, ...next }));
   const [dialog, setDialog] = useState<InputCommand | null>(null);
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const avail = availability(event, actor);
   const run = (payload: CommandPayload) => runCommand(event, payload, setOptimistic);
   const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : null);
@@ -144,6 +147,11 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
             {avail.cancel.state === "available" && (
               <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDialog("cancel")}>
                 <XCircleIcon aria-hidden /> Cancel event
+              </Button>
+            )}
+            {actor.roles.includes("head") && (
+              <Button variant="ghost" size="sm" className="text-destructive" disabled={pending} onClick={() => setDeleting(true)}>
+                <Trash2Icon aria-hidden /> Delete event
               </Button>
             )}
           </div>
@@ -278,6 +286,8 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
 
       <CommandDialog event={event} type={dialog} onClose={() => setDialog(null)} onSubmit={run} />
       {editing && <EditDetailsDialog event={event} onClose={() => setEditing(false)} onSubmit={run} />}
+      {/* The drawer renders the heading as h2, the full page as h1. */}
+      <DeleteEventDialog event={event} open={deleting} inDrawer={headingLevel === "h2"} onClose={() => setDeleting(false)} />
     </div>
   );
 }
