@@ -2,8 +2,11 @@
 --
 -- event_activity stays append-only for everything else. The one exception is
 -- delete_event below, which sets a transaction-local flag so forbid_mutation
--- lets it remove the deleted event's own history. The FK stays
--- `on delete restrict`, so a stray `delete from events` still fails.
+-- lets it remove the deleted event's own history. The flag alone is not
+-- enough: DELETE on event_activity is revoked from service_role, so only
+-- delete_event (security definer, owned by the migration role) can use it.
+-- The FK stays `on delete restrict`, so a stray `delete from events` still
+-- fails.
 
 create or replace function forbid_mutation() returns trigger
 language plpgsql set search_path = '' as $$
@@ -23,7 +26,7 @@ $$;
 -- the version it last saw so an event someone just changed isn't deleted
 -- from a stale screen.
 create function delete_event(p_event_id uuid, p_expected_version integer) returns void
-language plpgsql set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 declare
   cur events;
 begin
@@ -31,7 +34,7 @@ begin
   if not found then
     raise exception 'event_not_found' using errcode = 'PT404';
   end if;
-  if cur.version <> p_expected_version then
+  if p_expected_version is null or cur.version <> p_expected_version then
     raise exception 'version_conflict' using errcode = 'PT409';
   end if;
 
@@ -42,5 +45,6 @@ begin
 end
 $$;
 
+revoke delete, truncate on event_activity from service_role;
 revoke all on function delete_event(uuid, integer) from anon, authenticated, public;
 grant execute on function delete_event(uuid, integer) to service_role;

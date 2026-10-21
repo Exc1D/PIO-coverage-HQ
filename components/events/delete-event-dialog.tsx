@@ -43,17 +43,19 @@ export function DeleteEventDialog({
         toast.error(OFFLINE_MESSAGE);
         return;
       }
-      if (!res.ok) {
+      // Already gone (another tab or person deleted it): same outcome as success.
+      if (!res.ok && res.code !== "not_found") {
         // Close so a conflict shows the reloaded event before anyone retries.
         toast.error(res.message);
         onClose();
         return;
       }
-      toast.success("Event deleted");
+      toast.success(res.ok ? "Event deleted" : "This event was already deleted");
       onClose();
       if (inDrawer) {
+        // Refresh the page underneath once back() has landed on it, not the drawer route.
+        window.addEventListener("popstate", () => router.refresh(), { once: true });
         router.back();
-        router.refresh();
       } else {
         router.replace("/board");
       }

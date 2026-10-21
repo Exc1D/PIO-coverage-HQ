@@ -146,11 +146,12 @@ export async function deleteEventAction(eventId: string, version: number): Promi
 
   const { error } = await db().rpc("delete_event", { p_event_id: eventId, p_expected_version: version });
   if (error) {
+    // not_found: the client navigates away, so don't re-render the missing event.
+    if (error.code === DB_ERRORS.notFound) return { ok: false, code: "not_found", message: "This event no longer exists." };
     refresh();
     if (error.code === DB_ERRORS.conflict) {
       return { ok: false, code: "conflict", message: "Someone else just updated this event. It has been reloaded; please check it before deleting." };
     }
-    if (error.code === DB_ERRORS.notFound) return { ok: false, code: "not_found", message: "This event no longer exists." };
     console.error("delete_event failed", error.code, error.message);
     return { ok: false, code: "error", message: "The event couldn't be deleted. Please try again." };
   }
