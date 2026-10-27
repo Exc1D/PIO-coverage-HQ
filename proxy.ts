@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
 
   if (request.cookies.get(COOKIE)?.value === expected) return NextResponse.next();
 
-  return new NextResponse("Open PIO Coverage HQ with the link shared by the office.", {
+  return new NextResponse("Open PIO Production with the link shared by the office.", {
     status: 401,
     headers: { "content-type": "text/plain; charset=utf-8" },
   });

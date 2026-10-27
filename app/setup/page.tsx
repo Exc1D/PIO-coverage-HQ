@@ -14,7 +14,7 @@ export default function SetupPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 className="text-xl">Set up PIO Coverage HQ</h1>
+            <h1 className="text-xl">Set up PIO Production</h1>
           </CardTitle>
           <CardDescription>
             Create the office head’s account. The head can then add the rest of the team.

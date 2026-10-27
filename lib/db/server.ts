@@ -13,7 +13,7 @@ export function db(): SupabaseClient {
     const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = env();
     client = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-      global: { headers: { "x-client-info": "pio-coverage-hq" } },
+      global: { headers: { "x-client-info": "pio-production" } },
     });
   }
   return client;

@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/app/site-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "PIO Coverage HQ", template: "%s · PIO Coverage HQ" },
+  title: { default: "PIO Production", template: "%s · PIO Production" },
   description: "Coverage tracking for the Provincial Information Office of Camarines Norte.",
   robots: { index: false, follow: false },
 };

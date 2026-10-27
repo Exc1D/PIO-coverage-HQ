@@ -12,7 +12,7 @@ export function SiteHeader() {
       {/* Phones: brand + session on the first row, nav scrolls on its own row. Larger screens: one row. */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 px-4 sm:h-14 sm:flex-nowrap">
         <Link href="/" className="flex h-12 shrink-0 items-center rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring sm:h-auto">
-          PIO Coverage HQ
+          PIO Production
         </Link>
         <div className="order-last -mx-4 w-[calc(100%+2rem)] border-t px-4 py-1.5 sm:order-none sm:mx-0 sm:w-auto sm:flex-1 sm:border-0 sm:p-0">
           {/* usePathname() needs a Suspense boundary on dynamic routes; the fallback is the same nav without the active state. */}
