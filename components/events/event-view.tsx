@@ -4,6 +4,7 @@ import {
   ExternalLinkIcon,
   FolderOpenIcon,
   LockIcon,
+  MessageSquareWarningIcon,
   PencilIcon,
   Trash2Icon,
   Undo2Icon,
@@ -15,7 +16,6 @@ import { formatEventDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import type { CommandPayload } from "@/lib/commands";
 import {
   MUNICIPALITY_LABELS,
@@ -27,10 +27,11 @@ import {
 } from "@/lib/constants";
 import { isStuck } from "@/lib/metrics";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
-import type { EventRow, Staff } from "@/lib/types";
+import type { ActivityRow, CaptionRevision, EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { availability, nextStatus, type CommandType } from "@/lib/workflow";
-import { CommandDialog, type InputCommand } from "./command-dialog";
+import { CaptionPanel } from "./caption-panel";
+import { CommandDialog, INPUT_COMMANDS, type InputCommand } from "./command-dialog";
 import { DeleteEventDialog } from "./delete-event-dialog";
 import { EditDetailsDialog } from "./edit-details-dialog";
 import { useCommandRunner } from "./use-command-runner";
@@ -42,6 +43,10 @@ type Props = {
   today: string;
   requesterHidden: boolean;
   headingLevel: "h1" | "h2";
+  /** Caption versions, newest first (empty when signed out). */
+  captionRevisions: CaptionRevision[];
+  /** The proofreader's open "request changes" note, if any. */
+  captionFeedback: ActivityRow | null;
 };
 
 /** Forward actions, in pipeline order, with the button label to show. */
@@ -55,12 +60,20 @@ const FORWARD: { type: CommandType; label: string }[] = [
   { type: "restore", label: "Restore event" },
 ];
 
-const isInput = (t: CommandType): t is InputCommand =>
-  ["schedule_post", "reschedule_post", "mark_posted", "step_back", "cancel", "restore"].includes(t);
+const isInput = (t: CommandType): t is InputCommand => (INPUT_COMMANDS as readonly CommandType[]).includes(t);
 
 const fmtDateTime = (iso: string) => formatManila(iso, "EEE, MMM d, yyyy · h:mm a");
 
-export function EventView({ event: initial, staff, me, today, requesterHidden, headingLevel }: Props) {
+export function EventView({
+  event: initial,
+  staff,
+  me,
+  today,
+  requesterHidden,
+  headingLevel,
+  captionRevisions,
+  captionFeedback,
+}: Props) {
   const { run: runCommand, pending, actor } = useCommandRunner(staff, me);
   const [event, setOptimistic] = useOptimistic(initial, (s: EventRow, next: Partial<EventRow>) => ({ ...s, ...next }));
   const [dialog, setDialog] = useState<InputCommand | null>(null);
@@ -69,6 +82,7 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
   const avail = availability(event, actor);
   const run = (payload: CommandPayload) => runCommand(event, payload, setOptimistic);
   const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : null);
+  const nameOrSomeone = (id: string | null | undefined) => name(id ?? null) ?? "someone";
   const stuck = isStuck(event, today);
   const Heading = headingLevel;
 
@@ -122,6 +136,11 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
                 );
               })}
             </div>
+          )}
+          {avail.request_caption_changes.state === "available" && (
+            <Button variant="outline" className="h-11" disabled={pending} onClick={() => setDialog("request_caption_changes")}>
+              <MessageSquareWarningIcon aria-hidden /> Request caption changes
+            </Button>
           )}
           {event.status === "in_production" && (
             <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
@@ -224,20 +243,32 @@ export function EventView({ event: initial, staff, me, today, requesterHidden, h
         </dl>
       </section>
 
-      {/* Work links */}
+      {/* Caption */}
+      <section className="grid gap-3" aria-labelledby="caption-h">
+        <h3 id="caption-h" className="text-sm font-semibold">
+          Caption
+        </h3>
+        <CaptionPanel
+          event={event}
+          avail={avail}
+          revisions={captionRevisions}
+          // Hide the note once the writer has marked the caption done again.
+          feedback={event.caption_done ? null : captionFeedback}
+          nameOf={nameOrSomeone}
+          pending={pending}
+          onRun={run}
+        />
+      </section>
+
+      {/* Photos */}
       <section className="grid gap-3" aria-labelledby="work-h">
         <h3 id="work-h" className="text-sm font-semibold">
-          Photos and caption
+          Photos and video
         </h3>
         <DriveLink
           url={event.drive_folder_url}
           canEdit={avail.edit_drive_link.state === "available"}
           onSave={(value) => run({ type: "edit_drive_link", value })}
-        />
-        <CaptionText
-          text={event.caption_text}
-          canEdit={avail.edit_caption_text.state === "available"}
-          onSave={(value) => run({ type: "edit_caption_text", value })}
         />
       </section>
 
@@ -429,43 +460,3 @@ function DriveLink({ url, canEdit, onSave }: { url: string | null; canEdit: bool
     </div>
   );
 }
-
-function CaptionText({ text, canEdit, onSave }: { text: string | null; canEdit: boolean; onSave: (v: string | null) => void }) {
-  const [editing, setEditing] = useState(false);
-  if (editing) {
-    return (
-      <form
-        className="grid gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSave(String(new FormData(e.currentTarget).get("caption") ?? ""));
-          setEditing(false);
-        }}
-      >
-        <Label htmlFor="caption">Caption draft (optional)</Label>
-        <Textarea id="caption" name="caption" defaultValue={text ?? ""} rows={8} maxLength={20000} />
-        <div className="flex gap-2">
-          <Button type="submit" size="sm">Save caption</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
-        </div>
-      </form>
-    );
-  }
-  return (
-    <div className="grid gap-2">
-      {text ? (
-        <blockquote className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-sm">{text}</blockquote>
-      ) : (
-        <span className="text-sm text-muted-foreground">No caption text saved here.</span>
-      )}
-      {canEdit && (
-        <div>
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            {text ? <><PencilIcon aria-hidden /> Edit caption</> : "Add caption text"}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-

@@ -73,7 +73,9 @@ export type Command =
   | { type: "start_production" }
   | { type: "set_photos_done"; value: boolean }
   | { type: "set_caption_done"; value: boolean }
+  | { type: "submit_caption"; value: string }
   | { type: "approve" }
+  | { type: "request_caption_changes"; reason: string }
   | { type: "schedule_post"; scheduledPostAt: Date }
   | { type: "reschedule_post"; scheduledPostAt: Date }
   | { type: "mark_posted"; postLink: string; postedAt?: Date }
@@ -94,7 +96,9 @@ export const COMMAND_TYPES: readonly CommandType[] = [
   "start_production",
   "set_photos_done",
   "set_caption_done",
+  "submit_caption",
   "approve",
+  "request_caption_changes",
   "schedule_post",
   "reschedule_post",
   "mark_posted",
@@ -148,6 +152,7 @@ const isAssignedMedia = (e: WorkflowEvent, a: Actor) =>
   e.photographer_id === a.id || e.videographer_id === a.id;
 const isAssignedEditor = (e: WorkflowEvent, a: Actor) => e.editor_id === a.id;
 const isAssignedWriter = (e: WorkflowEvent, a: Actor) => e.writer_id === a.id;
+const canProofread = (a: Actor) => isHead(a) || hasRole(a, "proofreader");
 
 const label = (s: Status) => STATUS_LABELS[s];
 
@@ -251,13 +256,26 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
           : fail("forbidden", "Only the assigned writer or the head can tick this."),
     ),
 
+  submit_caption: (e, a) =>
+    first(
+      () => inStatus(e, ["scheduled", "covered", "in_production"], "Submitting the caption"),
+      () =>
+        isHead(a) || isAssignedWriter(e, a)
+          ? OK
+          : fail("forbidden", "Only the assigned writer or the head can submit the caption."),
+    ),
+
   approve: (e, a) =>
     first(
       () => inStatus(e, ["for_proofreading"], "Approving"),
+      () => (canProofread(a) ? OK : fail("forbidden", "Only a proofreader or the head can approve.")),
+    ),
+
+  request_caption_changes: (e, a) =>
+    first(
+      () => inStatus(e, ["for_proofreading"], "Requesting caption changes"),
       () =>
-        isHead(a) || hasRole(a, "proofreader")
-          ? OK
-          : fail("forbidden", "Only a proofreader or the head can approve."),
+        canProofread(a) ? OK : fail("forbidden", "Only a proofreader or the head can request caption changes."),
     ),
 
   schedule_post: (e, a) =>
@@ -327,9 +345,10 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
     first(
       () => notCancelled(e, "Editing the caption"),
       () =>
-        isHead(a) || isAssignedWriter(e, a)
+        // Proofreaders fix small mistakes in place while reviewing.
+        isHead(a) || isAssignedWriter(e, a) || (e.status === "for_proofreading" && hasRole(a, "proofreader"))
           ? OK
-          : fail("forbidden", "Only the assigned writer or the head can edit the caption."),
+          : fail("forbidden", "Only the assigned writer, a proofreader during proofreading, or the head can edit the caption."),
     ),
 
   edit_drive_link: (e, a) =>
@@ -397,6 +416,31 @@ function autoAdvance(d: Draft) {
   }
 }
 
+/** Tick or untick a progress box, advancing the event as the rules allow. */
+function tick(d: Draft, field: "photos_done" | "caption_done", value: boolean) {
+  const status = d.next.status;
+  set(d, field, value);
+  d.activity.push({ action: "tick", from_status: status, to_status: status, details: { field, value } });
+  // Ticking a box on a covered event means work has started.
+  if (value && status === "covered") {
+    move(d, "in_production", "auto_advance", { rule: "work_started" });
+  }
+  autoAdvance(d);
+}
+
+function editCaption(d: Draft, value: string | null) {
+  const status = d.next.status;
+  set(d, "caption_text", value);
+  d.activity.push({
+    action: "edit",
+    from_status: status,
+    to_status: status,
+    // Caption bodies can be long; the log records only that it changed. Each
+    // version is kept in caption_revisions instead.
+    details: { changes: { caption_text: { changed: true } } },
+  });
+}
+
 function changed(event: WorkflowEvent, patch: Patch): Record<string, { from: unknown; to: unknown }> {
   const out: Record<string, { from: unknown; to: unknown }> = {};
   for (const key of Object.keys(patch) as Array<keyof WorkflowEvent>) {
@@ -444,18 +488,17 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
     case "set_caption_done": {
       const field = cmd.type === "set_photos_done" ? "photos_done" : "caption_done";
       if (event[field] === cmd.value) return fail("no_change", "Nothing to change.");
-      set(d, field, cmd.value);
-      d.activity.push({
-        action: "tick",
-        from_status: event.status,
-        to_status: event.status,
-        details: { field, value: cmd.value },
-      });
-      // Ticking a box on a covered event means work has started.
-      if (cmd.value && event.status === "covered") {
-        move(d, "in_production", "auto_advance", { rule: "work_started" });
-      }
-      autoAdvance(d);
+      tick(d, field, cmd.value);
+      break;
+    }
+
+    case "submit_caption": {
+      // Save the caption text and tick "Caption done" in one step.
+      const value = cmd.value.trim();
+      if (value === "") return fail("invalid_input", "Write or paste the caption first.");
+      if (value === event.caption_text && event.caption_done) return fail("no_change", "Nothing to change.");
+      if (value !== event.caption_text) editCaption(d, value);
+      if (!event.caption_done) tick(d, "caption_done", true);
       break;
     }
 
@@ -464,6 +507,15 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
       set(d, "approved_by_id", actor.id);
       move(d, "approved", "transition");
       break;
+
+    case "request_caption_changes": {
+      const reason = cleanReason(cmd.reason);
+      if (typeof reason !== "string") return reason;
+      if (!event.proofreader_id) set(d, "proofreader_id", actor.id);
+      set(d, "caption_done", false);
+      move(d, "in_production", "request_changes", { reason });
+      break;
+    }
 
     case "schedule_post":
     case "reschedule_post": {
@@ -601,21 +653,23 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
       break;
     }
 
-    case "edit_caption_text":
-    case "edit_drive_link": {
-      const field = cmd.type === "edit_caption_text" ? "caption_text" : "drive_folder_url";
+    case "edit_caption_text": {
       const value = cmd.value === null || cmd.value.trim() === "" ? null : cmd.value.trim();
-      if (field === "drive_folder_url" && value !== null && !isHttpsUrl(value)) {
-        return fail("invalid_input", "Paste a full https:// link.");
-      }
-      if (event[field] === value) return fail("no_change", "Nothing to change.");
-      set(d, field, value);
+      if (event.caption_text === value) return fail("no_change", "Nothing to change.");
+      editCaption(d, value);
+      break;
+    }
+
+    case "edit_drive_link": {
+      const value = cmd.value === null || cmd.value.trim() === "" ? null : cmd.value.trim();
+      if (value !== null && !isHttpsUrl(value)) return fail("invalid_input", "Paste a full https:// link.");
+      if (event.drive_folder_url === value) return fail("no_change", "Nothing to change.");
+      set(d, "drive_folder_url", value);
       d.activity.push({
         action: "edit",
         from_status: event.status,
         to_status: event.status,
-        // Caption bodies can be long; log only that it changed.
-        details: { changes: { [field]: field === "caption_text" ? { changed: true } : { from: event[field], to: value } } },
+        details: { changes: { drive_folder_url: { from: event.drive_folder_url, to: value } } },
       });
       break;
     }

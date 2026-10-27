@@ -35,8 +35,8 @@ const ROLE_HINTS: Record<Role, string> = {
   photographer: "Takes photos; ticks Photos/Video done",
   videographer: "Takes video; ticks Photos/Video done",
   editor: "Edits and brands photos/video; ticks Photos/Video done",
-  writer: "Drafts captions; ticks Caption done",
-  proofreader: "Approves captions",
+  writer: "Posts captions in the event; marks them done",
+  proofreader: "Reviews, corrects and approves captions",
   page_admin: "Schedules and posts on Facebook",
 };
 

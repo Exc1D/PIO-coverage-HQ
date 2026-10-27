@@ -462,6 +462,10 @@ describe("caption text and Drive link (optional references)", () => {
     });
     err(run(ev(), { type: "edit_drive_link", value: "http://drive.google.com/x" }, photog), "invalid_input");
     ok(run(ev({ drive_folder_url: "https://a.b/c" }), { type: "edit_drive_link", value: null }, photog));
+    expect(ok(run(ev({ drive_folder_url: "https://a.b/c" }), { type: "edit_drive_link", value: "  " }, photog)).patch).toEqual({
+      drive_folder_url: null,
+    });
+    err(run(ev(), { type: "edit_drive_link", value: "" }, photog), "no_change");
   });
   it("permissions and cancelled", () => {
     err(run(ev(), { type: "edit_caption_text", value: "x" }, photog), "forbidden");
@@ -520,4 +524,57 @@ describe("dropCommand (board)", () => {
     err(dropCommand(ev({ status: "approved" }), "for_proofreading", proof) as Result, "forbidden");
   });
   it("rejects jumps", () => err(dropCommand(ev(), "posted", head) as Result, "invalid_input"));
+});
+
+describe("caption review", () => {
+  const prod = ev({ status: "in_production", coverage_confirmed: true, photos_done: true });
+  const fp = ev({ status: "for_proofreading", coverage_confirmed: true, photos_done: true, caption_done: true, caption_text: "Draft" });
+
+  it("writer submits the caption: saves text, ticks done, auto-advances", () => {
+    const r = ok(run(prod, { type: "submit_caption", value: "  Final caption  " }, writer));
+    expect(r.patch).toEqual({ caption_text: "Final caption", caption_done: true, status: "for_proofreading" });
+    expect(r.activity.map((a) => a.action)).toEqual(["edit", "tick", "auto_advance"]);
+    expect(r.activity[0].details).toEqual({ changes: { caption_text: { changed: true } } });
+  });
+  it("submitting on a covered event starts production", () => {
+    const r = ok(run(ev({ status: "covered" }), { type: "submit_caption", value: "Text" }, writer));
+    expect(r.next.status).toBe("in_production");
+    expect(r.activity.map((a) => a.action)).toEqual(["edit", "tick", "auto_advance"]);
+  });
+  it("submitting unchanged text only ticks; changed text on a ticked caption only edits", () => {
+    const a = ok(run({ ...prod, caption_text: "Same" }, { type: "submit_caption", value: "Same" }, writer));
+    expect(a.activity.map((x) => x.action)).toEqual(["tick", "auto_advance"]);
+    const b = ok(run(ev({ status: "scheduled", caption_done: true, caption_text: "Old" }), { type: "submit_caption", value: "New" }, head));
+    expect(b.patch).toEqual({ caption_text: "New" });
+  });
+  it("submit needs text, a change, the writer, and the right stage", () => {
+    err(run(prod, { type: "submit_caption", value: "   " }, writer), "invalid_input");
+    err(run(ev({ status: "scheduled", caption_done: true, caption_text: "x" }), { type: "submit_caption", value: "x" }, writer), "no_change");
+    err(run(prod, { type: "submit_caption", value: "x" }, proof), "forbidden");
+    err(run(fp, { type: "submit_caption", value: "x" }, writer), "wrong_status");
+  });
+
+  it("proofreader corrects the caption only while proofreading", () => {
+    const r = ok(run(fp, { type: "edit_caption_text", value: "Draft, fixed" }, proof));
+    expect(r.patch).toEqual({ caption_text: "Draft, fixed" });
+    expect(r.next.status).toBe("for_proofreading");
+    err(run(prod, { type: "edit_caption_text", value: "x" }, proof), "forbidden");
+    err(run({ ...fp, status: "approved" }, { type: "edit_caption_text", value: "x" }, proof), "forbidden");
+  });
+
+  it("proofreader requests changes: back to production, caption unticked, note logged", () => {
+    const r = ok(run(fp, { type: "request_caption_changes", reason: "  Add the venue  " }, proof));
+    expect(r.patch).toEqual({ proofreader_id: "proof", caption_done: false, status: "in_production" });
+    expect(r.activity).toEqual([
+      { action: "request_changes", from_status: "for_proofreading", to_status: "in_production", details: { reason: "Add the venue" } },
+    ]);
+    // An assigned proofreader is kept.
+    const h = ok(run({ ...fp, proofreader_id: "proof" }, { type: "request_caption_changes", reason: "x" }, head));
+    expect(h.patch.proofreader_id).toBeUndefined();
+  });
+  it("requesting changes needs a reason, a proofreader and the right stage", () => {
+    err(run(fp, { type: "request_caption_changes", reason: " " }, proof), "invalid_input");
+    err(run(fp, { type: "request_caption_changes", reason: "x" }, writer), "forbidden");
+    err(run(prod, { type: "request_caption_changes", reason: "x" }, proof), "wrong_status");
+  });
 });

@@ -48,7 +48,12 @@ export const commandPayloadSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("start_production") }),
   z.object({ type: z.literal("set_photos_done"), value: z.boolean() }),
   z.object({ type: z.literal("set_caption_done"), value: z.boolean() }),
+  z.object({
+    type: z.literal("submit_caption"),
+    value: z.string().trim().min(1, "Write or paste the caption first.").max(20000, "Keep the caption under 20,000 characters."),
+  }),
   z.object({ type: z.literal("approve") }),
+  z.object({ type: z.literal("request_caption_changes"), reason }),
   z.object({ type: z.literal("schedule_post"), scheduledPostAt: manilaLocal }),
   z.object({ type: z.literal("reschedule_post"), scheduledPostAt: manilaLocal }),
   z.object({

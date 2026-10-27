@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
-import { getActivity, getEvent, redactForViewer } from "@/lib/data/events";
+import { openCaptionFeedback } from "@/lib/activity";
+import { getActivity, getCaptionRevisions, getEvent, redactForViewer } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import { manilaDate } from "@/lib/time";
 import { ActivityTimeline } from "./activity-timeline";
@@ -12,7 +13,13 @@ import { EventView } from "./event-view";
 export async function EventDetail({ id, headingLevel }: { id: string; headingLevel: "h1" | "h2" }) {
   if (!z.uuid().safeParse(id).success) notFound();
   const me = await getCurrentStaff();
-  const [event, activity, staff] = await Promise.all([getEvent(id), getActivity(id), listStaff()]);
+  // Caption history is a working tool for staff; viewers see only the current caption.
+  const [event, activity, staff, revisions] = await Promise.all([
+    getEvent(id),
+    getActivity(id),
+    listStaff(),
+    me ? getCaptionRevisions(id) : [],
+  ]);
   if (!event) notFound();
 
   return (
@@ -24,6 +31,8 @@ export async function EventDetail({ id, headingLevel }: { id: string; headingLev
         today={manilaDate(new Date())}
         requesterHidden={me === null && Boolean(event.requested_by || event.contact)}
         headingLevel={headingLevel}
+        captionRevisions={revisions}
+        captionFeedback={me ? openCaptionFeedback(activity) : null}
       />
       <ActivityTimeline activity={activity} staff={staff} />
     </div>

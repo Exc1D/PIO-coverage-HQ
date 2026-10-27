@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { db } from "@/lib/db/server";
 import { addDays } from "@/lib/time";
-import type { ActivityRow, EventRow } from "@/lib/types";
+import type { ActivityRow, CaptionRevision, EventRow } from "@/lib/types";
 
 /** How far back the board loads finished (posted/cancelled) events. */
 const BOARD_HISTORY_DAYS = 90;
@@ -55,6 +55,23 @@ export async function getActivity(eventId: string): Promise<ActivityRow[]> {
     .order("id", { ascending: false });
   if (error) throw new Error(`Could not load the activity log: ${error.message}`);
   return data as ActivityRow[];
+}
+
+/** How many caption versions the event page shows. */
+const CAPTION_HISTORY_LIMIT = 20;
+
+/** Saved versions of an event's caption, newest first. */
+export async function getCaptionRevisions(eventId: string): Promise<CaptionRevision[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("caption_revisions")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(CAPTION_HISTORY_LIMIT);
+  if (error) throw new Error(`Could not load the caption history: ${error.message}`);
+  return data as CaptionRevision[];
 }
 
 type Range = { start: Date; end: Date; startDate: string; endDate: string };

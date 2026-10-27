@@ -49,6 +49,8 @@ export function describeActivity(a: ActivityRow, nameOf: (id: string | null | un
       const keys = Object.keys((d.changes as Record<string, unknown>) ?? {});
       return `Edited ${keys.map((k) => FIELD_LABELS[k] ?? k).join(", ") || "details"}`;
     }
+    case "request_changes":
+      return `Requested caption changes; moved back to ${s(a.to_status)}`;
     case "step_back":
       return `Moved back to ${s(a.to_status)}`;
     case "cancel":
@@ -64,4 +66,17 @@ export function describeActivity(a: ActivityRow, nameOf: (id: string | null | un
 export function activityReason(a: ActivityRow): string | null {
   const r = a.details?.reason;
   return typeof r === "string" && r.length > 0 ? r : null;
+}
+
+/**
+ * The proofreader's caption feedback still waiting on the writer: the latest
+ * "request changes" entry, unless "Caption done" was ticked again after it.
+ * `activity` is newest first, as getActivity returns it.
+ */
+export function openCaptionFeedback(activity: readonly ActivityRow[]): ActivityRow | null {
+  for (const a of activity) {
+    if (a.action === "request_changes") return a;
+    if (a.action === "tick" && a.details?.field === "caption_done" && a.details.value === true) return null;
+  }
+  return null;
 }

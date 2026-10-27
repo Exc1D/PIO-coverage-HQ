@@ -18,7 +18,7 @@ All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. T
 |---|---|---|
 | **Dashboard** `/` | everyone | This week / This month / custom range. Posts published and events covered (vs the previous period), in the pipeline now, stuck, posts by source, work by person, pipeline now, and the Needs assignment, Stuck and Next 7 days lists. Every chart has a "Show as table" view. |
 | **Board** `/board` | everyone; changes need a PIN | One column per status. Drag a card by its handle one step forward, or one step back (head, with a reason). Illegal drops snap back with the reason. Tick Photos/Video and Caption on the card. Filters (source, municipality, person, dates, cancelled) live in the URL. |
-| **Event** (drawer or `/events/<id>`) | everyone; changes need a PIN | All details, the actions you're allowed to take (with the reason when one is blocked), team assignment, Drive link, caption text, posting details, and the full activity timeline. |
+| **Event** (drawer or `/events/<id>`) | everyone; changes need a PIN | All details, the actions you're allowed to take (with the reason when one is blocked), team assignment, the caption (see [Caption review](#caption-review)), Drive link, posting details, and the full activity timeline. |
 | **Calendar** `/calendar` | everyone | Month grid of **Events** (by event date) or **Published** posts (by posting date), coloured by source. Hover a chip for details on a computer; tap a day on a phone. Click an event to open it. |
 | **Assign** `/needs-assignment` | head assigns; others view | Requested or scheduled events in the next 14 days missing a writer or photo/video. Pick people inline; each option shows how many other events that person has that day. |
 | **Reports** `/reports` | everyone | Monthly or weekly. Posted events grouped by source with subtotals, a per-person table (written / proofread / photographed / videographed), **CSV downloads**, and an **A4 print layout** with "Prepared by / Noted by" lines. |
@@ -188,12 +188,25 @@ Do **not** run `pnpm seed` against production; it creates staff with a shared PI
 | covered → in_production | assigned team or head; also automatic when either checkbox is ticked | — |
 | in_production → for_proofreading | **automatic** | **Photos/Video done** (photographer/videographer or head) and **Caption done** (writer or head), whichever is ticked last |
 | for_proofreading → approved | proofreader or head | becomes the proofreader if none was assigned |
+| for_proofreading → in_production (**request caption changes**) | proofreader or head | a note for the writer; unticks Caption done |
 | approved → scheduled_for_posting | page admin or head | posting date and time |
 | scheduled_for_posting → posted | page admin or head | a facebook.com or fb.watch post link; posted time defaults to now |
 
-Only the head assigns people and edits event details. The Drive folder link and caption text are optional references; no rule requires them. **Every** change is written to the append-only `event_activity` log.
+Only the head assigns people and edits event details. The Drive folder link and caption text are optional references; no rule requires them (but see [Caption review](#caption-review)). **Every** change is written to the append-only `event_activity` log.
 
 **Concurrent edits:** if two people change the same event at once, the second gets "Someone else just updated this event" and sees the fresh version, so nobody overwrites anyone. On the board, changes appear immediately and roll back if the server refuses them or the connection drops.
+
+## Caption review
+
+Writers post the caption in the event itself, so the proofreader reviews exactly what will go on the page instead of hunting for it in chat.
+
+- **Writer:** *Post caption* on the event. *Save draft* keeps working on it; *Save and mark Caption done* saves and ticks Caption done in one step (the event moves to For proofreading once Photos/Video is done too).
+- **Proofreader:** reads the caption on the event, with a word and character count and a **Copy** button. Two ways to respond:
+  - *Correct caption*: fix small mistakes in place (allowed for any proofreader while the event is For proofreading), then approve.
+  - *Request caption changes*: send it back with a note. The event returns to In production with Caption done unticked, and the writer sees the note above the caption until they mark it done again.
+- **What changed:** every saved version is kept in `caption_revisions`, with its author. Signed-in staff can compare the current caption with any earlier version, word by word (additions in green, removals struck through). The proofreader sees exactly what the writer fixed, and the writer sees the proofreader's corrections.
+
+The activity log records each caption edit and request (with the note), but not the caption text itself; the text lives in `caption_revisions`, which is removed along with its event.
 
 ## Reporting definitions
 
@@ -214,6 +227,7 @@ app/@drawer/         intercepted /events/[id] → side drawer over the current p
 components/          UI by area (board, events, dashboard, calendar, assign, reports, admin, ui = shadcn)
 lib/workflow.ts      transition rules (pure, 100% tested)
 lib/metrics.ts       reporting definitions (pure, 100% tested)
+lib/text-diff.ts     word diff for comparing caption versions
 lib/commands.ts      zod schema for event commands (server); lib/command-preview.ts for the browser
 lib/data/            database reads (server only)
 lib/auth/            PIN hashing, sessions, lockout

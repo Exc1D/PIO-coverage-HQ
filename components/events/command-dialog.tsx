@@ -22,7 +22,7 @@ import { previousStatus, type CommandType } from "@/lib/workflow";
 /** Commands that need extra input before they can run. */
 export type InputCommand = Extract<
   CommandType,
-  "schedule_post" | "reschedule_post" | "mark_posted" | "step_back" | "cancel" | "restore"
+  "schedule_post" | "reschedule_post" | "mark_posted" | "step_back" | "cancel" | "restore" | "request_caption_changes"
 >;
 
 export const INPUT_COMMANDS: readonly InputCommand[] = [
@@ -32,6 +32,7 @@ export const INPUT_COMMANDS: readonly InputCommand[] = [
   "step_back",
   "cancel",
   "restore",
+  "request_caption_changes",
 ];
 
 const manilaLocalNow = () => formatManila(new Date(), "yyyy-MM-dd'T'HH:mm");
@@ -50,6 +51,7 @@ const TITLES: Record<InputCommand, string> = {
   step_back: "Move back one step",
   cancel: "Cancel this event",
   restore: "Restore this event",
+  request_caption_changes: "Request caption changes",
 };
 
 const SUBMIT: Record<InputCommand, string> = {
@@ -59,6 +61,7 @@ const SUBMIT: Record<InputCommand, string> = {
   step_back: "Move back",
   cancel: "Cancel event",
   restore: "Restore",
+  request_caption_changes: "Send back to writer",
 };
 
 export function CommandDialog({
@@ -172,6 +175,26 @@ export function CommandDialog({
                   </label>
                 ))}
               </fieldset>
+            )}
+
+            {type === "request_caption_changes" && (
+              <p className="text-sm text-muted-foreground">
+                Moves the event back to <strong>In production</strong> and unticks <strong>Caption done</strong>. The
+                writer sees your note above the caption. For small typos, use <strong>Correct caption</strong> instead.
+              </p>
+            )}
+            {type === "request_caption_changes" && (
+              <div className="grid gap-2">
+                <Label htmlFor={`${id}-reason`}>What needs changing</Label>
+                <Textarea
+                  id={`${id}-reason`}
+                  name="reason"
+                  required
+                  maxLength={500}
+                  rows={4}
+                  placeholder="e.g. Use the governor's full title in the first line; confirm the barangay name"
+                />
+              </div>
             )}
 
             {(type === "step_back" || type === "cancel" || type === "restore") && (

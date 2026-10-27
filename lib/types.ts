@@ -54,3 +54,12 @@ export type ActivityRow = {
   details: Record<string, unknown>;
   created_at: string;
 };
+
+/** One saved version of an event's caption (newest first when listed). */
+export type CaptionRevision = {
+  id: number;
+  event_id: string;
+  author_id: string | null;
+  body: string | null;
+  created_at: string;
+};
