@@ -4,14 +4,17 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
+  /* iOS "grouped" canvas: the page sits on light grey, cards and bars are white. */
+  --canvas: oklch(0.968 0.003 286);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* System-style blue (#0071e3): white text on it passes WCAG AA. */
+  --primary: oklch(0.556 0.204 256.9);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -22,7 +25,15 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.556 0.204 256.9);
+
+  /* Motion: iOS-like curves. --ease-ios is the sheet/push curve (fast start, long settle);
+     --ease-spring overshoots slightly, for things that "land". */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --duration-sheet: 480ms;
+  --duration-push: 420ms;
+  --duration-fade: 200ms;
 
   /* Event source colors (keep in sync with lib/constants.ts) */
   --source-provincial-government: #1d4ed8;
@@ -33,6 +44,7 @@
 
 @theme inline {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-canvas: var(--canvas);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -62,7 +74,244 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-canvas text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* iOS Safari zooms the page into any field under 16px when it's focused. Keep fields at
+   16px on phones; unlayered so it wins over the text-sm on individual fields. */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Sheets and dialogs. Phones get a bottom sheet that slides up; larger screens get
+   a centred dialog that settles in from slightly larger, and a side panel.
+   --------------------------------------------------------------------------- */
+@keyframes ios-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ios-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ios-sheet-in {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+@keyframes ios-sheet-out {
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+@keyframes ios-panel-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+@keyframes ios-panel-out {
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+@keyframes ios-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+@keyframes ios-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.ios-overlay[data-state="open"] {
+  animation: ios-fade-in var(--duration-sheet) var(--ease-ios) both;
+}
+.ios-overlay[data-state="closed"] {
+  animation: ios-fade-out 280ms var(--ease-ios) both;
+}
+
+.ios-sheet[data-state="open"] {
+  animation: ios-sheet-in var(--duration-sheet) var(--ease-ios) both;
+}
+.ios-sheet[data-state="closed"] {
+  animation: ios-sheet-out 300ms var(--ease-ios) both;
+}
+@media (min-width: 640px) {
+  .ios-dialog[data-state="open"] {
+    animation: ios-pop-in 320ms var(--ease-ios) both;
+  }
+  .ios-dialog[data-state="closed"] {
+    animation: ios-pop-out 180ms ease-in both;
+  }
+  .ios-sheet.ios-sheet-auto[data-state="open"] {
+    animation-name: ios-panel-in;
+  }
+  .ios-sheet.ios-sheet-auto[data-state="closed"] {
+    animation-name: ios-panel-out;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Page transitions (React <ViewTransition> in the root layout).
+   tab-switch: a quick crossfade, like switching tabs in an iOS tab bar.
+   nav-forward / nav-back: the navigation-controller push and pop: the new page slides
+   in from the right while the old one drifts left under a dimming shade.
+   --------------------------------------------------------------------------- */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(site-header),
+::view-transition-group(tab-bar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header),
+::view-transition-old(tab-bar) {
+  display: none;
+}
+::view-transition-new(site-header),
+::view-transition-new(tab-bar) {
+  animation: none;
+}
+
+::view-transition-group(.push),
+::view-transition-group(.pop) {
+  animation-duration: var(--duration-push);
+  animation-timing-function: var(--ease-ios);
+}
+::view-transition-old(.tab-fade) {
+  animation: ios-fade-out 120ms ease-out both;
+}
+::view-transition-new(.tab-fade) {
+  animation: ios-fade-in var(--duration-fade) ease-out 60ms both;
+}
+
+@keyframes ios-push-in {
+  from {
+    transform: translateX(100%);
+    box-shadow: -8px 0 24px rgb(0 0 0 / 0);
+  }
+  to {
+    box-shadow: -8px 0 24px rgb(0 0 0 / 0.08);
+  }
+}
+@keyframes ios-push-out {
+  to {
+    transform: translateX(-30%);
+    filter: brightness(0.92);
+  }
+}
+@keyframes ios-pop-back-in {
+  from {
+    transform: translateX(-30%);
+    filter: brightness(0.92);
+  }
+}
+@keyframes ios-pop-back-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+::view-transition-old(.push) {
+  animation: ios-push-out var(--duration-push) var(--ease-ios) both;
+}
+::view-transition-new(.push) {
+  animation: ios-push-in var(--duration-push) var(--ease-ios) both;
+}
+::view-transition-old(.pop) {
+  animation: ios-pop-back-out var(--duration-push) var(--ease-ios) both;
+  z-index: 1;
+}
+::view-transition-new(.pop) {
+  animation: ios-pop-back-in var(--duration-push) var(--ease-ios) both;
+}
+
+/* Peek (components/app/peek.tsx). Holding a link presses it in slowly, the way iOS
+   signals that a long press is building; the preview then springs up from slightly small. */
+/* Lists the colour transitions too: this unlayered rule replaces the trigger's own transition-colors. */
+[data-peek] {
+  transition:
+    transform 200ms var(--ease-ios),
+    color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+[data-peek][data-pressing] {
+  transform: scale(0.96);
+  transition-duration: 450ms;
+}
+@media (hover: none) {
+  /* No text selection or system link callout competing with the long press. */
+  [data-peek] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+@keyframes ios-peek-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+}
+.ios-peek[data-state="open"] {
+  animation: ios-peek-in 420ms var(--ease-spring) both;
+}
+.ios-peek[data-state="closed"] {
+  animation: ios-pop-out 160ms ease-in both;
+}
+
+/* A card picked up on the board lifts off the column. */
+@keyframes ios-lift {
+  from {
+    transform: scale(1) rotate(0);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  }
+}
+.ios-lift {
+  animation: ios-lift 220ms var(--ease-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+  /* Sheets and dialogs still fade, but don't travel. */
+  .ios-sheet[data-state],
+  .ios-dialog[data-state],
+  .ios-peek[data-state] {
+    animation-name: ios-fade-in !important;
+    animation-duration: 150ms !important;
+  }
+  .ios-sheet[data-state="closed"],
+  .ios-dialog[data-state="closed"],
+  .ios-peek[data-state="closed"] {
+    animation-name: ios-fade-out !important;
+  }
+  .ios-lift {
+    animation: none;
+  }
+  [data-peek][data-pressing] {
+    transform: none;
   }
 }
 

@@ -11,7 +11,7 @@ export default function RequestPage() {
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-8">
       <p className="text-sm font-medium text-muted-foreground">Provincial Information Office · Camarines Norte</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">Request event coverage</h1>
+      <h1 className="mt-1 text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Request event coverage</h1>
       <p className="mt-2 mb-6 text-sm text-muted-foreground">
         Tell us about the event you’d like the PIO to cover. All fields are required except the start time and notes.
         Sending a request doesn’t guarantee coverage; we’ll get in touch.

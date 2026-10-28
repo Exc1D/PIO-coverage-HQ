@@ -88,7 +88,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
     <div className="grid gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">HQ Dashboard</h1>
+          <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">HQ Dashboard</h1>
           <p className="text-sm text-muted-foreground">{period.label} · Asia/Manila</p>
         </div>
         <PeriodSwitcher period={period} />
@@ -155,6 +155,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           title="Needs assignment"
           description="Next 14 days, missing a writer or photo/video"
           events={needs}
+          staff={staff}
           empty="Everyone is assigned for the next 14 days."
           meta={(e) => (
             <span className="font-medium text-amber-800">
@@ -167,6 +168,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           title="Stuck"
           description="Past the posting target and not yet posted"
           events={stuck}
+          staff={staff}
           empty="Nothing is overdue."
           meta={(e) => (
             <>
@@ -179,6 +181,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           title="Next 7 days"
           description="Coming up, today onwards"
           events={next7}
+          staff={staff}
           empty="No events in the next 7 days."
           meta={(e) => <StatusBadge status={e.status} />}
         />

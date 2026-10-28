@@ -12,7 +12,7 @@ import { listEventsByDate, listPostedBetween } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import { addDays, formatManila, manilaDate, manilaStartOfDay } from "@/lib/time";
 import type { EventRow, Staff } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { segmentedItem, segmentedList } from "@/components/app/segmented";
 
 export const metadata: Metadata = { title: "Calendar" };
 
@@ -77,13 +77,13 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
     <div className="grid gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
+          <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Calendar</h1>
           <p className="text-sm text-muted-foreground">
             {view === "events" ? "Events by event date" : "Facebook posts by the date they were published"} ·{" "}
             {inMonth} in {formatManila(manilaStartOfDay(`${month}-01`), "MMMM")}
           </p>
         </div>
-        <nav aria-label="Calendar type" className="inline-flex rounded-lg bg-muted p-1">
+        <nav aria-label="Calendar type" className={segmentedList}>
           {(
             [
               ["events", "Events"],
@@ -93,11 +93,9 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
             <Link
               key={v}
               href={href(v, month)}
+              transitionTypes={["tab-switch"]}
               aria-current={view === v ? "page" : undefined}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                view === v && "bg-background font-medium text-foreground shadow-xs",
-              )}
+              className={segmentedItem(view === v)}
             >
               {label}
             </Link>
@@ -107,22 +105,24 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
-          <Button asChild variant="ghost" size="icon" aria-label="Previous month">
-            <Link href={href(view, shiftMonth(month, -1))}>
+          <Button asChild variant="ghost" size="icon" aria-label="Previous month" className="text-primary hover:text-primary">
+            <Link href={href(view, shiftMonth(month, -1))} transitionTypes={["tab-switch"]}>
               <ChevronLeftIcon />
             </Link>
           </Button>
           <h2 className="min-w-36 text-center text-lg font-semibold">
             {formatManila(manilaStartOfDay(`${month}-01`), "MMMM yyyy")}
           </h2>
-          <Button asChild variant="ghost" size="icon" aria-label="Next month">
-            <Link href={href(view, shiftMonth(month, 1))}>
+          <Button asChild variant="ghost" size="icon" aria-label="Next month" className="text-primary hover:text-primary">
+            <Link href={href(view, shiftMonth(month, 1))} transitionTypes={["tab-switch"]}>
               <ChevronRightIcon />
             </Link>
           </Button>
           {month !== monthOf(today) && (
             <Button asChild variant="outline" size="sm" className="ml-1">
-              <Link href={href(view, monthOf(today))}>Today</Link>
+              <Link href={href(view, monthOf(today))} transitionTypes={["tab-switch"]}>
+                Today
+              </Link>
             </Button>
           )}
         </div>

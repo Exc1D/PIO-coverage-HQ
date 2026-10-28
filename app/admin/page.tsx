@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Staff admin" };
 export default function AdminPage() {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Staff</h1>
+      <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Staff</h1>
       <p className="mb-4 text-sm text-muted-foreground">
         Add people, set their roles, reset PINs, deactivate leavers and restore deleted events. Head only.
       </p>

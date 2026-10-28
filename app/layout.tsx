@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import { HideOnPublic } from "@/components/app/hide-on-public";
+import { TabBar } from "@/components/app/main-nav";
 import { SiteHeader } from "@/components/app/site-header";
 import "./globals.css";
 
@@ -15,6 +16,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Lets the translucent header and tab bar run under the notch and home indicator.
+  viewportFit: "cover",
   themeColor: "#ffffff",
 };
 
@@ -34,9 +37,16 @@ export default function RootLayout({ children, drawer }: LayoutProps<"/">) {
             <SiteHeader />
           </HideOnPublic>
         </Suspense>
-        <div id="main" className="flex flex-1 flex-col">
-          {children}
-        </div>
+        {/* Navigations tagged with a transition type animate the page (styles in globals.css);
+            untagged updates such as router.refresh() after a change don't. */}
+        <ViewTransition
+          update={{ "tab-switch": "tab-fade", "nav-forward": "push", "nav-back": "pop", default: "none" }}
+          default="none"
+        >
+          <div id="main" className="flex flex-1 flex-col">
+            {children}
+          </div>
+        </ViewTransition>
         <Suspense fallback={null}>
           <HideOnPublic>
             <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden">
@@ -46,6 +56,11 @@ export default function RootLayout({ children, drawer }: LayoutProps<"/">) {
               </Link>{" "}
               (share this link with LGUs and organisers)
             </footer>
+          </HideOnPublic>
+        </Suspense>
+        <Suspense fallback={<TabBar static />}>
+          <HideOnPublic>
+            <TabBar />
           </HideOnPublic>
         </Suspense>
         {drawer}

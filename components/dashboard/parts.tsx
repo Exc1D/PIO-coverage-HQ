@@ -1,10 +1,12 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon, MinusIcon } from "lucide-react";
 import Link from "next/link";
 import { SourceChip } from "@/components/app/labels";
+import { Peek } from "@/components/app/peek";
+import { EventPeek } from "@/components/events/event-peek";
 import { formatEventDate } from "@/lib/format";
 import { STATUS_LABELS } from "@/lib/constants";
 import type { PipelineStatus } from "@/lib/metrics";
-import type { EventRow } from "@/lib/types";
+import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BAR_COLOR } from "@/lib/chart-colors";
 
@@ -154,14 +156,18 @@ export function EventList({
   empty,
   meta,
   href,
+  staff,
 }: {
   title: string;
   description: string;
   events: EventRow[];
+  /** For the peek's team list. */
+  staff: Staff[];
   empty: string;
   meta: (e: EventRow) => React.ReactNode;
   href?: { label: string; to: string };
 }) {
+  const staffById = new Map(staff.map((s) => [s.id, s]));
   return (
     <section className="flex flex-col rounded-xl border bg-card" aria-label={title}>
       <header className="flex items-baseline justify-between gap-2 border-b px-4 py-3">
@@ -183,19 +189,21 @@ export function EventList({
         <ul className="divide-y">
           {events.slice(0, 8).map((e) => (
             <li key={e.id}>
-              <Link
-                href={`/events/${e.id}`}
-                // Many links; prefetching each would pull the drawer's code into the dashboard load.
-                prefetch={false}
-                className="grid gap-1 px-4 py-2.5 hover:bg-accent/60 focus-visible:bg-accent focus-visible:outline-none"
-              >
-                <span className="line-clamp-1 text-sm font-medium">{e.title}</span>
-                <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  {formatEventDate(e)}
-                  <SourceChip source={e.source} short />
-                  {meta(e)}
-                </span>
-              </Link>
+              <Peek href={`/events/${e.id}`} label={e.title} preview={<EventPeek event={e} staffById={staffById} />}>
+                <Link
+                  href={`/events/${e.id}`}
+                  // Many links; prefetching each would pull the drawer's code into the dashboard load.
+                  prefetch={false}
+                  className="grid gap-1 px-4 py-2.5 transition-colors duration-150 hover:bg-accent/60 focus-visible:bg-accent focus-visible:outline-none active:bg-accent active:duration-0"
+                >
+                  <span className="line-clamp-1 text-sm font-medium">{e.title}</span>
+                  <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    {formatEventDate(e)}
+                    <SourceChip source={e.source} short />
+                    {meta(e)}
+                  </span>
+                </Link>
+              </Peek>
             </li>
           ))}
           {events.length > 8 && <li className="px-4 py-2 text-xs text-muted-foreground">and {events.length - 8} more</li>}

@@ -2,11 +2,9 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import {
-  CalendarIcon,
   CameraIcon,
   CheckCircle2Icon,
   GripVerticalIcon,
-  MapPinIcon,
   PenLineIcon,
   ScissorsIcon,
   SpellCheckIcon,
@@ -15,13 +13,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { Fragment } from "react";
-import { OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { OverdueFlag, SourceChip } from "@/components/app/labels";
+import { Peek } from "@/components/app/peek";
+import { EventPeek, slotStaff } from "@/components/events/event-peek";
 import { MUNICIPALITY_LABELS, SLOT_LABELS, SLOTS, SOURCE_COLORS, type Slot } from "@/lib/constants";
 import { isStuck } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
-import { formatManila, manilaStartOfDay } from "@/lib/time";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { availability, type Actor } from "@/lib/workflow";
@@ -52,12 +49,6 @@ const SLOT_TONE: Partial<Record<Slot, string>> = {
 };
 const FALLBACK_TONE = "bg-muted text-foreground ring-border";
 
-function slotStaff(event: EventRow, slot: Slot, staffById: Map<string, Staff>): Staff | "unknown" | null {
-  const id = event[`${slot}_id`];
-  if (!id) return null;
-  return staffById.get(id) ?? "unknown";
-}
-
 function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; staffById: Map<string, Staff> }) {
   const person = slotStaff(event, slot, staffById);
   if (!person) return null;
@@ -76,63 +67,6 @@ function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; sta
       <span className="sr-only">{label}: </span>
       <span className="truncate">{name}</span>
     </span>
-  );
-}
-
-/** The hover peek: everything a head usually opens the event for, without leaving the board. */
-function EventPeek({ event, staffById }: { event: EventRow; staffById: Map<string, Staff> }) {
-  const place = [event.venue, event.municipality && MUNICIPALITY_LABELS[event.municipality]].filter(Boolean).join(", ");
-  return (
-    <div className="grid gap-3 text-xs">
-      <div className="grid gap-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold leading-snug">{event.title}</p>
-          <StatusBadge status={event.status} className="shrink-0" />
-        </div>
-        <p className="flex items-center gap-1.5 text-muted-foreground">
-          <CalendarIcon className="size-3.5 shrink-0" aria-hidden />
-          {formatEventDate(event)}
-        </p>
-        {place && (
-          <p className="flex items-center gap-1.5 text-muted-foreground">
-            <MapPinIcon className="size-3.5 shrink-0" aria-hidden />
-            {place}
-          </p>
-        )}
-        {(event.requested_by || event.contact) && (
-          <p className="flex items-center gap-1.5 text-muted-foreground">
-            <UserIcon className="size-3.5 shrink-0" aria-hidden />
-            {[event.requested_by && `Requested by ${event.requested_by}`, event.contact].filter(Boolean).join(" · ")}
-          </p>
-        )}
-      </div>
-
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t pt-2">
-        {SLOTS.map((slot) => {
-          const person = slotStaff(event, slot, staffById);
-          return (
-            <Fragment key={slot}>
-              <dt className="text-muted-foreground">{SLOT_LABELS[slot]}</dt>
-              <dd className={cn("min-w-0 truncate", !person && "text-muted-foreground italic")}>
-                {person === "unknown" ? "Unknown" : (person?.full_name ?? "Unassigned")}
-              </dd>
-            </Fragment>
-          );
-        })}
-      </dl>
-
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-2">
-        <span className={event.photos_done ? "text-green-700" : "text-muted-foreground"}>
-          {event.photos_done ? "✓" : "○"} Photos/Video
-        </span>
-        <span className={event.caption_done ? "text-green-700" : "text-muted-foreground"}>
-          {event.caption_done ? "✓" : "○"} Caption
-        </span>
-        <span className="text-muted-foreground">Due {formatManila(manilaStartOfDay(event.due_date), "MMM d")}</span>
-      </div>
-
-      {event.notes && <p className="line-clamp-4 whitespace-pre-line border-t pt-2 text-muted-foreground">{event.notes}</p>}
-    </div>
   );
 }
 
@@ -170,10 +104,11 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
     <article
       ref={setNodeRef}
       className={cn(
-        "group relative rounded-lg border border-l-4 bg-card p-3 shadow-xs transition-[box-shadow,transform] hover:-translate-y-px hover:shadow-md",
+        "group relative rounded-xl border border-l-4 bg-card p-3 shadow-xs transition-[box-shadow,transform,opacity] duration-200 ease-[var(--ease-ios)] hover:-translate-y-px hover:shadow-md",
         stuck && "border-red-300",
-        isDragging && "opacity-40",
-        overlay && "rotate-1 shadow-lg ring-2 ring-ring",
+        isDragging && "scale-[0.98] opacity-40",
+        // Picked up: lifts off the column with a little spring (globals.css).
+        overlay && "ios-lift rotate-[1.5deg] scale-[1.03] cursor-grabbing shadow-2xl ring-1 ring-black/5",
       )}
       // Left stripe in the source colour; the source chip below carries the same information as text.
       style={{ borderLeftColor: event.source ? SOURCE_COLORS[event.source] : undefined }}
@@ -184,19 +119,14 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
           {overlay ? (
             <span className="line-clamp-2 text-sm font-semibold leading-snug">{event.title}</span>
           ) : (
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <Link
-                  href={`/events/${event.id}`}
-                  className="line-clamp-2 rounded-sm text-sm font-semibold leading-snug hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {event.title}
-                </Link>
-              </HoverCardTrigger>
-              <HoverCardContent side="right" align="start" className="w-72">
-                <EventPeek event={event} staffById={staffById} />
-              </HoverCardContent>
-            </HoverCard>
+            <Peek href={`/events/${event.id}`} label={event.title} preview={<EventPeek event={event} staffById={staffById} />}>
+              <Link
+                href={`/events/${event.id}`}
+                className="line-clamp-2 rounded-sm text-sm font-semibold leading-snug hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {event.title}
+              </Link>
+            </Peek>
           )}
           <p className="mt-0.5 text-xs text-muted-foreground">
             {formatEventDate(event)}

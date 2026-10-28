@@ -12,6 +12,7 @@ import { nextPeriod, previousPeriod, type Period } from "@/lib/metrics";
 import { reportPeriod } from "@/lib/period-params";
 import { formatManila, manilaDate } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { segmentedItem, segmentedList } from "@/components/app/segmented";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -58,7 +59,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
 
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+          <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Reports</h1>
           <p className="text-sm text-muted-foreground">Posted events and who did the work, by week or month.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -78,16 +79,14 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
 
       {/* Period picker */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 print:hidden">
-        <nav aria-label="Report type" className="inline-flex rounded-lg bg-muted p-1">
+        <nav aria-label="Report type" className={segmentedList}>
           {(["month", "week"] as const).map((k) => (
             <Link
               key={k}
               href={`/reports?${switchTo(k)}`}
+              transitionTypes={["tab-switch"]}
               aria-current={period.kind === k ? "page" : undefined}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                period.kind === k && "bg-background font-medium text-foreground shadow-xs",
-              )}
+              className={segmentedItem(period.kind === k)}
             >
               {k === "month" ? "Monthly" : "Weekly"}
             </Link>
