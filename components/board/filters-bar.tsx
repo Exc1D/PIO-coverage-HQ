@@ -2,6 +2,7 @@
 
 import { FilterIcon, XIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MUNICIPALITIES, MUNICIPALITY_LABELS, SOURCES, SOURCE_LABELS } from "@/lib/constants";
@@ -23,9 +24,12 @@ function setParam(key: string, value: string | null) {
 export function FiltersBar({ staff }: { staff: Staff[] }) {
   const f = readFilters(new URLSearchParams(useSearchParams()));
   const active = hasFilters(f);
+  // Opens by itself when the page loads filtered; after that only the person opens or
+  // closes it, so clearing the last filter doesn't fold the panel away mid-edit.
+  const [open, setOpen] = useState(active);
 
   return (
-    <details className="group rounded-lg border bg-card" open={active || undefined}>
+    <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <FilterIcon className="size-4" aria-hidden />
         Filters
@@ -69,7 +73,7 @@ export function FiltersBar({ staff }: { staff: Staff[] }) {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="f-from">Event date from</Label>
-          <input id="f-from" type="date" className={field} value={f.from ?? ""} onChange={(e) => setParam("from", e.target.value || null)} />
+          <input id="f-from" type="date" className={field} value={f.from ?? ""} max={f.to ?? undefined} onChange={(e) => setParam("from", e.target.value || null)} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="f-to">to</Label>

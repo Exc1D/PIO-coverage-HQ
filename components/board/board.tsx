@@ -5,10 +5,13 @@ import {
   DragOverlay,
   KeyboardSensor,
   MouseSensor,
+  pointerWithin,
+  rectIntersection,
   TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -35,6 +38,19 @@ type Props = {
 };
 
 type Patch = { id: string; next: Partial<EventRow> };
+
+// The drop target is the column under the pointer. dnd-kit's default picks the
+// column the dragged card overlaps most, and since the handle sits at the card's
+// right edge, the card hangs over columns that are scrolled out of view (on a
+// phone, a one-step move landed two columns away). Keyboard drags have no
+// pointer, so they keep the default.
+const collisionDetection: CollisionDetection = (args) =>
+  args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
+
+// The default edge scroll (20% edge zone, up to ~2000px/s) races past the
+// neighbouring column before the finger can stop. Slower and narrower, the next
+// column has time to arrive under the pointer.
+const AUTO_SCROLL = { acceleration: 2, threshold: { x: 0.15, y: 0.2 } };
 
 export function Board({ events, staff, me, today }: Props) {
   const filters = readFilters(new URLSearchParams(useSearchParams()));
@@ -85,6 +101,8 @@ export function Board({ events, staff, me, today }: Props) {
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
+      collisionDetection={collisionDetection}
+      autoScroll={AUTO_SCROLL}
       accessibility={{
         announcements: {
           onDragStart: ({ active }) => `Picked up ${titleOf(optimistic, active.id)}.`,
@@ -96,7 +114,13 @@ export function Board({ events, staff, me, today }: Props) {
         },
       }}
     >
-      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 md:snap-none" role="list" aria-label="Pipeline columns">
+      <div
+        // Snapping is off while dragging: with mandatory snap, each small auto-scroll step
+        // jumps a whole column, so the board flew to the first or last column.
+        className={cn("-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:snap-none", active ? "snap-none" : "snap-mandatory")}
+        role="list"
+        aria-label="Pipeline columns"
+      >
         {columns.map((status) => {
           const cards = visible.filter((e) => e.status === status);
           const legal = active ? dropCommand(active, status, actor).ok : null;

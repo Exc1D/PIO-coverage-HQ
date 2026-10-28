@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS } from "@/lib/constants";
 import { formatManila } from "@/lib/time";
+import { isFacebookPostUrl } from "@/lib/urls";
 import type { EventRow } from "@/lib/types";
 import { previousStatus, type CommandType } from "@/lib/workflow";
 
@@ -89,9 +90,18 @@ export function CommandDialog({
       case "reschedule_post":
         payload = { type, scheduledPostAt: str("when") };
         break;
-      case "mark_posted":
+      case "mark_posted": {
+        // The input's pattern can't express the exact hosts the server accepts; check here
+        // so a rejected link keeps the dialog open instead of closing and losing it.
+        const link = e.currentTarget.elements.namedItem("postLink") as HTMLInputElement;
+        if (!isFacebookPostUrl(link.value)) {
+          link.setCustomValidity("Paste the Facebook post link (facebook.com or fb.watch).");
+          link.reportValidity();
+          return;
+        }
         payload = { type, postLink: str("postLink"), postedAt: str("when") || undefined };
         break;
+      }
       case "step_back":
         payload = {
           type,
@@ -138,6 +148,7 @@ export function CommandDialog({
                     placeholder="https://www.facebook.com/…"
                     pattern="https://.*(facebook\.com|fb\.watch)/.+"
                     title="A facebook.com or fb.watch link"
+                    onChange={(e) => e.currentTarget.setCustomValidity("")}
                     className="h-11"
                   />
                 </div>
