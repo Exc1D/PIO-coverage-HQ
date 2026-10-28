@@ -107,9 +107,9 @@ SQL migrations live in `supabase/migrations/`. Locally, `pnpm db:reset` rebuilds
 |---|---|
 | `pnpm check` | typecheck + lint + unit tests with coverage |
 | `pnpm test` / `pnpm test:coverage` | Vitest. `lib/workflow.ts` and `lib/metrics.ts` are held to **100% branch coverage**, including Manila timezone edge cases. |
-| `pnpm test:e2e` | Playwright: builds and starts the app, then runs the full flow on a phone (Pixel 7) and a desktop viewport. |
+| `pnpm test:e2e` | Playwright: builds and starts the app, then runs the end-to-end tests on a phone (Pixel 7) and a desktop viewport. |
 
-The end-to-end test needs local Supabase running and the seed loaded (`pnpm db:reset && pnpm seed`). It follows one event through its whole life:
+The end-to-end tests need local Supabase running and the seed loaded (`pnpm db:reset && pnpm seed`). The main one follows one event through its whole life:
 
 1. Someone submits it through the public request form.
 2. The head schedules it, assigns people and confirms coverage.
@@ -119,7 +119,11 @@ The end-to-end test needs local Supabase running and the seed loaded (`pnpm db:r
 6. The page admin schedules and posts it.
 7. The dashboard's post count and the writer's credit go up by one.
 
-It is safe to rerun. Set `E2E_BASE_URL` to test a server that's already running. If you use a preinstalled Chromium instead of `npx playwright install`, set `PLAYWRIGHT_CHROMIUM_PATH`.
+`delete-restore.spec.ts` covers deleting an event and bringing it back (Undo and Staff → Recently deleted events), the typed confirmation for posted events, and deactivating and deleting accounts.
+
+They are safe to rerun. Set `E2E_BASE_URL` to test a server that's already running. If you use a preinstalled Chromium instead of `npx playwright install`, set `PLAYWRIGHT_CHROMIUM_PATH`.
+
+GitHub Actions runs them on every pull request and push to `main` (`.github/workflows/e2e.yml`): it starts local Supabase with the CLI, loads the seed and uploads the Playwright report as an artifact.
 
 ---
 

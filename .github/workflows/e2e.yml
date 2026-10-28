@@ -1,0 +1,79 @@
+# End-to-end tests against a local Supabase stack (migrations from
+# supabase/migrations) and a production build of the app. The app only talks
+# to the REST API, so everything but Postgres, PostgREST and Kong is skipped.
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Start Supabase (database, REST API and gateway only)
+        run: >
+          pnpm exec supabase start
+          -x gotrue,realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Write .env.local
+        run: |
+          status=$(pnpm exec supabase status -o json)
+          url=$(jq -r '.API_URL // empty' <<<"$status")
+          key=$(jq -r '.SERVICE_ROLE_KEY // .SECRET_KEY // empty' <<<"$status")
+          if [ -z "$url" ] || [ -z "$key" ]; then
+            echo "::error::supabase status did not report an API URL and service-role key"
+            exit 1
+          fi
+          echo "::add-mask::$key"
+          {
+            echo "SUPABASE_URL=$url"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$key"
+            echo "SESSION_SECRET=$(openssl rand -hex 32)"
+          } > .env.local
+
+      # global-setup also seeds an empty database; doing it here keeps the
+      # seed output in its own step.
+      - run: pnpm seed
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # Playwright builds and starts the app itself (playwright.config.ts).
+      - run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      - name: Supabase logs on failure
+        if: ${{ failure() }}
+        run: docker ps -a && docker logs supabase_rest_pio-coverage-hq --tail 100 || true
