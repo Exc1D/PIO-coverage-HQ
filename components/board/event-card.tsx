@@ -18,7 +18,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { MUNICIPALITY_LABELS, ROLE_LABELS, SLOTS, SOURCE_COLORS, type Slot } from "@/lib/constants";
+import { MUNICIPALITY_LABELS, SLOT_LABELS, SLOTS, SOURCE_COLORS, type Slot } from "@/lib/constants";
 import { isStuck } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
@@ -61,7 +61,7 @@ function slotStaff(event: EventRow, slot: Slot, staffById: Map<string, Staff>): 
 function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; staffById: Map<string, Staff> }) {
   const person = slotStaff(event, slot, staffById);
   if (!person) return null;
-  const label = ROLE_LABELS[slot];
+  const label = SLOT_LABELS[slot];
   const name = person === "unknown" ? "Unknown" : person.display_name;
   const Icon = SLOT_ICON[slot] ?? UserIcon;
   return (
@@ -112,7 +112,7 @@ function EventPeek({ event, staffById }: { event: EventRow; staffById: Map<strin
           const person = slotStaff(event, slot, staffById);
           return (
             <Fragment key={slot}>
-              <dt className="text-muted-foreground">{ROLE_LABELS[slot]}</dt>
+              <dt className="text-muted-foreground">{SLOT_LABELS[slot]}</dt>
               <dd className={cn("min-w-0 truncate", !person && "text-muted-foreground italic")}>
                 {person === "unknown" ? "Unknown" : (person?.full_name ?? "Unassigned")}
               </dd>

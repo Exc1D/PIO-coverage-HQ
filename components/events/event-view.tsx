@@ -19,8 +19,9 @@ import { Label } from "@/components/ui/label";
 import type { CommandPayload } from "@/lib/commands";
 import {
   MUNICIPALITY_LABELS,
-  ROLE_LABELS,
+  SLOT_LABELS,
   SLOTS,
+  canFillSlot,
   SOURCE_LABELS,
   STATUS_LABELS,
   type Slot,
@@ -384,12 +385,12 @@ function TeamRow({
   onAssign: (staffId: string | null) => void;
 }) {
   const id = `assign-${slot}`;
-  const eligible = staff.filter((s) => (s.active && s.roles.includes(slot)) || s.id === currentId);
+  const eligible = staff.filter((s) => (s.active && canFillSlot(s.roles, slot)) || s.id === currentId);
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <dt>
         <label htmlFor={canAssign ? id : undefined} className="text-muted-foreground">
-          {ROLE_LABELS[slot]}
+          {SLOT_LABELS[slot]}
         </label>
       </dt>
       <dd className="min-w-0">

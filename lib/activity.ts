@@ -1,6 +1,6 @@
 // Human-readable descriptions of event_activity rows.
 
-import { ROLE_LABELS, STATUS_LABELS, type Slot, type Status } from "./constants";
+import { SLOT_LABELS, STATUS_LABELS, type Slot, type Status } from "./constants";
 import type { ActivityRow } from "./types";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -41,7 +41,7 @@ export function describeActivity(a: ActivityRow, nameOf: (id: string | null | un
     case "coverage_confirmed":
       return d.value ? "Confirmed coverage" : "Removed the coverage confirmation";
     case "assign": {
-      const role = ROLE_LABELS[d.slot as Slot] ?? String(d.slot);
+      const role = SLOT_LABELS[d.slot as Slot] ?? String(d.slot);
       if (!d.to) return `Unassigned ${role.toLowerCase()} (was ${nameOf(d.from as string)})`;
       return `Assigned ${role.toLowerCase()}: ${nameOf(d.to as string)}`;
     }

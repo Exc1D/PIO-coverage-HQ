@@ -23,7 +23,7 @@ export type SourceGroup = { source: Source | null; label: string; rows: PostRow[
 
 export type PersonRow = { id: string; name: string; roles: string } & Credit & { total: number };
 
-const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer", "editor"] as const;
+const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer", "photo_editor", "video_editor"] as const;
 
 export function postGroups(events: readonly EventRow[], period: Period, staff: readonly Staff[]): SourceGroup[] {
   const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : "");
@@ -58,7 +58,7 @@ export function peopleRows(events: readonly EventRow[], period: Period, staff: r
       return {
         id: s.id,
         name: s.display_name + (s.active ? "" : " (inactive)"),
-        roles: s.roles.filter((r) => r !== "head" && r !== "page_admin").join(", "),
+        roles: s.roles.filter((r) => (PEOPLE_ROLES as readonly string[]).includes(r)).join(", "),
         ...c,
         total: c.written + c.proofread + c.photographed + c.videographed + c.edited,
       };

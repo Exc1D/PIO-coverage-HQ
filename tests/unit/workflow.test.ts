@@ -20,7 +20,7 @@ const NOW = new Date("2026-10-20T04:00:00Z");
 const head: Actor = { id: "head", roles: ["head", "proofreader"] };
 const photog: Actor = { id: "photog", roles: ["photographer"] };
 const video: Actor = { id: "video", roles: ["videographer"] };
-const editor: Actor = { id: "editor", roles: ["editor"] };
+const editor: Actor = { id: "editor", roles: ["photo_editor"] };
 const writer: Actor = { id: "writer", roles: ["writer"] };
 const proof: Actor = { id: "proof", roles: ["proofreader", "page_admin"] };
 const admin: Actor = { id: "admin", roles: ["page_admin"] };
@@ -406,7 +406,7 @@ describe("assign", () => {
   it("works after posting (credit correction)", () =>
     ok(run(ev({ status: "posted", proofreader_id: null }), { type: "assign", slot: "proofreader", assignee: { id: "p", roles: ["proofreader"], active: true } }, head)));
   it("a multi-role person can fill several slots, including editor", () => {
-    const multi = { id: "m", roles: ["photographer", "editor", "writer"] as const, active: true };
+    const multi = { id: "m", roles: ["photographer", "video_editor", "writer"] as const, active: true };
     const a = ok(run(ev({ editor_id: null }), { type: "assign", slot: "editor", assignee: multi }, head));
     expect(a.patch).toEqual({ editor_id: "m" });
     const b = ok(run(a.next, { type: "assign", slot: "photographer", assignee: multi }, head));
@@ -416,6 +416,8 @@ describe("assign", () => {
   it("validates the assignee", () => {
     err(run(ev(), { type: "assign", slot: "writer", assignee: { ...ana, active: false } }, head), "invalid_input");
     err(run(ev(), { type: "assign", slot: "photographer", assignee: ana }, head), "invalid_input");
+    const graphics = { id: "g", roles: ["graphics"] as const, active: true };
+    err(run(ev({ editor_id: null }), { type: "assign", slot: "editor", assignee: graphics }, head), "invalid_input");
   });
   it("rejects no-ops, non-heads and cancelled events", () => {
     err(run(ev(), { type: "assign", slot: "writer", assignee: { id: "writer", roles: ["writer"], active: true } }, head), "no_change");
