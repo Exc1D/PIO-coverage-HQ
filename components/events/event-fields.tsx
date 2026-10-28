@@ -230,11 +230,13 @@ function RadioGroup({
                 value={o.value}
                 required={required}
                 defaultChecked={defaultValue === o.value}
+                // Named by the short label alone; the hint is its description.
+                aria-labelledby={`${optId}-label`}
                 aria-describedby={o.hint ? `${optId}-hint` : undefined}
                 className="mt-0.5 size-4 shrink-0 accent-primary"
               />
               <span className="grid gap-0.5">
-                <span className="flex items-center gap-2 text-sm font-medium">
+                <span id={`${optId}-label`} className="flex items-center gap-2 text-sm font-medium">
                   {o.swatch && <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: o.swatch }} />}
                   {o.label}
                 </span>

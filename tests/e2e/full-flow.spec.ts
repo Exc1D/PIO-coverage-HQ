@@ -42,8 +42,8 @@ test("an event goes from public request to published, and the dashboard counts i
   await pub.getByLabel("Start time (optional)").fill("09:00");
   await pub.getByLabel("Venue").fill("Provincial Capitol Grounds");
   await pub.getByLabel("Municipality").selectOption("daet");
-  await pub.getByRole("group", { name: "Who is organising it?" }).getByRole("radio", { name: "Community" }).check();
-  await pub.getByRole("group", { name: "What coverage do you need?" }).getByRole("radio", { name: "Photos, video and article" }).check();
+  await pub.getByRole("group", { name: "Who is organising it?" }).getByRole("radio", { name: "Community", exact: true }).check();
+  await pub.getByRole("group", { name: "What coverage do you need?" }).getByRole("radio", { name: "Photos, video and article", exact: true }).check();
   await pub.getByLabel("Your name").fill("Maria Santos");
   await pub.getByLabel("Mobile number or email").fill("0917 123 4567");
   await pub.getByRole("button", { name: "Send request" }).click();
