@@ -4,6 +4,8 @@
 
 import {
   PIPELINE,
+  SLOT_LABELS,
+  canFillSlot,
   STATUS_LABELS,
   type Role,
   type Slot,
@@ -614,8 +616,8 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
       const nextId = cmd.assignee?.id ?? null;
       if (cmd.assignee) {
         if (!cmd.assignee.active) return fail("invalid_input", "That staff member is inactive.");
-        if (!cmd.assignee.roles.includes(cmd.slot)) {
-          return fail("invalid_input", `That staff member doesn't have the ${cmd.slot} role.`);
+        if (!canFillSlot(cmd.assignee.roles, cmd.slot)) {
+          return fail("invalid_input", `That staff member can't be assigned as ${SLOT_LABELS[cmd.slot].toLowerCase()}.`);
         }
       }
       if (event[field] === nextId) return fail("no_change", "Nothing to change.");

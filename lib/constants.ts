@@ -83,7 +83,9 @@ export const ROLES = [
   "head",
   "photographer",
   "videographer",
-  "editor",
+  "photo_editor",
+  "video_editor",
+  "graphics",
   "writer",
   "proofreader",
   "page_admin",
@@ -94,7 +96,9 @@ export const ROLE_LABELS: Record<Role, string> = {
   head: "Head",
   photographer: "Photographer",
   videographer: "Videographer",
-  editor: "Editor",
+  photo_editor: "Photo editor",
+  video_editor: "Video editor",
+  graphics: "Graphics",
   writer: "Writer",
   proofreader: "Proofreader",
   page_admin: "Page admin",
@@ -102,6 +106,25 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 export const SLOTS = ["photographer", "videographer", "editor", "writer", "proofreader"] as const;
 export type Slot = (typeof SLOTS)[number];
+
+export const SLOT_LABELS: Record<Slot, string> = {
+  photographer: "Photographer",
+  videographer: "Videographer",
+  editor: "Editor",
+  writer: "Writer",
+  proofreader: "Proofreader",
+};
+
+/** Roles that can fill each event slot. */
+export const SLOT_ROLES: Record<Slot, readonly Role[]> = {
+  photographer: ["photographer"],
+  videographer: ["videographer"],
+  editor: ["photo_editor", "video_editor"],
+  writer: ["writer"],
+  proofreader: ["proofreader"],
+};
+
+export const canFillSlot = (roles: readonly Role[], slot: Slot) => SLOT_ROLES[slot].some((r) => roles.includes(r));
 
 export const TIMEZONE = "Asia/Manila";
 

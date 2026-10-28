@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useOptimistic } from "react";
 import { SourceChip, StatusBadge } from "@/components/app/labels";
 import { useCommandRunner } from "@/components/events/use-command-runner";
-import { MUNICIPALITY_LABELS, ROLE_LABELS, type Slot } from "@/lib/constants";
+import { MUNICIPALITY_LABELS, SLOT_LABELS, canFillSlot, type Slot } from "@/lib/constants";
 import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -71,12 +71,12 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
                 const id = `${e.id}-${slot}`;
                 const current = e[`${slot}_id`];
                 const dayLoad = load[e.event_date] ?? {};
-                const eligible = staff.filter((s) => (s.active && s.roles.includes(slot)) || s.id === current);
+                const eligible = staff.filter((s) => (s.active && canFillSlot(s.roles, slot)) || s.id === current);
                 const missing = slot === "writer" ? missingWriter : missingMedia && !current;
                 return (
                   <div key={slot} className="grid gap-1.5">
                     <label htmlFor={id} className={cn("text-xs font-medium", missing ? "text-amber-800" : "text-muted-foreground")}>
-                      {ROLE_LABELS[slot]}
+                      {SLOT_LABELS[slot]}
                     </label>
                     {canAssign ? (
                       <select
@@ -90,7 +90,7 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
                             e,
                             { type: "assign", slot, staffId },
                             (next) => patch({ id: e.id, next }),
-                            who ? `${who} assigned as ${ROLE_LABELS[slot].toLowerCase()}` : `${ROLE_LABELS[slot]} unassigned`,
+                            who ? `${who} assigned as ${SLOT_LABELS[slot].toLowerCase()}` : `${SLOT_LABELS[slot]} unassigned`,
                           );
                         }}
                       >
