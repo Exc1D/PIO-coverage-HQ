@@ -15,12 +15,14 @@ import {
 import Link from "next/link";
 import { OverdueFlag, SourceChip } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
+import { WaitingOn } from "@/components/app/waiting-on";
 import { EventPeek, slotStaff } from "@/components/events/event-peek";
 import { MUNICIPALITY_LABELS, SLOT_LABELS, SLOTS, SOURCE_COLORS, type Slot } from "@/lib/constants";
 import { isStuck } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { waitingOn } from "@/lib/waiting";
 import { availability, type Actor } from "@/lib/workflow";
 
 type Props = {
@@ -163,6 +165,8 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
         {!event.writer_id && <span className="text-[11px] text-amber-700">No writer</span>}
         {!event.photographer_id && !event.videographer_id && <span className="text-[11px] text-amber-700">No photo/video</span>}
       </div>
+
+      <WaitingOn items={waitingOn(event, today)} staffById={staffById} me={me} compact className="mt-2" />
 
       {showTicks && (
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2">

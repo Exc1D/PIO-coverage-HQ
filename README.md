@@ -18,13 +18,13 @@ All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. T
 
 | Page | Who | What it's for |
 |---|---|---|
-| **Dashboard** `/` | everyone | This week / This month / custom range. Posts published and events covered (vs the previous period), in the pipeline now, stuck, posts by source, work by person, pipeline now, and the Needs assignment, Stuck and Next 7 days lists. Every chart has a "Show as table" view. |
+| **Dashboard** `/` | everyone | This week / This month / custom range. Posts published and events covered (vs the previous period), in the pipeline now, stuck, posts by source, work by person, pipeline now, and the Needs assignment, Stuck and Next 7 days lists. Every chart has a "Show as table" view. **Waiting on** shows who has to act next on each event still in progress, one card per person, most overdue first. |
 | **Board** `/board` | everyone; changes need a PIN | One column per status. Drag a card by its handle one step forward, or one step back (head, with a reason). Illegal drops snap back with the reason. Tick Photos/Video and Caption on the card. Filters (source, municipality, person, dates, cancelled) live in the URL. |
 | **Event** (drawer or `/events/<id>`) | everyone; changes need a PIN | All details, the actions you're allowed to take (with the reason when one is blocked), team assignment, the caption (see [Caption review](#caption-review)), Drive link, posting details, and the full activity timeline. |
 | **Calendar** `/calendar` | everyone | Month grid of **Events** (by event date) or **Published** posts (by posting date), coloured by source. Hover a chip for details on a computer; tap a day on a phone. Click an event to open it. |
 | **Assign** `/needs-assignment` | head assigns; others view | Requested or scheduled events in the next 14 days missing a writer or photo/video. Pick people inline; each option shows how many other events that person has that day. |
 | **Reports** `/reports` | everyone | Monthly or weekly. Posted events grouped by source with subtotals, a per-person table (written / proofread / photographed / videographed), **CSV downloads**, and an **A4 print layout** with "Prepared by / Noted by" lines. |
-| **My work** `/me` | signed-in staff | Your own events month by month (by event date): the last 6 months at a glance with events held and posted, then the chosen month's events with your role, source and status. Step back through earlier months with the arrows. |
+| **My work** `/me` | signed-in staff | **Waiting on you**: every event that needs your next step, overdue first. Then your own events month by month (by event date): the last 6 months at a glance with events held and posted, then the chosen month's events with your role, source and status. Step back through earlier months with the arrows. |
 | **Staff** `/admin` | head | Add people, set roles, reset PINs, deactivate leavers, clear sign-in locks, restore deleted events. |
 | **Request coverage** `/request` | public, no sign-in | Organisers and LGUs request coverage. Lands on the board as *Requested*. |
 | **First-run setup** `/setup` | once | Creates the first head when there are no staff yet. |
@@ -218,6 +218,18 @@ Writers post the caption in the event itself, so the proofreader reviews exactly
 
 The activity log records each caption edit and request (with the note), but not the caption text itself; the text lives in `caption_revisions`, which is removed along with its event.
 
+## Waiting on
+
+Every event in progress shows who it's waiting on (on the board card, at the top of the event, on the dashboard and in My work). It's worked out from the event's status, checkboxes and team in `lib/waiting.ts`, never typed in, so it is always current.
+
+| Status | Waiting on |
+|---|---|
+| Requested | the head, to add source/municipality and schedule |
+| Scheduled | the head, to assign a writer and photo/video, then confirm coverage; nobody until the event day; then the photographer/videographer, to mark it covered |
+| Covered / In production | whoever still owes work: the editor (or, with no editor, the photographer/videographer) for Photos/Video, the writer for the caption ("revise" after changes were requested); the head if a needed slot is empty |
+| For proofreading | the assigned proofreader, or any proofreader |
+| Approved / Scheduled for posting | a page admin, to schedule and then publish the post |
+
 ## Reporting definitions
 
 These live in `lib/metrics.ts` and are covered by unit tests.
@@ -238,6 +250,7 @@ components/          UI by area (board, events, dashboard, calendar, assign, rep
 lib/workflow.ts      transition rules (pure, 100% tested)
 lib/metrics.ts       reporting definitions (pure, 100% tested)
 lib/my-work.ts       one person's events by month (pure, tested)
+lib/waiting.ts       who each event is waiting on (pure, 100% tested)
 lib/text-diff.ts     word diff for comparing caption versions
 lib/commands.ts      zod schema for event commands (server); lib/command-preview.ts for the browser
 lib/data/            database reads (server only)

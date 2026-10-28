@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useOptimistic, useState } from "react";
 import { OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
+import { WaitingOn } from "@/components/app/waiting-on";
 import { formatEventDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import { isStuck } from "@/lib/metrics";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
 import type { ActivityRow, CaptionRevision, EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { waitingOn } from "@/lib/waiting";
 import { availability, nextStatus, type CommandType } from "@/lib/workflow";
 import { CaptionPanel } from "./caption-panel";
 import { CommandDialog, INPUT_COMMANDS, type InputCommand } from "./command-dialog";
@@ -109,6 +111,12 @@ export function EventView({
           {event.municipality && <> · {MUNICIPALITY_LABELS[event.municipality]}</>}
           {event.venue && <> · {event.venue}</>}
         </p>
+        <WaitingOn
+          items={waitingOn(event, today, { changesRequested: captionFeedback !== null })}
+          staffById={new Map(staff.map((s) => [s.id, s]))}
+          me={me}
+          className="mt-1"
+        />
       </div>
 
       {/* Actions */}

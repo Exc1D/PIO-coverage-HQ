@@ -128,6 +128,18 @@ export async function listEventsByDate(from: string, to: string): Promise<EventR
   return (data as EventRow[]).map(forList);
 }
 
+/** Every event still in progress (not posted or cancelled), soonest first. */
+export async function listInProgressEvents(): Promise<EventRow[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("events")
+    .select("*")
+    .not("status", "in", "(posted,cancelled)")
+    .order("event_date", { ascending: true });
+  if (error) throw new Error(`Could not load events in progress: ${error.message}`);
+  return (data as EventRow[]).map(forList);
+}
+
 /** Events (cancelled included) where `staffId` fills any slot, held between two Manila dates (inclusive). */
 export async function listEventsForStaff(staffId: string, from: string, to: string): Promise<EventRow[]> {
   await connection();

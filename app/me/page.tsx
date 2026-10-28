@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { initials, SourceChip, StatusBadge } from "@/components/app/labels";
+import { initials, OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
 import { MUNICIPALITY_LABELS, ROLE_LABELS, SLOT_LABELS } from "@/lib/constants";
-import { listEventsForStaff } from "@/lib/data/events";
+import { isMe } from "@/components/app/waiting-on";
+import { listEventsForStaff, listInProgressEvents } from "@/lib/data/events";
+import { isStuck } from "@/lib/metrics";
+import { waitingOn } from "@/lib/waiting";
 import { formatEventDate } from "@/lib/format";
 import {
   eventsInMonth,
@@ -55,11 +58,17 @@ async function MyWork({ searchParams }: { searchParams: PageProps<"/me">["search
   }
 
   const now = new Date();
-  const current = manilaDate(now).slice(0, 7);
+  const today = manilaDate(now);
+  const current = today.slice(0, 7);
   const month = monthParam((await searchParams).month, now);
   const months = monthsEnding(month, HISTORY_MONTHS);
   const { from, to } = monthsRange(months);
-  const events = await listEventsForStaff(me.id, from, to);
+  const [events, inProgress] = await Promise.all([listEventsForStaff(me.id, from, to), listInProgressEvents()]);
+  // Everything waiting on me: by assignment, or on a role I hold (head, proofreader, page admin).
+  const onMe = inProgress
+    .map((e) => ({ event: e, tasks: waitingOn(e, today).filter((w) => isMe(w.who, me)).map((w) => w.task) }))
+    .filter((x) => x.tasks.length > 0)
+    .sort((a, b) => Number(isStuck(b.event, today)) - Number(isStuck(a.event, today)) || a.event.due_date.localeCompare(b.event.due_date));
   const summaries = monthSummaries(events, months);
   const list = eventsInMonth(events, month);
   const selected = summaries[summaries.length - 1];
@@ -79,6 +88,36 @@ async function MyWork({ searchParams }: { searchParams: PageProps<"/me">["search
           </p>
         </div>
       </div>
+
+      <section aria-labelledby="on-me-h" className="grid gap-2">
+        <h2 id="on-me-h" className="text-lg font-semibold tracking-tight">
+          Waiting on you <span className="ml-1 text-base font-normal text-muted-foreground tabular-nums">{onMe.length}</span>
+        </h2>
+        {onMe.length === 0 ? (
+          <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">Nothing is waiting on you right now.</p>
+        ) : (
+          <ul className="divide-y overflow-hidden rounded-xl border border-primary/30 bg-card">
+            {onMe.map(({ event: e, tasks }) => (
+              <li key={e.id}>
+                <Link
+                  href={`/events/${e.id}`}
+                  className="grid gap-1 px-3 py-2.5 transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4"
+                >
+                  <span className="grid min-w-0 gap-0.5">
+                    <span className="font-medium">{e.title}</span>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      <span className="font-medium text-primary">{tasks.join(" · ")}</span>
+                      <span>· {formatEventDate(e)}</span>
+                      {isStuck(e, today) && <OverdueFlag dueDate={e.due_date} />}
+                    </span>
+                  </span>
+                  <StatusBadge status={e.status} className="justify-self-start sm:justify-self-end" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Past months at a glance; each one opens that month below. */}
       <section aria-labelledby="months-h" className="grid gap-3 rounded-xl border bg-card p-3">
