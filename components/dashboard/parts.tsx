@@ -38,7 +38,7 @@ export function StatTile({
       <p className="mt-1 text-3xl font-semibold tracking-tight" data-value={value}>
         {value.toLocaleString("en-PH")}
       </p>
-      {delta ? (
+      {delta && (
         <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
           <Icon
             aria-hidden
@@ -49,9 +49,8 @@ export function StatTile({
             {d} vs {delta.against}
           </span>
         </p>
-      ) : (
-        hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
       )}
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

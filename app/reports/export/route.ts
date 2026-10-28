@@ -13,19 +13,21 @@ export async function GET(request: NextRequest) {
 
   let rows: Cell[][];
   if (table === "posts") {
-    rows = [["Source", "Posted (Manila)", "Event", "Event date", "Municipality", "Writer", "Photographer / Videographer", "Editor", "Proofreader", "Facebook link"]];
+    rows = [["Source", "Posted (Manila)", "Event", "Event date", "Municipality", "Coverage", "Writer", "Photographer / Videographer", "Editor", "Proofreader", "Cameraman / OBS tech", "Facebook link"]];
     for (const g of report.groups) {
       for (const r of g.rows) {
-        rows.push([g.label, r.postedAt, r.title, r.eventDate, r.municipality, r.writer, r.photoVideo, r.editor, r.proofreader, r.link]);
+        rows.push([g.label, r.postedAt, r.title, r.eventDate, r.municipality, r.coverage, r.writer, r.photoVideo, r.editor, r.proofreader, r.liveCrew, r.link]);
       }
       rows.push([`${g.label} subtotal`, g.rows.length]);
     }
     rows.push(["Total posts", report.totalPosts]);
   } else {
-    rows = [["Person", "Roles", "Written", "Proofread", "Photographed", "Videographed", "Edited", "Total"]];
-    for (const p of report.people) rows.push([p.name, p.roles, p.written, p.proofread, p.photographed, p.videographed, p.edited, p.total]);
+    rows = [["Person", "Roles", "Written", "Proofread", "Photographed", "Videographed", "Edited", "Live camera", "Live OBS", "Total"]];
+    for (const p of report.people) {
+      rows.push([p.name, p.roles, p.written, p.proofread, p.photographed, p.videographed, p.edited, p.liveCamera, p.liveObs, p.total]);
+    }
     const t = report.peopleTotals;
-    rows.push(["Total", "", t.written, t.proofread, t.photographed, t.videographed, t.edited, t.total]);
+    rows.push(["Total", "", t.written, t.proofread, t.photographed, t.videographed, t.edited, t.liveCamera, t.liveObs, t.total]);
   }
 
   const filename = `pio-${table}-${periodSlug(period)}.csv`;

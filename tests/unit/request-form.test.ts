@@ -9,6 +9,7 @@ const good = {
   venue: "Plaza Rizal",
   municipality: "daet",
   source: "community",
+  coverage: "live_and_regular",
   requested_by: "Maria Santos",
   contact: "0917 123 4567",
   notes: "",
@@ -30,7 +31,7 @@ describe("public request form", () => {
 
   it("explains each problem in plain words", () => {
     const r = parseRequest(
-      { ...good, title: " ", event_date: "2026-10-19", municipality: "manila", source: "", contact: "call me" },
+      { ...good, title: " ", event_date: "2026-10-19", municipality: "manila", source: "", coverage: "", contact: "call me" },
       today,
     );
     expect(r).toEqual({
@@ -40,6 +41,7 @@ describe("public request form", () => {
         event_date: "The event date can’t be in the past.",
         municipality: "Choose the municipality.",
         source: "Choose who is organising the event.",
+        coverage: "Choose the coverage you need.",
         contact: "Enter a mobile number or an email address.",
       },
     });

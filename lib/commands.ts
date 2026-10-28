@@ -5,7 +5,7 @@
 // so zod never ships to the client.
 
 import { z } from "zod";
-import { MUNICIPALITIES, SLOTS, SOURCES } from "./constants";
+import { COVERAGES, MUNICIPALITIES, SLOTS, SOURCES } from "./constants";
 import { toCommand, type ToCommandResult } from "./command-preview";
 import { isDateString } from "./time";
 import type { Staff } from "./types";
@@ -36,6 +36,7 @@ export const detailsSchema = z.object({
   venue: optionalText(200),
   municipality: z.enum(MUNICIPALITIES).nullable(),
   source: z.enum(SOURCES).nullable(),
+  coverage: z.enum(COVERAGES, "Choose the coverage."),
   requested_by: optionalText(120),
   contact: optionalText(120),
   notes: optionalText(2000),

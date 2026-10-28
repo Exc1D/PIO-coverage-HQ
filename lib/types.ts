@@ -1,4 +1,4 @@
-import type { Municipality, Role, Source, Status } from "./constants";
+import type { Coverage, Municipality, Role, Source, Status } from "./constants";
 
 /** A row of `events` as returned by the database (timestamps as ISO strings). */
 export type EventRow = {
@@ -9,6 +9,7 @@ export type EventRow = {
   venue: string | null;
   municipality: Municipality | null;
   source: Source | null;
+  coverage: Coverage;
   requested_by: string | null;
   contact: string | null;
   notes: string | null;
@@ -19,6 +20,8 @@ export type EventRow = {
   editor_id: string | null;
   writer_id: string | null;
   proofreader_id: string | null;
+  cameraman_id: string | null;
+  obs_tech_id: string | null;
   approved_by_id: string | null;
   coverage_confirmed: boolean;
   photos_done: boolean;

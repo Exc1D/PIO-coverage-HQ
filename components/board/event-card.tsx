@@ -4,7 +4,9 @@ import { useDraggable } from "@dnd-kit/core";
 import {
   CameraIcon,
   CheckCircle2Icon,
+  ClapperboardIcon,
   GripVerticalIcon,
+  MonitorPlayIcon,
   PenLineIcon,
   ScissorsIcon,
   SpellCheckIcon,
@@ -13,12 +15,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { OverdueFlag, SourceChip } from "@/components/app/labels";
+import { LiveChip, OverdueFlag, SourceChip } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
 import { WaitingOn } from "@/components/app/waiting-on";
 import { EventPeek, slotStaff } from "@/components/events/event-peek";
-import { MUNICIPALITY_LABELS, SLOT_LABELS, SLOTS, SOURCE_COLORS, type Slot } from "@/lib/constants";
-import { isStuck } from "@/lib/metrics";
+import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, SOURCE_COLORS, type Slot } from "@/lib/constants";
+import { isStuck, TEAM_GAP_LABELS, teamGaps } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,8 @@ const SLOT_ICON: Partial<Record<Slot, LucideIcon>> = {
   editor: ScissorsIcon,
   writer: PenLineIcon,
   proofreader: SpellCheckIcon,
+  cameraman: ClapperboardIcon,
+  obs_tech: MonitorPlayIcon,
 };
 const SLOT_TONE: Partial<Record<Slot, string>> = {
   photographer: "bg-sky-50 text-sky-900 ring-sky-200",
@@ -48,6 +52,8 @@ const SLOT_TONE: Partial<Record<Slot, string>> = {
   editor: "bg-rose-50 text-rose-900 ring-rose-200",
   writer: "bg-amber-50 text-amber-900 ring-amber-200",
   proofreader: "bg-emerald-50 text-emerald-900 ring-emerald-200",
+  cameraman: "bg-rose-50 text-rose-900 ring-rose-200",
+  obs_tech: "bg-fuchsia-50 text-fuchsia-900 ring-fuchsia-200",
 };
 const FALLBACK_TONE = "bg-muted text-foreground ring-border";
 
@@ -81,7 +87,8 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
   });
   const avail = availability(event, me);
   const stuck = isStuck(event, today);
-  const showTicks = ["scheduled", "covered", "in_production", "for_proofreading"].includes(event.status);
+  const showTicks =
+    hasRegular(event.coverage) && ["scheduled", "covered", "in_production", "for_proofreading"].includes(event.status);
 
   const tick = (field: "photos_done" | "caption_done", label: string, cmd: "set_photos_done" | "set_caption_done") => {
     const enabled = avail[cmd].state === "available";
@@ -150,6 +157,7 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <SourceChip source={event.source} short />
+        <LiveChip coverage={event.coverage} />
         {stuck && <OverdueFlag dueDate={event.due_date} />}
         {event.status === "scheduled" && event.coverage_confirmed && (
           <span className="inline-flex items-center gap-1 text-xs text-green-700">
@@ -159,11 +167,14 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1">
-        {SLOTS.map((slot) => (
+        {slotsFor(event.coverage).map((slot) => (
           <Assignee key={slot} slot={slot} event={event} staffById={staffById} />
         ))}
-        {!event.writer_id && <span className="text-[11px] text-amber-700">No writer</span>}
-        {!event.photographer_id && !event.videographer_id && <span className="text-[11px] text-amber-700">No photo/video</span>}
+        {teamGaps(event).map((gap) => (
+          <span key={gap} className="text-[11px] text-amber-700">
+            No {TEAM_GAP_LABELS[gap]}
+          </span>
+        ))}
       </div>
 
       <WaitingOn items={waitingOn(event, today)} staffById={staffById} me={me} compact className="mt-2" />

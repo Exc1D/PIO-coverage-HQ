@@ -94,7 +94,7 @@ export async function createEventAction(_prev: CreateEventState, formData: FormD
   if (!me.roles.includes("head")) return { error: "Only the head can add events here. Others can use the request form." };
 
   const raw = Object.fromEntries(
-    ["title", "event_date", "start_time", "venue", "municipality", "source", "requested_by", "contact", "notes"].map(
+    ["title", "event_date", "start_time", "venue", "municipality", "source", "coverage", "requested_by", "contact", "notes"].map(
       (k) => [k, String(formData.get(k) ?? "")],
     ),
   );

@@ -26,7 +26,7 @@ All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. T
 | **Reports** `/reports` | everyone | Monthly or weekly. Posted events grouped by source with subtotals, a per-person table (written / proofread / photographed / videographed), **CSV downloads**, and an **A4 print layout** with "Prepared by / Noted by" lines. |
 | **My work** `/me` | signed-in staff | **Waiting on you**: every event that needs your next step, overdue first. Then your own events month by month (by event date): the last 6 months at a glance with events held and posted, then the chosen month's events with your role, source and status. Step back through earlier months with the arrows. |
 | **Staff** `/admin` | head | Add people, set roles, reset PINs, deactivate leavers, clear sign-in locks, restore deleted events. |
-| **Request coverage** `/request` | public, no sign-in | Organisers and LGUs request coverage. Lands on the board as *Requested*. |
+| **Request coverage** `/request` | public, no sign-in | Organisers and LGUs request coverage, and choose photos/video/article, a live stream, or both. Lands on the board as *Requested*. |
 | **First-run setup** `/setup` | once | Creates the first head when there are no staff yet. |
 
 Source colours are the same everywhere: **Provincial Government** blue, **Other LGU** purple, **Community** green, **Private** orange. They were checked for colour-blind separation and always appear with a text label.
@@ -37,7 +37,7 @@ Source colours are the same everywhere: **Provincial Government** blue, **Other 
 - **To change anything**, staff pick their name and enter a personal 4–6 digit **PIN**. That sets a signed, httpOnly session cookie for 8 hours. Every change is attributed to that person in the event's activity log.
 - **Account menu:** once signed in, the avatar at the right of the header holds everything account-related: your name and roles, **My work**, **Staff** (head only) and **Sign out**. Signed out, it's a single **Sign in** button.
 - **Lockout:** 5 wrong PINs for one person, or 20 from one IP address, lock sign-in for 15 minutes. The head can clear a person's lock from Staff.
-- **Roles** (a person can have several): head (admin), photographer, videographer, writer, proofreader, page admin.
+- **Roles** (a person can have several): head (admin), photographer, videographer, photo editor, video editor, graphics, writer, proofreader, page admin, cameraman, OBS tech.
 - Resetting someone's PIN or deactivating them signs them out on every device at once. Before deactivating, Staff lists the unfinished events they are still assigned to.
 - Accounts with any work on record can only be deactivated, so reports keep their names. A deactivated account with no history (e.g. added by mistake) can be deleted for good.
 - Deleting an event (head only) keeps a copy for 30 days: the toast offers **Undo**, and **Staff → Recently deleted events** can restore it with its history. Posted events also need the word "delete" typed. **Cancel event** remains the way to keep something on record.
@@ -74,7 +74,7 @@ Then:
 
 ```bash
 pnpm db:reset              # apply supabase/migrations/ to a clean local database
-pnpm seed                  # 8 placeholder staff (PIN 1234) + 28 sample events
+pnpm seed                  # 10 placeholder staff (PIN 1234) + 28 sample events
 pnpm dev                   # http://localhost:3000
 ```
 
@@ -98,6 +98,8 @@ Sign in as **Grace S.** (head + proofreader) with PIN **1234**, or as anyone els
 | Rico M., Jessa T. | photographer |
 | Paolo D. | videographer |
 | Ana R., Mark V., Liza C. | writer |
+| Ben A. | cameraman, videographer |
+| Kim L. | OBS tech |
 
 ### Migrations
 
@@ -194,7 +196,8 @@ Do **not** run `pnpm seed` against production; it creates staff with a shared PI
 | Step | Who | Needs |
 |---|---|---|
 | requested → scheduled | head | source and municipality |
-| scheduled → covered | assigned photographer/videographer, or head | the head has ticked **Coverage confirmed** |
+| scheduled → covered | assigned photographer/videographer, live crew, or head | the head has ticked **Coverage confirmed** (for a live stream, only possible once a cameraman and an OBS tech are assigned) |
+| covered → posted (**live stream only**) | assigned live crew, page admin or head | the Facebook live video link |
 | covered → in_production | assigned team or head; also automatic when either checkbox is ticked | — |
 | in_production → for_proofreading | **automatic** | **Photos/Video done** (photographer/videographer or head) and **Caption done** (writer or head), whichever is ticked last |
 | for_proofreading → approved | proofreader or head | becomes the proofreader if none was assigned |
@@ -205,6 +208,16 @@ Do **not** run `pnpm seed` against production; it creates staff with a shared PI
 Only the head assigns people and edits event details. The Drive folder link and caption text are optional references; no rule requires them (but see [Caption review](#caption-review)). **Every** change is written to the append-only `event_activity` log.
 
 **Concurrent edits:** if two people change the same event at once, the second gets "Someone else just updated this event" and sees the fresh version, so nobody overwrites anyone. On the board, changes appear immediately and roll back if the server refuses them or the connection drops.
+
+## Live coverage
+
+Each event has a **coverage**: *Photos, video and article* (the usual), *Live stream only*, or *Live stream + photos, video and article*. The requester picks it on the public form; the head can change it under **Edit details** until production starts.
+
+- A live stream needs a **cameraman** and an **OBS tech** (two staff roles with their own event slots). The head can't tick *Coverage confirmed* until both are assigned, and can swap them afterwards but not leave a slot empty.
+- **Live stream + article** follows the normal pipeline, with the live crew added to the team. The live crew can mark it covered alongside the photographer/videographer.
+- **Live stream only** has no article, so it skips production: `requested → scheduled → covered → posted`. Once it's covered, the live crew, a page admin or the head adds the Facebook live video link (*Add the live video*), and the event is posted. There are no Photos/Video or Caption boxes, and no caption.
+- Changing the coverage clears the slots the new coverage doesn't have (logged in the activity).
+- Live events show a red **Live** chip on the board, the event and the Assign page. Needs assignment, Waiting on, the dashboard (*Live streams* credits and "N livestreamed" under Events covered) and Reports (a *Live crew* column, and *Live camera* / *Live OBS* credits) all include the live crew.
 
 ## Caption review
 
@@ -225,7 +238,8 @@ Every event in progress shows who it's waiting on (on the board card, at the top
 | Status | Waiting on |
 |---|---|
 | Requested | the head, to add source/municipality and schedule |
-| Scheduled | the head, to assign a writer and photo/video, then confirm coverage; nobody until the event day; then the photographer/videographer, to mark it covered |
+| Scheduled | the head, to assign a writer and photo/video (and a cameraman and OBS tech for a live stream), then confirm coverage; nobody until the event day; then the photographer/videographer and live crew, to mark it covered |
+| Covered, live stream only | the OBS tech (or a page admin), to add the live video link |
 | Covered / In production | whoever still owes work: the editor (or, with no editor, the photographer/videographer) for Photos/Video, the writer for the caption ("revise" after changes were requested); the head if a needed slot is empty |
 | For proofreading | the assigned proofreader, or any proofreader |
 | Approved / Scheduled for posting | a page admin, to schedule and then publish the post |
@@ -235,10 +249,10 @@ Every event in progress shows who it's waiting on (on the board card, at the top
 These live in `lib/metrics.ts` and are covered by unit tests.
 
 - **Post:** status is posted and `posted_at` falls inside the period, in Manila time. Cancelled events never count.
-- **Events covered:** the event date is in the period and the status is covered or later.
+- **Events covered:** the event date is in the period and the status is covered or later. The dashboard also shows how many of them were livestreamed.
 - **Stuck:** not posted or cancelled, and today (Manila) is after the due date. The due date is the event date + 2 days.
-- **Needs assignment:** requested or scheduled, event date from today through 14 days ahead, and no writer, or no photographer *and* no videographer.
-- **Credit**, counted only for posted events: the writer gets "written", the proofreader "proofread", the photographer "photographed", the videographer "videographed".
+- **Needs assignment:** requested or scheduled, event date from today through 14 days ahead, and a gap in the minimum team: for photos/video/article, no writer, or no photographer *and* no videographer; for a live stream, no cameraman or no OBS tech.
+- **Credit**, counted only for posted events: the writer gets "written", the proofreader "proofread", the photographer "photographed", the videographer "videographed", the editor "edited", the cameraman "live camera" and the OBS tech "live OBS". A live-only event is posted when its live video link is added.
 
 ## Project layout
 

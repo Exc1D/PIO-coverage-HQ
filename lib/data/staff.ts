@@ -30,7 +30,7 @@ export async function openAssignments(): Promise<Map<string, OpenAssignment[]>> 
   const cols = SLOTS.map((s) => `${s}_id`);
   const { data, error } = await db()
     .from("events")
-    .select("id, title, event_date, photographer_id, videographer_id, editor_id, writer_id, proofreader_id")
+    .select(["id, title, event_date", ...cols].join(", "))
     .not("status", "in", "(posted,cancelled)")
     .or(cols.map((c) => `${c}.not.is.null`).join(","))
     .order("event_date");

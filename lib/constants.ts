@@ -89,6 +89,8 @@ export const ROLES = [
   "writer",
   "proofreader",
   "page_admin",
+  "cameraman",
+  "obs_tech",
 ] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -102,9 +104,36 @@ export const ROLE_LABELS: Record<Role, string> = {
   writer: "Writer",
   proofreader: "Proofreader",
   page_admin: "Page admin",
+  cameraman: "Cameraman",
+  obs_tech: "OBS tech",
 };
 
-export const SLOTS = ["photographer", "videographer", "editor", "writer", "proofreader"] as const;
+/** What the office provides for an event: the usual photos, video and article, a live stream, or both. */
+export const COVERAGES = ["regular", "live", "live_and_regular"] as const;
+export type Coverage = (typeof COVERAGES)[number];
+
+export const COVERAGE_LABELS: Record<Coverage, string> = {
+  regular: "Photos, video and article",
+  live: "Live stream only",
+  live_and_regular: "Live stream + photos, video and article",
+};
+
+export const COVERAGE_SHORT: Record<Coverage, string> = {
+  regular: "Regular",
+  live: "Live",
+  live_and_regular: "Live + regular",
+};
+
+export const hasLive = (c: Coverage) => c !== "regular";
+export const hasRegular = (c: Coverage) => c !== "live";
+
+/** A live-only event has no article to produce: once covered, the live video is the post. */
+const LIVE_PIPELINE: readonly Status[] = ["requested", "scheduled", "covered", "posted"];
+
+/** The forward steps an event with this coverage goes through, in order. */
+export const pipelineFor = (coverage: Coverage): readonly Status[] => (coverage === "live" ? LIVE_PIPELINE : PIPELINE);
+
+export const SLOTS = ["photographer", "videographer", "editor", "writer", "proofreader", "cameraman", "obs_tech"] as const;
 export type Slot = (typeof SLOTS)[number];
 
 export const SLOT_LABELS: Record<Slot, string> = {
@@ -113,7 +142,18 @@ export const SLOT_LABELS: Record<Slot, string> = {
   editor: "Editor",
   writer: "Writer",
   proofreader: "Proofreader",
+  cameraman: "Cameraman",
+  obs_tech: "OBS tech",
 };
+
+/** The live stream crew; both are required before coverage is confirmed. */
+export const LIVE_SLOTS = ["cameraman", "obs_tech"] as const satisfies readonly Slot[];
+const REGULAR_SLOTS = SLOTS.filter((s) => !(LIVE_SLOTS as readonly Slot[]).includes(s));
+
+/** The slots that apply to an event with this coverage, in display order. */
+export function slotsFor(coverage: Coverage): readonly Slot[] {
+  return [...(hasRegular(coverage) ? REGULAR_SLOTS : []), ...(hasLive(coverage) ? LIVE_SLOTS : [])];
+}
 
 /** Roles that can fill each event slot. */
 export const SLOT_ROLES: Record<Slot, readonly Role[]> = {
@@ -122,6 +162,8 @@ export const SLOT_ROLES: Record<Slot, readonly Role[]> = {
   editor: ["photo_editor", "video_editor"],
   writer: ["writer"],
   proofreader: ["proofreader"],
+  cameraman: ["cameraman"],
+  obs_tech: ["obs_tech"],
 };
 
 export const canFillSlot = (roles: readonly Role[], slot: Slot) => SLOT_ROLES[slot].some((r) => roles.includes(r));

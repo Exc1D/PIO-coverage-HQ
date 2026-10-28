@@ -22,11 +22,14 @@ const ev = (o: Partial<EventRow>): EventRow =>
     posted_at: "2026-10-11T10:00:00Z",
     source: "community",
     municipality: "daet",
+    coverage: "regular",
     photographer_id: "rico",
     videographer_id: null,
     editor_id: null,
     writer_id: "ana",
     proofreader_id: "grace",
+    cameraman_id: null,
+    obs_tech_id: null,
     post_link: "https://fb.watch/x",
     ...o,
   }) as EventRow;
@@ -61,7 +64,16 @@ describe("report rows", () => {
       ["Paolo D. (inactive)", 0, 0, 0, 1, 1],
     ]);
     expect(rows.find((r) => r.name === "Grace S.")?.roles).toBe("proofreader");
-    expect(peopleTotals(rows)).toEqual({ written: 2, proofread: 1, photographed: 2, videographed: 1, edited: 0, total: 6 });
+    expect(peopleTotals(rows)).toEqual({
+      written: 2,
+      proofread: 1,
+      photographed: 2,
+      videographed: 1,
+      edited: 0,
+      liveCamera: 0,
+      liveObs: 0,
+      total: 6,
+    });
   });
 
   it("credits editors and counts them in totals", () => {
@@ -69,6 +81,23 @@ describe("report rows", () => {
     const rico = rows.find((r) => r.name === "Rico M.");
     expect(rico).toMatchObject({ photographed: 2, edited: 2, total: 4 });
     expect(peopleTotals(rows)).toMatchObject({ edited: 2 });
+  });
+
+  it("shows the coverage and live crew, and credits the crew", () => {
+    const staffWithCrew: Staff[] = [
+      ...staff,
+      { id: "ben", full_name: "Ben A.", display_name: "Ben A.", roles: ["cameraman"], active: true },
+      { id: "kim", full_name: "Kim L.", display_name: "Kim L.", roles: ["obs_tech"], active: true },
+    ];
+    const live = ev({ coverage: "live", photographer_id: null, writer_id: null, proofreader_id: null, cameraman_id: "ben", obs_tech_id: "kim" });
+    const [group] = postGroups([live, ev({})], october, staffWithCrew);
+    expect(group.rows.map((r) => [r.coverage, r.liveCrew])).toEqual([
+      ["Live", "Ben A. / Kim L."],
+      ["Regular", ""],
+    ]);
+    const rows = peopleRows([live], october, staffWithCrew);
+    expect(rows.find((r) => r.name === "Ben A.")).toMatchObject({ liveCamera: 1, roles: "cameraman", total: 1 });
+    expect(rows.find((r) => r.name === "Kim L.")).toMatchObject({ liveObs: 1, roles: "obs_tech", total: 1 });
   });
 
   it("names files by period", () => {

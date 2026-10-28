@@ -7,7 +7,7 @@ import { CalendarView, type CalItem } from "@/components/calendar/calendar-view"
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { gridRange, isMonthString, monthGrid, monthOf, shiftMonth } from "@/lib/calendar";
-import { MUNICIPALITY_LABELS, SOURCE_COLORS, SOURCE_LABELS, SOURCES } from "@/lib/constants";
+import { hasLive, MUNICIPALITY_LABELS, SOURCE_COLORS, SOURCE_LABELS, SOURCES } from "@/lib/constants";
 import { listEventsByDate, listPostedInPeriod } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import { formatTime, staffName } from "@/lib/format";
@@ -36,11 +36,13 @@ function toItem(e: EventRow, view: View, staff: Staff[]): CalItem {
     name(e.videographer_id) && `V: ${name(e.videographer_id)}`,
     name(e.editor_id) && `E: ${name(e.editor_id)}`,
     name(e.writer_id) && `W: ${name(e.writer_id)}`,
+    name(e.cameraman_id) && `Cam: ${name(e.cameraman_id)}`,
+    name(e.obs_tech_id) && `OBS: ${name(e.obs_tech_id)}`,
   ].filter(Boolean);
   const posted = view === "published" && e.posted_at;
   return {
     id: e.id,
-    title: e.title,
+    title: hasLive(e.coverage) ? `${e.title} (live)` : e.title,
     day: posted ? manilaDate(e.posted_at as string) : e.event_date,
     time: posted ? formatManila(e.posted_at as string, "h:mm a") : e.start_time ? formatTime(e.start_time) : null,
     source: e.source,

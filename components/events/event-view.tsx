@@ -11,7 +11,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { useOptimistic, useState } from "react";
-import { OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
+import { LiveChip, OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
 import { WaitingOn } from "@/components/app/waiting-on";
 import { formatEventDate, staffName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CommandPayload } from "@/lib/commands";
 import {
+  COVERAGE_LABELS,
+  hasRegular,
   MUNICIPALITY_LABELS,
   SLOT_LABELS,
-  SLOTS,
   canFillSlot,
+  slotsFor,
   SOURCE_LABELS,
   type Slot,
 } from "@/lib/constants";
@@ -91,6 +93,9 @@ export function EventView({
   const trigger = (type: CommandType) => (isInput(type) ? setDialog(type) : run({ type } as CommandPayload));
 
   const forward = FORWARD.filter((a) => avail[a.type].state !== "hidden");
+  // A live-only event has no article: no photos/caption to produce, and its post is the live video.
+  const regular = hasRegular(event.coverage);
+  const actionLabel = (a: (typeof FORWARD)[number]) => (a.type === "mark_posted" && !regular ? "Add the live video" : a.label);
 
   return (
     <div className="grid gap-6">
@@ -101,6 +106,7 @@ export function EventView({
             <StatusBadge status={event.status} />
           </span>
           <SourceChip source={event.source} />
+          <LiveChip coverage={event.coverage} />
           {stuck && <OverdueFlag dueDate={event.due_date} />}
         </div>
         <Heading className="text-xl font-semibold leading-tight tracking-tight">{event.title}</Heading>
@@ -132,7 +138,7 @@ export function EventView({
                       disabled={st.state === "blocked" || pending}
                       onClick={() => trigger(a.type)}
                     >
-                      {a.label}
+                      {actionLabel(a)}
                     </Button>
                     {st.state === "blocked" && (
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -194,27 +200,31 @@ export function EventView({
             <Tick
               id="coverage"
               label="Coverage confirmed"
-              hint="Head confirms the team covered it"
+              hint={avail.set_coverage_confirmed.reason ?? "Head confirms the team covered it"}
               checked={event.coverage_confirmed}
               enabled={avail.set_coverage_confirmed.state === "available" && !pending}
               onChange={(v) => run({ type: "set_coverage_confirmed", value: v })}
             />
-            <Tick
-              id="photos"
-              label="Photos/Video done"
-              hint="Edited and branded · photographer, videographer or editor"
-              checked={event.photos_done}
-              enabled={avail.set_photos_done.state === "available" && !pending}
-              onChange={(v) => run({ type: "set_photos_done", value: v })}
-            />
-            <Tick
-              id="caption"
-              label="Caption done"
-              hint="Drafted · writer"
-              checked={event.caption_done}
-              enabled={avail.set_caption_done.state === "available" && !pending}
-              onChange={(v) => run({ type: "set_caption_done", value: v })}
-            />
+            {regular && (
+              <>
+                <Tick
+                  id="photos"
+                  label="Photos/Video done"
+                  hint="Edited and branded · photographer, videographer or editor"
+                  checked={event.photos_done}
+                  enabled={avail.set_photos_done.state === "available" && !pending}
+                  onChange={(v) => run({ type: "set_photos_done", value: v })}
+                />
+                <Tick
+                  id="caption"
+                  label="Caption done"
+                  hint="Drafted · writer"
+                  checked={event.caption_done}
+                  enabled={avail.set_caption_done.state === "available" && !pending}
+                  onChange={(v) => run({ type: "set_caption_done", value: v })}
+                />
+              </>
+            )}
           </div>
         </section>
       )}
@@ -225,7 +235,7 @@ export function EventView({
           Team
         </h3>
         <dl className="grid gap-2 rounded-lg border p-3">
-          {SLOTS.map((slot) => (
+          {slotsFor(event.coverage).map((slot) => (
             <TeamRow
               key={slot}
               slot={slot}
@@ -246,26 +256,28 @@ export function EventView({
       </section>
 
       {/* Caption */}
-      <section className="grid gap-3" aria-labelledby="caption-h">
-        <h3 id="caption-h" className="text-sm font-semibold">
-          Caption
-        </h3>
-        <CaptionPanel
-          event={event}
-          avail={avail}
-          revisions={captionRevisions}
-          // Hide the note once the writer has marked the caption done again.
-          feedback={event.caption_done ? null : captionFeedback}
-          nameOf={nameOrSomeone}
-          pending={pending}
-          onRun={run}
-        />
-      </section>
+      {regular && (
+        <section className="grid gap-3" aria-labelledby="caption-h">
+          <h3 id="caption-h" className="text-sm font-semibold">
+            Caption
+          </h3>
+          <CaptionPanel
+            event={event}
+            avail={avail}
+            revisions={captionRevisions}
+            // Hide the note once the writer has marked the caption done again.
+            feedback={event.caption_done ? null : captionFeedback}
+            nameOf={nameOrSomeone}
+            pending={pending}
+            onRun={run}
+          />
+        </section>
+      )}
 
       {/* Photos */}
       <section className="grid gap-3" aria-labelledby="work-h">
         <h3 id="work-h" className="text-sm font-semibold">
-          Photos and video
+          {regular ? "Photos and video" : "Recording"}
         </h3>
         <DriveLink
           url={event.drive_folder_url}
@@ -278,7 +290,7 @@ export function EventView({
       {(event.scheduled_post_at || event.posted_at || event.post_link) && (
         <section className="grid gap-2" aria-labelledby="post-h">
           <h3 id="post-h" className="text-sm font-semibold">
-            Facebook post
+            {regular ? "Facebook post" : "Live video"}
           </h3>
           <dl className="grid gap-2 rounded-lg border p-3 text-sm">
             {event.scheduled_post_at && <Row label="Scheduled for" value={fmtDateTime(event.scheduled_post_at)} />}
@@ -287,7 +299,7 @@ export function EventView({
           {event.post_link && (
             <Button asChild variant="outline" className="h-11 justify-start">
               <a href={event.post_link} target="_blank" rel="noopener noreferrer">
-                <ExternalLinkIcon aria-hidden /> Open the Facebook post
+                <ExternalLinkIcon aria-hidden /> {regular ? "Open the Facebook post" : "Open the live video"}
               </a>
             </Button>
           )}
@@ -305,6 +317,7 @@ export function EventView({
           <Row label="Venue" value={event.venue ?? "—"} />
           <Row label="Municipality" value={event.municipality ? MUNICIPALITY_LABELS[event.municipality] : "—"} />
           <Row label="Source" value={event.source ? SOURCE_LABELS[event.source] : "—"} />
+          <Row label="Coverage" value={COVERAGE_LABELS[event.coverage]} />
           {requesterHidden ? (
             <Row label="Requested by" value="Sign in to see requester details" muted />
           ) : (
@@ -376,6 +389,9 @@ function Tick({
   );
 }
 
+/** Slots highlighted when empty: the writer, photo/video and the live crew. */
+const NEEDED_SLOTS: readonly Slot[] = ["writer", "photographer", "cameraman", "obs_tech"];
+
 function TeamRow({
   slot,
   currentId,
@@ -419,7 +435,7 @@ function TeamRow({
         ) : currentName ? (
           <span className="font-medium">{currentName}</span>
         ) : (
-          <span className={cn(slot === "writer" || slot === "photographer" ? "text-amber-700" : "text-muted-foreground")}>
+          <span className={cn(NEEDED_SLOTS.includes(slot) ? "text-amber-700" : "text-muted-foreground")}>
             Unassigned
           </span>
         )}

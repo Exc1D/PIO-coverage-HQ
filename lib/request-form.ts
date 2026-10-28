@@ -3,7 +3,7 @@
 // requester's name and one contact detail.
 
 import { z } from "zod";
-import { MUNICIPALITIES, SOURCES } from "./constants";
+import { COVERAGES, MUNICIPALITIES, SOURCES } from "./constants";
 import { HONEYPOT_FIELD } from "./request-constants";
 import { addDays, isDateString } from "./time";
 
@@ -21,6 +21,7 @@ export const REQUEST_FIELDS = [
   "venue",
   "municipality",
   "source",
+  "coverage",
   "requested_by",
   "contact",
   "notes",
@@ -44,6 +45,7 @@ function schema(today: string) {
     venue: text("the venue", 200),
     municipality: z.enum(MUNICIPALITIES, "Choose the municipality."),
     source: z.enum(SOURCES, "Choose who is organising the event."),
+    coverage: z.enum(COVERAGES, "Choose the coverage you need."),
     requested_by: text("your name", 120),
     contact: text("a contact number or email", 120).refine(
       (v) => /\d{7,}/.test(v.replace(/[\s()+-]/g, "")) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),

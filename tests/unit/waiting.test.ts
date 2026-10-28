@@ -8,6 +8,7 @@ const ev = (p: Partial<WaitingEvent> = {}): WaitingEvent => ({
   event_date: TODAY,
   source: "community",
   municipality: "daet",
+  coverage: "regular",
   coverage_confirmed: true,
   photos_done: false,
   caption_done: false,
@@ -16,6 +17,8 @@ const ev = (p: Partial<WaitingEvent> = {}): WaitingEvent => ({
   editor_id: null,
   writer_id: "wri",
   proofreader_id: null,
+  cameraman_id: null,
+  obs_tech_id: null,
   ...p,
 });
 
@@ -83,6 +86,41 @@ describe("waitingOn", () => {
   it("finished events wait on nobody", () => {
     expect(waitingOn(ev({ status: "posted" }), TODAY)).toEqual([]);
     expect(waitingOn(ev({ status: "cancelled" }), TODAY)).toEqual([]);
+  });
+});
+
+describe("waitingOn with live coverage", () => {
+  const crew = { cameraman_id: "cam", obs_tech_id: "obs" };
+  const live = (p: Partial<WaitingEvent> = {}) =>
+    ev({ coverage: "live", photographer_id: null, writer_id: null, ...crew, ...p });
+
+  it("scheduled: the head assigns the live crew too", () => {
+    expect(waitingOn(live({ cameraman_id: null, obs_tech_id: null }), TODAY)).toEqual([
+      { who: head, task: "Assign a cameraman and an OBS tech" },
+    ]);
+    expect(waitingOn(ev({ coverage: "live_and_regular", writer_id: null, obs_tech_id: null, cameraman_id: null }), TODAY)).toEqual([
+      { who: head, task: "Assign a writer, a cameraman and an OBS tech" },
+    ]);
+  });
+
+  it("scheduled: on the day, the live crew marks it covered", () => {
+    expect(waitingOn(live(), TODAY)).toEqual([
+      { who: { kind: "staff", id: "cam", slot: "cameraman" }, task: "Mark as covered" },
+      { who: { kind: "staff", id: "obs", slot: "obs_tech" }, task: "Mark as covered" },
+    ]);
+  });
+
+  it("covered, live only: the OBS tech (or a page admin) adds the live video link", () => {
+    expect(waitingOn(live({ status: "covered" }), TODAY)).toEqual([
+      { who: { kind: "staff", id: "obs", slot: "obs_tech" }, task: "Add the live video link" },
+    ]);
+    expect(waitingOn(live({ status: "covered", obs_tech_id: null }), TODAY)).toEqual([{ who: pageAdmin, task: "Add the live video link" }]);
+  });
+
+  it("covered, live and regular: the usual production work", () => {
+    expect(waitingOn(ev({ status: "covered", coverage: "live_and_regular", ...crew, caption_done: true }), TODAY)).toEqual([
+      { who: { kind: "staff", id: "pho", slot: "photographer" }, task: "Finish photos/video" },
+    ]);
   });
 });
 
