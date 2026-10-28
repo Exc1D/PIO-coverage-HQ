@@ -8,13 +8,17 @@ import { getCurrentStaff } from "@/lib/auth/session";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 print:hidden">
-      {/* Phones: brand + session on the first row, nav scrolls on its own row. Larger screens: one row. */}
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 px-4 sm:h-14 sm:flex-nowrap">
-        <Link href="/" className="flex h-12 shrink-0 items-center rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring sm:h-auto">
+    // Named so page transitions slide under it instead of moving it (see globals.css).
+    <header
+      style={{ viewTransitionName: "site-header" }}
+      className="sticky top-0 z-40 border-b border-black/10 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl backdrop-saturate-150 print:hidden"
+    >
+      {/* Phones: brand + session; sections are in the tab bar at the bottom. Larger screens: one row with the nav. */}
+      <div className="mx-auto flex h-12 max-w-6xl items-center gap-x-3 px-4 sm:h-14">
+        <Link href="/" className="flex shrink-0 items-center rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring">
           PIO Production
         </Link>
-        <div className="order-last -mx-4 w-[calc(100%+2rem)] border-t px-4 py-1.5 sm:order-none sm:mx-0 sm:w-auto sm:flex-1 sm:border-0 sm:p-0">
+        <div className="hidden sm:block sm:flex-1">
           {/* usePathname() needs a Suspense boundary on dynamic routes; the fallback is the same nav without the active state. */}
           <Suspense fallback={<MainNav static />}>
             <MainNav />
@@ -42,8 +46,10 @@ async function SessionBadge() {
   return (
     <form action={signOutAction} className="flex items-center gap-1 sm:gap-2">
       {staff.roles.includes("head") && (
-        <Button asChild size="sm" variant="ghost">
-          <Link href="/admin">Staff</Link>
+        <Button asChild size="sm" variant="ghost" className="text-primary hover:text-primary">
+          <Link href="/admin" transitionTypes={["nav-forward"]}>
+            Staff
+          </Link>
         </Button>
       )}
       <span className="text-sm text-muted-foreground">
@@ -53,7 +59,7 @@ async function SessionBadge() {
         </span>
         <span className="sr-only sm:not-sr-only">{staff.display_name}</span>
       </span>
-      <Button type="submit" size="sm" variant="ghost">
+      <Button type="submit" size="sm" variant="ghost" className="text-primary hover:text-primary">
         Sign out
       </Button>
     </form>

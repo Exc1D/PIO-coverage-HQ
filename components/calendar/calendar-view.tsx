@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { SourceChip, StatusBadge } from "@/components/app/labels";
+import { Peek } from "@/components/app/peek";
 import type { GridDay } from "@/lib/calendar";
 import { SOURCE_COLORS, SOURCE_LABELS, STATUS_LABELS, type Source, type Status } from "@/lib/constants";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
@@ -41,27 +42,30 @@ function Details({ item }: { item: CalItem }) {
 function Chip({ item, alignRight }: { item: CalItem; alignRight: boolean }) {
   const color = item.source ? SOURCE_COLORS[item.source] : "#a3a3a3";
   return (
-    <li className="group relative">
-      <Link
+    <li>
+      {/* Hover, keyboard focus or (on touch) press and hold for details. The same details are in the day list below. */}
+      <Peek
         href={`/events/${item.id}`}
-        prefetch={false}
-        className="block truncate rounded-[4px] border-l-[3px] bg-muted/60 py-0.5 pl-1.5 pr-1 text-xs leading-5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        style={{ borderLeftColor: color }}
-        aria-label={`${item.title}, ${item.source ? SOURCE_LABELS[item.source] : "no source"}, ${STATUS_LABELS[item.status]}${item.time ? `, ${item.time}` : ""}`}
+        label={item.title}
+        side="bottom"
+        align={alignRight ? "end" : "start"}
+        preview={
+          <div className="text-xs">
+            <Details item={item} />
+          </div>
+        }
       >
-        {item.time && <span className="mr-1 tabular-nums text-muted-foreground">{item.time.replace(/:00 /, " ").replace(" ", "").toLowerCase()}</span>}
-        {item.title}
-      </Link>
-      {/* Hover / keyboard-focus details. The same details are in the day list below. */}
-      <span
-        role="tooltip"
-        className={cn(
-          "pointer-events-none invisible absolute top-full z-30 mt-1 w-64 rounded-md border bg-popover p-3 text-xs opacity-0 shadow-md transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
-          alignRight ? "right-0" : "left-0",
-        )}
-      >
-        <Details item={item} />
-      </span>
+        <Link
+          href={`/events/${item.id}`}
+          prefetch={false}
+          className="block truncate rounded-[4px] border-l-[3px] bg-muted/60 py-0.5 pl-1.5 pr-1 text-xs leading-5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{ borderLeftColor: color }}
+          aria-label={`${item.title}, ${item.source ? SOURCE_LABELS[item.source] : "no source"}, ${STATUS_LABELS[item.status]}${item.time ? `, ${item.time}` : ""}`}
+        >
+          {item.time && <span className="mr-1 tabular-nums text-muted-foreground">{item.time.replace(/:00 /, " ").replace(" ", "").toLowerCase()}</span>}
+          {item.title}
+        </Link>
+      </Peek>
     </li>
   );
 }

@@ -19,7 +19,7 @@ export default function BoardPage() {
     <main className="mx-auto w-full max-w-[2000px] px-4 py-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
+          <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Pipeline</h1>
           <p className="text-sm text-muted-foreground">
             Every event from request to posted. Drag a card by its handle to move it one step.
           </p>

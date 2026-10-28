@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Needs assignment" };
 export default function NeedsAssignmentPage() {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Needs assignment</h1>
+      <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Needs assignment</h1>
       <p className="mb-4 text-sm text-muted-foreground">
         Requested or scheduled events in the next {NEEDS_ASSIGNMENT_DAYS} days with no writer, or no photographer or
         videographer. Pick people right here; each name shows how many other events they already have that day.

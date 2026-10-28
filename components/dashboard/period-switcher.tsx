@@ -1,17 +1,16 @@
 import Link from "next/link";
 import type { Period } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
+import { segmentedItem, segmentedList } from "@/components/app/segmented";
 
 /** Plain links and a GET form: works before (and without) JavaScript. */
 export function PeriodSwitcher({ period }: { period: Period }) {
   const tab = (kind: Period["kind"], label: string, href: string) => (
     <Link
       href={href}
+      transitionTypes={["tab-switch"]}
       aria-current={period.kind === kind ? "page" : undefined}
-      className={cn(
-        "rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        period.kind === kind && "bg-background font-medium text-foreground shadow-xs",
-      )}
+      className={segmentedItem(period.kind === kind)}
     >
       {label}
     </Link>
@@ -20,7 +19,7 @@ export function PeriodSwitcher({ period }: { period: Period }) {
     "h-9 rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <nav aria-label="Period" className="inline-flex rounded-lg bg-muted p-1">
+      <nav aria-label="Period" className={segmentedList}>
         {tab("week", "This week", "/?period=week")}
         {tab("month", "This month", "/?period=month")}
       </nav>
