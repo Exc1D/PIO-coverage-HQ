@@ -249,8 +249,12 @@
 
 /* Peek (components/app/peek.tsx). Holding a link presses it in slowly, the way iOS
    signals that a long press is building; the preview then springs up from slightly small. */
+/* Lists the colour transitions too: this unlayered rule replaces the trigger's own transition-colors. */
 [data-peek] {
-  transition: transform 200ms var(--ease-ios);
+  transition:
+    transform 200ms var(--ease-ios),
+    color 150ms ease-out,
+    background-color 150ms ease-out;
 }
 [data-peek][data-pressing] {
   transform: scale(0.96);
