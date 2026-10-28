@@ -1,25 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import { signIn, signOut } from "./helpers";
 
 // The whole life of an event, as five different people:
 // public request → head schedules and assigns → photographer marks covered →
 // writer and photographer tick their boxes (auto-advance) → proofreader
 // approves → page admin schedules and posts → dashboard counts update.
-
-const PIN = "1234";
-
-async function signIn(page: Page, name: string) {
-  await page.goto("/login");
-  await page.getByLabel("Your name").selectOption({ label: name });
-  await page.getByLabel("PIN").fill(PIN);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL("/");
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-}
-
-async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("link", { name: "Sign in to edit" })).toBeVisible();
-}
 
 const status = (page: Page) => page.getByTestId("event-status");
 
