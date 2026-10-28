@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { SourceChip, StatusBadge } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
-import type { GridDay } from "@/lib/calendar";
+import { byDay as groupByDay, type GridDay } from "@/lib/calendar";
 import { SOURCE_COLORS, SOURCE_LABELS, STATUS_LABELS, type Source, type Status } from "@/lib/constants";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -83,8 +83,7 @@ export function CalendarView({
   month: string;
   emptyLabel: string;
 }) {
-  const byDay = new Map<string, CalItem[]>();
-  for (const it of items) byDay.set(it.day, [...(byDay.get(it.day) ?? []), it]);
+  const byDay = groupByDay(items, (it) => it.day);
   const initial = today.startsWith(month) ? today : `${month}-01`;
   const [selected, setSelected] = useState(initial);
   const dayItems = byDay.get(selected) ?? [];

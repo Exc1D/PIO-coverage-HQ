@@ -99,8 +99,8 @@ export async function listEventsForDashboard(periods: Range[]): Promise<EventRow
   return (data as EventRow[]).map(forList);
 }
 
-/** Posted events whose posted_at falls inside the period (for reports). */
-export async function listPostedInPeriod(period: Range): Promise<EventRow[]> {
+/** Posted events whose posted_at falls inside the period (reports, published calendar). */
+export async function listPostedInPeriod(period: Pick<Range, "start" | "end">): Promise<EventRow[]> {
   await connection();
   const { data, error } = await db()
     .from("events")
@@ -152,11 +152,6 @@ export async function listEventsForStaff(staffId: string, from: string, to: stri
     .order("event_date", { ascending: true });
   if (error) throw new Error(`Could not load your events: ${error.message}`);
   return (data as EventRow[]).map(forList);
-}
-
-/** Posted events whose posted_at falls between two instants. */
-export async function listPostedBetween(start: Date, end: Date): Promise<EventRow[]> {
-  return listPostedInPeriod({ start, end, startDate: "", endDate: "" });
 }
 
 /** Deleted events still restorable (kept 30 days), newest delete first. */

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { detailsSchema, parseCommand } from "@/lib/commands";
 import { AuthError, requireStaff } from "@/lib/auth/session";
 import { db, DB_ERRORS } from "@/lib/db/server";
+import { fieldErrors } from "@/lib/form-errors";
 import { getEvent } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import { notify } from "@/lib/notify";
@@ -102,11 +103,7 @@ export async function createEventAction(_prev: CreateEventState, formData: FormD
     ),
   );
   const parsed = createSchema.safeParse(raw);
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const i of parsed.error.issues) fieldErrors[String(i.path[0])] ??= i.message;
-    return { fieldErrors, values: raw };
-  }
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values: raw };
 
   const { data, error } = await db()
     .rpc("create_event", {

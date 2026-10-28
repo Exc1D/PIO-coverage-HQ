@@ -7,6 +7,7 @@ import { hashPin, pinSchema } from "@/lib/auth/pin";
 import { AuthError, createSession, requireHead } from "@/lib/auth/session";
 import { ROLES, type Role } from "@/lib/constants";
 import { db, DB_ERRORS } from "@/lib/db/server";
+import { fieldErrors } from "@/lib/form-errors";
 import { listStaff } from "@/lib/data/staff";
 import { checkStaffChange } from "@/lib/staff-rules";
 import type { Staff } from "@/lib/types";
@@ -27,12 +28,6 @@ async function head(): Promise<Staff | { error: string }> {
     if (e instanceof AuthError) return { error: e.message };
     throw e;
   }
-}
-
-function fieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const i of error.issues) out[String(i.path[0])] ??= i.message;
-  return out;
 }
 
 const namesSchema = z.object({

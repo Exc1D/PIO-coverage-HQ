@@ -6,6 +6,7 @@ import { attemptLogin } from "@/lib/auth/login";
 import { hashPin, pinSchema } from "@/lib/auth/pin";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { db, DB_ERRORS } from "@/lib/db/server";
+import { fieldErrors } from "@/lib/form-errors";
 import { safeNext } from "@/lib/safe-next";
 
 export type FormState =
@@ -16,15 +17,6 @@ export type FormState =
       values?: Record<string, string>;
     }
   | undefined;
-
-function fieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "form");
-    out[key] ??= issue.message;
-  }
-  return out;
-}
 
 const loginSchema = z.object({
   staffId: z.uuid("Pick your name."),

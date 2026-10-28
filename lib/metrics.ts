@@ -163,6 +163,12 @@ export function daysOverdue(e: Pick<MetricEvent, "due_date">, today: string): nu
   return Math.max(0, daysBetween(e.due_date, today));
 }
 
+/** Sort order for events: by date, then start time (no time last). */
+export const byDateAndTime = (
+  a: Pick<EventRow, "event_date" | "start_time">,
+  b: Pick<EventRow, "event_date" | "start_time">,
+) => a.event_date.localeCompare(b.event_date) || (a.start_time ?? "99").localeCompare(b.start_time ?? "99");
+
 /** Non-cancelled events happening from today through the next `days - 1` days. */
 export function upcoming<T extends MetricEvent & { start_time: string | null }>(
   events: readonly T[],
@@ -170,13 +176,7 @@ export function upcoming<T extends MetricEvent & { start_time: string | null }>(
   days = 7,
 ): T[] {
   const last = addDays(today, days - 1);
-  return events
-    .filter((e) => e.status !== "cancelled" && e.event_date >= today && e.event_date <= last)
-    .sort((a, b) =>
-      a.event_date === b.event_date
-        ? (a.start_time ?? "99").localeCompare(b.start_time ?? "99")
-        : a.event_date.localeCompare(b.event_date),
-    );
+  return events.filter((e) => e.status !== "cancelled" && e.event_date >= today && e.event_date <= last).sort(byDateAndTime);
 }
 
 /** Covered in period = event_date in the period and status covered or later. */
@@ -229,7 +229,7 @@ export function pipelineCounts(events: readonly MetricEvent[]): Record<PipelineS
 
 export type Credit = { written: number; proofread: number; photographed: number; videographed: number; edited: number };
 
-const emptyCredit = (): Credit => ({ written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0 });
+export const emptyCredit = (): Credit => ({ written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0 });
 
 /** Per-person credit by role, counted only from events posted in the period. */
 export function creditsByPerson(events: readonly MetricEvent[], period: Period): Map<string, Credit> {

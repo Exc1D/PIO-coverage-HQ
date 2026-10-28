@@ -12,6 +12,7 @@ export function monthOf(date: string): string {
   return date.slice(0, 7);
 }
 
+/** "2026-10" moved by `delta` months. */
 export function shiftMonth(month: string, delta: number): string {
   const [y, m] = month.split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));

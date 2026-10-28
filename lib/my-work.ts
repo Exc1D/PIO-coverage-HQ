@@ -1,7 +1,9 @@
 // "My work": one person's events, month by month (by event date, Manila).
 // Pure, so the page and its tests can't disagree.
 
+import { shiftMonth } from "./calendar";
 import { SLOTS, type Slot } from "./constants";
+import { byDateAndTime } from "./metrics";
 import { endOfMonth, formatManila, manilaDate, manilaStartOfDay } from "./time";
 import type { EventRow } from "./types";
 
@@ -19,12 +21,7 @@ export function mySlots(e: MyEvent, staffId: string): Slot[] {
   return SLOTS.filter((s) => e[`${s}_id`] === staffId);
 }
 
-/** "2026-10" moved by `delta` months. */
-export function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-  return d.toISOString().slice(0, 7);
-}
+export { shiftMonth };
 
 /**
  * ?month=yyyy-MM, if it's a real month from 2000 up to the current Manila
@@ -68,13 +65,7 @@ export function monthSummaries(events: readonly MyEvent[], months: readonly stri
 
 /** Events held in `month`, earliest first (by date, then start time; no time last). */
 export function eventsInMonth<T extends MyEvent>(events: readonly T[], month: string): T[] {
-  return events
-    .filter((e) => e.event_date.startsWith(month))
-    .sort((a, b) =>
-      a.event_date === b.event_date
-        ? (a.start_time ?? "99").localeCompare(b.start_time ?? "99")
-        : a.event_date.localeCompare(b.event_date),
-    );
+  return events.filter((e) => e.event_date.startsWith(month)).sort(byDateAndTime);
 }
 
 /** How many of the month's (non-cancelled) events this person filled each slot on. */
