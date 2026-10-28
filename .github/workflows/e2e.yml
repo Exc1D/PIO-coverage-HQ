@@ -1,6 +1,7 @@
 # End-to-end tests against a local Supabase stack (migrations from
 # supabase/migrations) and a production build of the app. The app only talks
-# to the REST API, so everything but Postgres, PostgREST and Kong is skipped.
+# to the REST API, so everything but Postgres, PostgREST, Kong and GoTrue is
+# skipped (without GoTrue, `supabase status` doesn't report the API keys).
 name: E2E
 
 on:
@@ -34,10 +35,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Start Supabase (database, REST API and gateway only)
+      - name: Start Supabase (database, REST API, gateway and auth only)
         run: >
           pnpm exec supabase start
-          -x gotrue,realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
       - name: Write .env.local
         run: |
@@ -46,6 +47,7 @@ jobs:
           key=$(jq -r '.SERVICE_ROLE_KEY // .SECRET_KEY // empty' <<<"$status")
           if [ -z "$url" ] || [ -z "$key" ]; then
             echo "::error::supabase status did not report an API URL and service-role key"
+            echo "Fields reported: $(jq -r 'keys | join(", ")' <<<"$status")"
             exit 1
           fi
           echo "::add-mask::$key"
