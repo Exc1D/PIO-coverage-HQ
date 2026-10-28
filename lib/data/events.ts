@@ -1,5 +1,6 @@
 import "server-only";
 import { connection } from "next/server";
+import { SLOTS } from "@/lib/constants";
 import { db } from "@/lib/db/server";
 import { addDays } from "@/lib/time";
 import type { ActivityRow, CaptionRevision, DeletedEvent, EventRow } from "@/lib/types";
@@ -124,6 +125,20 @@ export async function listEventsByDate(from: string, to: string): Promise<EventR
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false });
   if (error) throw new Error(`Could not load events: ${error.message}`);
+  return (data as EventRow[]).map(forList);
+}
+
+/** Events (cancelled included) where `staffId` fills any slot, held between two Manila dates (inclusive). */
+export async function listEventsForStaff(staffId: string, from: string, to: string): Promise<EventRow[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("events")
+    .select("*")
+    .or(SLOTS.map((s) => `${s}_id.eq.${staffId}`).join(","))
+    .gte("event_date", from)
+    .lte("event_date", to)
+    .order("event_date", { ascending: true });
+  if (error) throw new Error(`Could not load your events: ${error.message}`);
   return (data as EventRow[]).map(forList);
 }
 

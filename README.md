@@ -24,6 +24,7 @@ All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. T
 | **Calendar** `/calendar` | everyone | Month grid of **Events** (by event date) or **Published** posts (by posting date), coloured by source. Hover a chip for details on a computer; tap a day on a phone. Click an event to open it. |
 | **Assign** `/needs-assignment` | head assigns; others view | Requested or scheduled events in the next 14 days missing a writer or photo/video. Pick people inline; each option shows how many other events that person has that day. |
 | **Reports** `/reports` | everyone | Monthly or weekly. Posted events grouped by source with subtotals, a per-person table (written / proofread / photographed / videographed), **CSV downloads**, and an **A4 print layout** with "Prepared by / Noted by" lines. |
+| **My work** `/me` | signed-in staff | Your own events month by month (by event date): the last 6 months at a glance with events held and posted, then the chosen month's events with your role, source and status. Step back through earlier months with the arrows. |
 | **Staff** `/admin` | head | Add people, set roles, reset PINs, deactivate leavers, clear sign-in locks, restore deleted events. |
 | **Request coverage** `/request` | public, no sign-in | Organisers and LGUs request coverage. Lands on the board as *Requested*. |
 | **First-run setup** `/setup` | once | Creates the first head when there are no staff yet. |
@@ -34,6 +35,7 @@ Source colours are the same everywhere: **Provincial Government** blue, **Other 
 
 - **Anyone with the link can view** the dashboard, board, calendars and reports.
 - **To change anything**, staff pick their name and enter a personal 4–6 digit **PIN**. That sets a signed, httpOnly session cookie for 8 hours. Every change is attributed to that person in the event's activity log.
+- **Account menu:** once signed in, the avatar at the right of the header holds everything account-related: your name and roles, **My work**, **Staff** (head only) and **Sign out**. Signed out, it's a single **Sign in** button.
 - **Lockout:** 5 wrong PINs for one person, or 20 from one IP address, lock sign-in for 15 minutes. The head can clear a person's lock from Staff.
 - **Roles** (a person can have several): head (admin), photographer, videographer, writer, proofreader, page admin.
 - Resetting someone's PIN or deactivating them signs them out on every device at once. Before deactivating, Staff lists the unfinished events they are still assigned to.
@@ -229,12 +231,13 @@ These live in `lib/metrics.ts` and are covered by unit tests.
 ## Project layout
 
 ```
-app/                 routes (dashboard, board, calendar, needs-assignment, reports, admin,
+app/                 routes (dashboard, board, calendar, needs-assignment, reports, me, admin,
                      events/[id], request, login, setup) and Server Actions in app/actions/
 app/@drawer/         intercepted /events/[id] → side drawer over the current page
 components/          UI by area (board, events, dashboard, calendar, assign, reports, admin, ui = shadcn)
 lib/workflow.ts      transition rules (pure, 100% tested)
 lib/metrics.ts       reporting definitions (pure, 100% tested)
+lib/my-work.ts       one person's events by month (pure, tested)
 lib/text-diff.ts     word diff for comparing caption versions
 lib/commands.ts      zod schema for event commands (server); lib/command-preview.ts for the browser
 lib/data/            database reads (server only)
