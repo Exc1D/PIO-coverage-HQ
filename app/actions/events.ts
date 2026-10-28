@@ -8,7 +8,6 @@ import { db, DB_ERRORS } from "@/lib/db/server";
 import { fieldErrors } from "@/lib/form-errors";
 import { getEvent } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
-import { notify } from "@/lib/notify";
 import type { EventRow, Staff } from "@/lib/types";
 import { applyCommand } from "@/lib/workflow";
 
@@ -72,9 +71,6 @@ export async function runEventCommand(eventId: string, version: number, payload:
     return { ok: false, code: "error", message: "The change couldn't be saved. Please try again." };
   }
 
-  await notify({ eventId: event.id, title: event.title, actorId: me.id, activity: result.activity }).catch((e) =>
-    console.error("notify failed", e),
-  );
   refresh();
   return { ok: true, version: data.version };
 }
@@ -115,12 +111,6 @@ export async function createEventAction(_prev: CreateEventState, formData: FormD
     console.error("create_event failed", error.code, error.message);
     return { error: "The event couldn't be saved. Please try again.", values: raw };
   }
-  await notify({
-    eventId: data.id,
-    title: data.title,
-    actorId: me.id,
-    activity: [{ action: "created", from_status: null, to_status: "requested", details: {} }],
-  }).catch((e) => console.error("notify failed", e));
   refresh();
   return { createdId: data.id };
 }

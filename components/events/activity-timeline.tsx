@@ -1,10 +1,10 @@
 import { activityReason, describeActivity } from "@/lib/activity";
+import { staffName } from "@/lib/format";
 import { formatManila } from "@/lib/time";
 import type { ActivityRow, Staff } from "@/lib/types";
 
 export function ActivityTimeline({ activity, staff }: { activity: ActivityRow[]; staff: Staff[] }) {
-  const byId = new Map(staff.map((s) => [s.id, s.display_name]));
-  const nameOf = (id: string | null | undefined) => (id ? (byId.get(id) ?? "Unknown") : "nobody");
+  const nameOf = (id: string | null | undefined) => staffName(staff, id) ?? "nobody";
 
   return (
     <section className="grid gap-3" aria-labelledby="activity-h">
@@ -23,7 +23,7 @@ export function ActivityTimeline({ activity, staff }: { activity: ActivityRow[];
                 <p className="text-sm">{describeActivity(a, nameOf)}</p>
                 {reason && <p className="mt-0.5 border-l-2 pl-2 text-sm italic text-muted-foreground">“{reason}”</p>}
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {a.actor_id ? byId.get(a.actor_id) ?? "Unknown" : "Public request"} ·{" "}
+                  {staffName(staff, a.actor_id) ?? "Public request"} ·{" "}
                   <time dateTime={a.created_at}>{formatManila(a.created_at, "MMM d, yyyy · h:mm a")}</time>
                 </p>
               </li>

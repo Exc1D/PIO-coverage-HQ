@@ -103,12 +103,22 @@ export async function updateStaffAction(staffId: string, _prev: StaffFormState, 
  * applied (e.g. a new PIN with old sessions still valid).
  */
 async function updateAndRevoke(staffId: string, changes: Record<string, unknown>): Promise<number> {
-  const { data, error } = await db().from("staff").select("session_version").eq("id", staffId).single<{ session_version: number }>();
-  if (error) throw new Error(`Could not load staff: ${error.message}`);
-  const next = data.session_version + 1;
-  const { error: upd } = await db().from("staff").update({ ...changes, session_version: next }).eq("id", staffId);
-  if (upd) throw new Error(`Could not update staff: ${upd.message}`);
-  return next;
+  // Compare-and-set: two heads acting at once can't both write the same version
+  // (which would leave a session from the old version valid).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await db().from("staff").select("session_version").eq("id", staffId).single<{ session_version: number }>();
+    if (error) throw new Error(`Could not load staff: ${error.message}`);
+    const next = data.session_version + 1;
+    const { data: updated, error: upd } = await db()
+      .from("staff")
+      .update({ ...changes, session_version: next })
+      .eq("id", staffId)
+      .eq("session_version", data.session_version)
+      .select("id");
+    if (upd) throw new Error(`Could not update staff: ${upd.message}`);
+    if (updated.length > 0) return next;
+  }
+  throw new Error("Could not update staff: it kept changing underneath us.");
 }
 
 export async function resetPinAction(staffId: string, _prev: StaffFormState, formData: FormData): Promise<StaffFormState> {

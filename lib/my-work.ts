@@ -1,7 +1,7 @@
 // "My work": one person's events, month by month (by event date, Manila).
 // Pure, so the page and its tests can't disagree.
 
-import { shiftMonth } from "./calendar";
+import { isMonthString, shiftMonth } from "./calendar";
 import { SLOTS, type Slot } from "./constants";
 import { byDateAndTime } from "./metrics";
 import { endOfMonth, formatManila, manilaDate, manilaStartOfDay } from "./time";
@@ -13,8 +13,6 @@ export const HISTORY_MONTHS = 6;
 export type MyEvent = Pick<EventRow, "id" | "event_date" | "start_time" | "status"> & {
   [K in `${Slot}_id`]: string | null;
 };
-
-const MONTH_RE = /^(\d{4})-(\d{2})$/;
 
 /** The slots `staffId` fills on an event, in slot order. */
 export function mySlots(e: MyEvent, staffId: string): Slot[] {
@@ -30,9 +28,7 @@ export { shiftMonth };
 export function monthParam(raw: string | string[] | undefined, now: Date): string {
   const current = manilaDate(now).slice(0, 7);
   const value = Array.isArray(raw) ? raw[0] : raw;
-  const m = value?.match(MONTH_RE);
-  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12 || value! < "2000-01" || value! > current) return current;
-  return value!;
+  return value && isMonthString(value) && value <= current ? value : current;
 }
 
 /** The `count` months ending with `month`, oldest first. */

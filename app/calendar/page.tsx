@@ -10,7 +10,7 @@ import { gridRange, isMonthString, monthGrid, monthOf, shiftMonth } from "@/lib/
 import { MUNICIPALITY_LABELS, SOURCE_COLORS, SOURCE_LABELS, SOURCES } from "@/lib/constants";
 import { listEventsByDate, listPostedInPeriod } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
-import { formatTime } from "@/lib/format";
+import { formatTime, staffName } from "@/lib/format";
 import { addDays, formatManila, manilaDate, manilaStartOfDay } from "@/lib/time";
 import type { EventRow, Staff } from "@/lib/types";
 import { segmentedItem, segmentedList } from "@/components/app/segmented";
@@ -30,7 +30,7 @@ export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
 }
 
 function toItem(e: EventRow, view: View, staff: Staff[]): CalItem {
-  const name = (id: string | null) => (id ? staff.find((s) => s.id === id)?.display_name : undefined);
+  const name = (id: string | null) => staffName(staff, id);
   const people = [
     name(e.photographer_id) && `P: ${name(e.photographer_id)}`,
     name(e.videographer_id) && `V: ${name(e.videographer_id)}`,

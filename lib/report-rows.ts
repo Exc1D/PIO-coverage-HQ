@@ -1,6 +1,7 @@
 // Report tables, built once and shared by the Reports page and its CSV
 // export so the two can never disagree.
 
+import { staffName } from "./format";
 import { MUNICIPALITY_LABELS, SOURCE_LABELS, type Source } from "./constants";
 import { creditsByPerson, emptyCredit, postsGroupedBySource, type Credit, type Period } from "./metrics";
 import { formatManila, manilaStartOfDay } from "./time";
@@ -26,7 +27,7 @@ export type PersonRow = { id: string; name: string; roles: string } & Credit & {
 const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer", "photo_editor", "video_editor"] as const;
 
 export function postGroups(events: readonly EventRow[], period: Period, staff: readonly Staff[]): SourceGroup[] {
-  const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : "");
+  const name = (id: string | null) => staffName(staff, id) ?? "";
   return postsGroupedBySource(events, period).map((g) => ({
     source: g.source,
     label: g.source ? SOURCE_LABELS[g.source] : "No source",

@@ -2,7 +2,6 @@
 
 import { clientIpHash } from "@/lib/auth/ip";
 import { db } from "@/lib/db/server";
-import { notify } from "@/lib/notify";
 import { recordHit, releaseSlot, takeSlot } from "@/lib/rate-limit";
 import { isBot, parseRequest, REQUEST_FIELDS, REQUESTS_PER_HOUR } from "@/lib/request-form";
 import { manilaDate } from "@/lib/time";
@@ -50,12 +49,5 @@ export async function submitRequestAction(_prev: RequestState, formData: FormDat
     await releaseSlot(slot); // a failed save shouldn't use up the hourly allowance
     return { error: "Your request couldn’t be sent. Please try again.", values };
   }
-  await notify({
-    eventId: data.id,
-    title: data.title,
-    actorId: null,
-    activity: [{ action: "created", from_status: null, to_status: "requested", details: { public_request: true } }],
-  }).catch((e) => console.error("notify failed", e));
-
   return { submitted: true, title: data.title, date: data.event_date };
 }
