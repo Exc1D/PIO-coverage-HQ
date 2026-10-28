@@ -163,10 +163,6 @@
     animation-name: ios-panel-out;
   }
 }
-/* Swiped away by hand: it's already off screen, so close without a second animation. */
-.ios-sheet[data-swiped][data-state="closed"] {
-  animation: none;
-}
 
 /* ---------------------------------------------------------------------------
    Page transitions (React <ViewTransition> in the root layout).

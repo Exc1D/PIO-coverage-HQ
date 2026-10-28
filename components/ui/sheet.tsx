@@ -49,6 +49,7 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  ref,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   /** "auto": a pull-down bottom sheet on phones, a right-hand panel from 640px up. */
@@ -56,7 +57,7 @@ function SheetContent({
   showCloseButton?: boolean
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null)
-  const swipeRef = useSwipeDismiss<HTMLDivElement>(() => closeRef.current?.click())
+  const swipeRef = useSwipeDismiss<HTMLDivElement>(() => closeRef.current?.click(), ref)
   const swipeable = side === "auto" || side === "bottom"
   return (
     <SheetPortal>
@@ -78,7 +79,7 @@ function SheetContent({
           className
         )}
         {...props}
-        ref={swipeable ? swipeRef : undefined}
+        ref={swipeable ? swipeRef : ref}
       >
         {swipeable && (
           // Sticky so it stays at the top while the sheet's content scrolls.

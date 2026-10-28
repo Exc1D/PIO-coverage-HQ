@@ -52,12 +52,13 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  ref,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
   const closeRef = React.useRef<HTMLButtonElement>(null)
-  const swipeRef = useSwipeDismiss<HTMLDivElement>(() => closeRef.current?.click())
+  const swipeRef = useSwipeDismiss<HTMLDivElement>(() => closeRef.current?.click(), ref)
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
