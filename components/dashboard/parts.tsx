@@ -1,11 +1,13 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon, MinusIcon } from "lucide-react";
 import Link from "next/link";
-import { SourceChip } from "@/components/app/labels";
+import { OverdueFlag, SourceChip } from "@/components/app/labels";
+import { partyName } from "@/components/app/waiting-on";
 import { Peek } from "@/components/app/peek";
 import { EventPeek } from "@/components/events/event-peek";
 import { formatEventDate } from "@/lib/format";
 import { STATUS_LABELS } from "@/lib/constants";
-import type { PipelineStatus } from "@/lib/metrics";
+import { isStuck, type PipelineStatus } from "@/lib/metrics";
+import { partyKey, waitingByParty } from "@/lib/waiting";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BAR_COLOR } from "@/lib/chart-colors";
@@ -213,3 +215,66 @@ export function EventList({
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Waiting on: who is holding up production right now
+// ---------------------------------------------------------------------------
+
+const WAITING_SHOWN = 4;
+
+/** One card per person (or role) that in-progress events are waiting on; most overdue first. */
+export function WaitingBoard({ events, staff, today }: { events: EventRow[]; staff: Staff[]; today: string }) {
+  const staffById = new Map(staff.map((s) => [s.id, s]));
+  const groups = waitingByParty(events, today)
+    .map((g) => ({
+      ...g,
+      overdue: g.items.filter((i) => isStuck(i.event, today)).length,
+      // Overdue first, then by posting target.
+      items: [...g.items].sort(
+        (a, b) => Number(isStuck(b.event, today)) - Number(isStuck(a.event, today)) || a.event.due_date.localeCompare(b.event.due_date),
+      ),
+    }))
+    .sort((a, b) => b.overdue - a.overdue);
+
+  if (groups.length === 0) {
+    return <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Nothing is waiting on anyone right now.</p>;
+  }
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {groups.map((g) => {
+        const name = partyName(g.who, staffById);
+        return (
+          <li key={partyKey(g.who)} className={cn("flex flex-col rounded-xl border bg-card", g.overdue > 0 && "border-red-200")}>
+            <div className="flex items-baseline justify-between gap-2 border-b px-4 py-2.5">
+              <h3 className="truncate text-sm font-semibold">{name.charAt(0).toUpperCase() + name.slice(1)}</h3>
+              <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                {g.items.length} waiting
+                {g.overdue > 0 && <span className="font-semibold text-red-700"> · {g.overdue} overdue</span>}
+              </p>
+            </div>
+            <ul className="divide-y">
+              {g.items.slice(0, WAITING_SHOWN).map((i, n) => (
+                <li key={`${i.event.id}-${n}`}>
+                  <Link
+                    href={`/events/${i.event.id}`}
+                    prefetch={false}
+                    className="grid gap-0.5 px-4 py-2 transition-colors duration-150 hover:bg-accent/60 focus-visible:bg-accent focus-visible:outline-none active:bg-accent active:duration-0"
+                  >
+                    <span className="line-clamp-1 text-sm font-medium">{i.event.title}</span>
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      {i.task}
+                      {isStuck(i.event, today) && <OverdueFlag dueDate={i.event.due_date} />}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              {g.items.length > WAITING_SHOWN && (
+                <li className="px-4 py-2 text-xs text-muted-foreground">and {g.items.length - WAITING_SHOWN} more</li>
+              )}
+            </ul>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

@@ -12,12 +12,13 @@ export async function signIn(page: Page, name: string) {
   await page.getByLabel("PIN").fill(PIN);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/");
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Account menu for ${name}` })).toBeVisible();
 }
 
 export async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("link", { name: "Sign in to edit" })).toBeVisible();
+  await page.getByRole("button", { name: /^Account menu for / }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
 }
 
 let client: SupabaseClient | null = null;

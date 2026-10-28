@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { StatusBadge } from "@/components/app/labels";
 import { LazyPersonBars, LazySourceDonut } from "@/components/dashboard/lazy-charts";
-import { ChartCard, EmptyChart, EventList, PipelineBars, StatTile } from "@/components/dashboard/parts";
+import { ChartCard, EmptyChart, EventList, PipelineBars, StatTile, WaitingBoard } from "@/components/dashboard/parts";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SOURCE_COLORS, SOURCE_LABELS, SOURCES, STATUS_LABELS } from "@/lib/constants";
@@ -134,6 +134,16 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           <PipelineBars counts={s.pipeline} />
         </ChartCard>
       </div>
+
+      <section aria-labelledby="waiting-h" className="grid gap-3">
+        <div>
+          <h2 id="waiting-h" className="text-lg font-semibold tracking-tight">
+            Waiting on
+          </h2>
+          <p className="text-sm text-muted-foreground">Who has to act next on each event still in progress, most overdue first.</p>
+        </div>
+        <WaitingBoard events={events} staff={staff} today={today} />
+      </section>
 
       <section aria-labelledby="work-h" className="grid gap-3">
         <div>
