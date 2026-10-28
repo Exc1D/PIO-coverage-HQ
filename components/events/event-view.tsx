@@ -24,7 +24,6 @@ import {
   SLOTS,
   canFillSlot,
   SOURCE_LABELS,
-  STATUS_LABELS,
   type Slot,
 } from "@/lib/constants";
 import { isStuck } from "@/lib/metrics";
@@ -32,7 +31,7 @@ import { formatManila, manilaStartOfDay } from "@/lib/time";
 import type { ActivityRow, CaptionRevision, EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { waitingOn } from "@/lib/waiting";
-import { availability, nextStatus, type CommandType } from "@/lib/workflow";
+import { availability, type CommandType } from "@/lib/workflow";
 import { CaptionPanel } from "./caption-panel";
 import { CommandDialog, INPUT_COMMANDS, type InputCommand } from "./command-dialog";
 import { DeleteEventDialog } from "./delete-event-dialog";
@@ -92,7 +91,6 @@ export function EventView({
   const trigger = (type: CommandType) => (isInput(type) ? setDialog(type) : run({ type } as CommandPayload));
 
   const forward = FORWARD.filter((a) => avail[a.type].state !== "hidden");
-  const next = nextStatus(event.status);
 
   return (
     <div className="grid gap-6">
@@ -183,11 +181,6 @@ export function EventView({
               </Button>
             )}
           </div>
-          {forward.length === 0 && next && event.status !== "in_production" && event.status !== "posted" && (
-            <p className="text-sm text-muted-foreground">
-              Waiting on someone else to move this to {STATUS_LABELS[next]}.
-            </p>
-          )}
         </section>
       ) : null}
 
