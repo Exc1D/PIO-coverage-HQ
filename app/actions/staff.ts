@@ -6,7 +6,7 @@ import { clearLockout } from "@/lib/auth/login";
 import { hashPin, pinSchema } from "@/lib/auth/pin";
 import { AuthError, createSession, requireHead } from "@/lib/auth/session";
 import { ROLES, type Role } from "@/lib/constants";
-import { db } from "@/lib/db/server";
+import { db, DB_ERRORS } from "@/lib/db/server";
 import { listStaff } from "@/lib/data/staff";
 import { checkStaffChange } from "@/lib/staff-rules";
 import type { Staff } from "@/lib/types";
@@ -165,4 +165,35 @@ export async function clearLockAction(staffId: string): Promise<SimpleResult> {
   await clearLockout(staffId, me.id);
   refresh();
   return { ok: true, message: "Lock cleared. They can sign in again." };
+}
+
+/**
+ * Permanently remove a deactivated account with no history (e.g. added by
+ * mistake). Anyone who appears in the record stays deactivated instead, so
+ * reports and activity keep their names. delete_staff enforces all of this.
+ */
+export async function deleteStaffAction(staffId: string): Promise<SimpleResult> {
+  const me = await head();
+  if ("error" in me) return { ok: false, message: me.error };
+  if (!z.uuid().safeParse(staffId).success) return { ok: false, message: "Invalid request." };
+
+  const { error } = await db().rpc("delete_staff", { p_staff_id: staffId, p_deleted_by: me.id });
+  refresh();
+  if (error) {
+    if (error.code === DB_ERRORS.forbidden) return { ok: false, message: "Only the head can delete accounts." };
+    if (error.code === DB_ERRORS.notFound) return { ok: false, message: "That account was already deleted." };
+    if (error.code === DB_ERRORS.badInput) return { ok: false, message: "You can’t delete your own account." };
+    if (error.code === DB_ERRORS.conflict) {
+      return {
+        ok: false,
+        message: error.message === "still_active"
+          ? "Deactivate this account before deleting it."
+          : "This person has work on record, so the account stays deactivated to keep reports and history accurate.",
+      };
+    }
+    console.error("delete_staff failed", error.code, error.message);
+    return { ok: false, message: "Couldn’t delete the account. Please try again." };
+  }
+  console.info("staff deleted", { staffId, by: me.id });
+  return { ok: true, message: "Account deleted." };
 }

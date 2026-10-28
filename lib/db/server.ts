@@ -21,6 +21,7 @@ export function db(): SupabaseClient {
 
 /** Custom SQLSTATEs raised by our Postgres functions. */
 export const DB_ERRORS = {
+  forbidden: "PT403",
   notFound: "PT404",
   conflict: "PT409",
   badInput: "PT422",

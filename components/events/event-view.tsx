@@ -319,7 +319,13 @@ export function EventView({
       <CommandDialog event={event} type={dialog} onClose={() => setDialog(null)} onSubmit={run} />
       {editing && <EditDetailsDialog event={event} onClose={() => setEditing(false)} onSubmit={run} />}
       {/* The drawer renders the heading as h2, the full page as h1. */}
-      <DeleteEventDialog event={event} open={deleting} inDrawer={headingLevel === "h2"} onClose={() => setDeleting(false)} />
+      <DeleteEventDialog
+        event={event}
+        open={deleting}
+        inDrawer={headingLevel === "h2"}
+        onClose={() => setDeleting(false)}
+        onCancelInstead={avail.cancel.state === "available" ? () => setDialog("cancel") : undefined}
+      />
     </div>
   );
 }

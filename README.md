@@ -24,7 +24,7 @@ All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. T
 | **Calendar** `/calendar` | everyone | Month grid of **Events** (by event date) or **Published** posts (by posting date), coloured by source. Hover a chip for details on a computer; tap a day on a phone. Click an event to open it. |
 | **Assign** `/needs-assignment` | head assigns; others view | Requested or scheduled events in the next 14 days missing a writer or photo/video. Pick people inline; each option shows how many other events that person has that day. |
 | **Reports** `/reports` | everyone | Monthly or weekly. Posted events grouped by source with subtotals, a per-person table (written / proofread / photographed / videographed), **CSV downloads**, and an **A4 print layout** with "Prepared by / Noted by" lines. |
-| **Staff** `/admin` | head | Add people, set roles, reset PINs, deactivate leavers, clear sign-in locks. |
+| **Staff** `/admin` | head | Add people, set roles, reset PINs, deactivate leavers, clear sign-in locks, restore deleted events. |
 | **Request coverage** `/request` | public, no sign-in | Organisers and LGUs request coverage. Lands on the board as *Requested*. |
 | **First-run setup** `/setup` | once | Creates the first head when there are no staff yet. |
 
@@ -36,7 +36,9 @@ Source colours are the same everywhere: **Provincial Government** blue, **Other 
 - **To change anything**, staff pick their name and enter a personal 4–6 digit **PIN**. That sets a signed, httpOnly session cookie for 8 hours. Every change is attributed to that person in the event's activity log.
 - **Lockout:** 5 wrong PINs for one person, or 20 from one IP address, lock sign-in for 15 minutes. The head can clear a person's lock from Staff.
 - **Roles** (a person can have several): head (admin), photographer, videographer, writer, proofreader, page admin.
-- Resetting someone's PIN or deactivating them signs them out on every device at once.
+- Resetting someone's PIN or deactivating them signs them out on every device at once. Before deactivating, Staff lists the unfinished events they are still assigned to.
+- Accounts with any work on record can only be deactivated, so reports keep their names. A deactivated account with no history (e.g. added by mistake) can be deleted for good.
+- Deleting an event (head only) keeps a copy for 30 days: the toast offers **Undo**, and **Staff → Recently deleted events** can restore it with its history. Posted events also need the word "delete" typed. **Cancel event** remains the way to keep something on record.
 - **Requester names and contacts** are hidden from anyone not signed in.
 - **Optional view key:** set `VIEW_KEY` and viewers must open the app once with `?k=<VIEW_KEY>`. A cookie then remembers the device. The public request form stays open to everyone.
 - **Database security:** Row Level Security is on for every table, with **no** policies, and the anon/authenticated roles are revoked. All reads and writes go through server code using the service-role key, which never reaches the browser. Every input is validated with zod on the server.
@@ -247,6 +249,7 @@ Notifications such as email or SMS are out of scope. `lib/notify.ts` is called a
 - **"Invalid server environment" error:** `.env.local` is missing a value; `SESSION_SECRET` needs at least 32 characters.
 - **`supabase start` can't pull images** (registry rate limits): run only the database with `supabase db start`, then follow the comments in `scripts/dev/rest-proxy.mjs` to run PostgREST behind a small `/rest/v1` proxy.
 - **Someone is locked out:** wait 15 minutes, or have the head open Staff and press **Clear lock**.
+- **Deleted an event by mistake:** within 30 days, open Staff → **Recently deleted events** and press **Restore**. It comes back with its history and caption versions, and its activity shows when it was brought back.
 - **Lost the only head's PIN:** in the Supabase SQL editor, run `update staff set roles = array_append(roles, 'head') where display_name = '<someone>';` for another staff member, then have that person reset the PIN from Staff.
 
 ## Privacy
@@ -256,4 +259,8 @@ In keeping with the Data Privacy Act of 2012 (RA 10173), the app stores only:
 - staff names and roles;
 - each requester's name and one contact detail on their event, visible only to signed-in staff.
 
-IP addresses used for rate limiting and lockout are stored only as keyed hashes, and old entries are deleted automatically.
+IP addresses used for rate limiting and lockout are stored only as keyed hashes. Old data is deleted automatically (`prune_expired_data`, run occasionally on sign-in):
+
+- sign-in attempts after 30 days;
+- rate-limit entries after 2 days;
+- deleted events, including the requester's details, 30 days after the delete.

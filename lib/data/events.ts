@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { db } from "@/lib/db/server";
 import { addDays } from "@/lib/time";
-import type { ActivityRow, CaptionRevision, EventRow } from "@/lib/types";
+import type { ActivityRow, CaptionRevision, DeletedEvent, EventRow } from "@/lib/types";
 
 /** How far back the board loads finished (posted/cancelled) events. */
 const BOARD_HISTORY_DAYS = 90;
@@ -130,4 +130,15 @@ export async function listEventsByDate(from: string, to: string): Promise<EventR
 /** Posted events whose posted_at falls between two instants. */
 export async function listPostedBetween(start: Date, end: Date): Promise<EventRow[]> {
   return listPostedInPeriod({ start, end, startDate: "", endDate: "" });
+}
+
+/** Deleted events still restorable (kept 30 days), newest delete first. */
+export async function listDeletedEvents(): Promise<DeletedEvent[]> {
+  await connection();
+  const { data, error } = await db()
+    .from("deleted_events")
+    .select("event_id, title, deleted_by_id, deleted_at, event_date:event->>event_date, status:event->>status")
+    .order("deleted_at", { ascending: false });
+  if (error) throw new Error(`Could not load deleted events: ${error.message}`);
+  return data as DeletedEvent[];
 }

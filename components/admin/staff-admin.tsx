@@ -1,11 +1,13 @@
 "use client";
 
-import { KeyRoundIcon, LockIcon, PencilIcon, UserPlusIcon } from "lucide-react";
+import { KeyRoundIcon, LockIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   clearLockAction,
   createStaffAction,
+  deleteStaffAction,
   resetPinAction,
   setActiveAction,
   updateStaffAction,
@@ -24,11 +26,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ROLE_LABELS, ROLES, type Role } from "@/lib/constants";
+import { formatEventDate } from "@/lib/format";
 import { OFFLINE_MESSAGE } from "@/lib/offline";
-import type { Staff } from "@/lib/types";
+import type { OpenAssignment, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Row = Staff & { lockedUntil: string | null };
+type Row = Staff & { lockedUntil: string | null; openAssignments: OpenAssignment[]; hasHistory: boolean };
+type Quick = (fn: () => Promise<{ ok: boolean; message: string }>, after?: () => void) => void;
 
 const ROLE_HINTS: Record<Role, string> = {
   head: "Admin: schedules, assigns, confirms coverage, manages staff",
@@ -181,11 +185,81 @@ function ResetPinDialog({ person, onClose }: { person: Row; onClose: () => void 
   );
 }
 
+/** Deactivation ends their sessions; open assignments stay put, so list them for reassignment. */
+function DeactivateDialog({ person, pending, quick, onClose }: { person: Row; pending: boolean; quick: Quick; onClose: () => void }) {
+  const open = person.openAssignments;
+  return (
+    <Dialog open onOpenChange={(o) => !o && !pending && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Deactivate {person.display_name}?</DialogTitle>
+          <DialogDescription>
+            They’ll be signed out everywhere and can’t be assigned. Their past work still counts in reports, and you can
+            reactivate them at any time.
+          </DialogDescription>
+        </DialogHeader>
+        {open.length > 0 && (
+          <div className="grid gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950/40">
+            <p className="font-medium">
+              Still assigned to {open.length} unfinished event{open.length === 1 ? "" : "s"}. Reassign{" "}
+              {open.length === 1 ? "it" : "them"} so nothing stalls:
+            </p>
+            <ul className="grid max-h-40 gap-1 overflow-y-auto">
+              {open.map((e) => (
+                <li key={e.id}>
+                  <Link href={`/events/${e.id}`} className="underline underline-offset-4">
+                    {e.title}
+                  </Link>{" "}
+                  <span className="text-muted-foreground">· {formatEventDate({ event_date: e.event_date, start_time: null })}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
+            Never mind
+          </Button>
+          <Button type="button" variant="destructive" disabled={pending} onClick={() => quick(() => setActiveAction(person.id, false), onClose)}>
+            {pending ? "Deactivating…" : "Deactivate"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Only offered for deactivated accounts with no history (delete_staff checks again). */
+function DeleteStaffDialog({ person, pending, quick, onClose }: { person: Row; pending: boolean; quick: Quick; onClose: () => void }) {
+  return (
+    <Dialog open onOpenChange={(o) => !o && !pending && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete {person.display_name}’s account?</DialogTitle>
+          <DialogDescription>
+            {person.full_name} has no work on record, so the account can be removed completely, with their name and PIN.
+            This can’t be undone; you’d need to add them again.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
+            Never mind
+          </Button>
+          <Button type="button" variant="destructive" disabled={pending} onClick={() => quick(() => deleteStaffAction(person.id), onClose)}>
+            {pending ? "Deleting…" : "Delete account"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function StaffAdmin({ staff, meId }: { staff: Row[]; meId: string }) {
-  const [dialog, setDialog] = useState<{ kind: "add" } | { kind: "edit" | "pin"; person: Row } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "add" } | { kind: "edit" | "pin" | "deactivate" | "delete"; person: Row } | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const quick = (fn: () => Promise<{ ok: boolean; message: string }>) =>
+  /** Run an action and toast its result; `after` runs either way once it settles (e.g. close a dialog). */
+  const quick: Quick = (fn, after) =>
     startTransition(async () => {
       let res;
       try {
@@ -196,6 +270,7 @@ export function StaffAdmin({ staff, meId }: { staff: Row[]; meId: string }) {
       }
       if (res.ok) toast.success(res.message);
       else toast.error(res.message);
+      after?.();
     });
 
   const active = staff.filter((s) => s.active);
@@ -217,6 +292,11 @@ export function StaffAdmin({ staff, meId }: { staff: Row[]; meId: string }) {
                 </span>
               ))}
             </p>
+            {s.active && s.openAssignments.length > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {s.openAssignments.length} unfinished event{s.openAssignments.length === 1 ? "" : "s"}
+              </p>
+            )}
             {s.lockedUntil && (
               <p className="mt-1 flex items-center gap-1 text-xs font-medium text-red-700">
                 <LockIcon className="size-3.5" aria-hidden /> Locked out after wrong PINs
@@ -237,24 +317,28 @@ export function StaffAdmin({ staff, meId }: { staff: Row[]; meId: string }) {
             </Button>
             {s.active ? (
               s.id !== meId && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive"
-                  disabled={pending}
-                  onClick={() => {
-                    if (window.confirm(`Deactivate ${s.display_name}? They’ll be signed out and can’t be assigned. Their past work still counts in reports.`)) {
-                      quick(() => setActiveAction(s.id, false));
-                    }
-                  }}
-                >
+                <Button size="sm" variant="ghost" className="text-destructive" disabled={pending} onClick={() => setDialog({ kind: "deactivate", person: s })}>
                   Deactivate
                 </Button>
               )
             ) : (
-              <Button size="sm" variant="secondary" disabled={pending} onClick={() => quick(() => setActiveAction(s.id, true))}>
-                Reactivate
-              </Button>
+              <>
+                <Button size="sm" variant="secondary" disabled={pending} onClick={() => quick(() => setActiveAction(s.id, true))}>
+                  Reactivate
+                </Button>
+                {!s.hasHistory && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    disabled={pending}
+                    onClick={() => setDialog({ kind: "delete", person: s })}
+                    aria-label={`Delete ${s.display_name}’s account`}
+                  >
+                    <Trash2Icon aria-hidden /> Delete
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </li>
@@ -280,6 +364,10 @@ export function StaffAdmin({ staff, meId }: { staff: Row[]; meId: string }) {
           <h2 id="inactive-h" className="text-sm font-semibold">
             Deactivated <span className="font-normal text-muted-foreground">· {inactive.length}</span>
           </h2>
+          <p className="text-xs text-muted-foreground">
+            Accounts with work on record stay here so reports keep their names. Accounts with none (e.g. added by mistake)
+            can be deleted.
+          </p>
           {list(inactive)}
         </section>
       )}
@@ -287,6 +375,10 @@ export function StaffAdmin({ staff, meId }: { staff: Row[]; meId: string }) {
       {dialog?.kind === "add" && <StaffDialog mode="add" onClose={() => setDialog(null)} />}
       {dialog?.kind === "edit" && <StaffDialog mode="edit" person={dialog.person} onClose={() => setDialog(null)} />}
       {dialog?.kind === "pin" && <ResetPinDialog person={dialog.person} onClose={() => setDialog(null)} />}
+      {dialog?.kind === "deactivate" && (
+        <DeactivateDialog person={dialog.person} pending={pending} quick={quick} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === "delete" && <DeleteStaffDialog person={dialog.person} pending={pending} quick={quick} onClose={() => setDialog(null)} />}
     </div>
   );
 }

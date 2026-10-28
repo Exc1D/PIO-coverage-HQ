@@ -63,3 +63,16 @@ export type CaptionRevision = {
   body: string | null;
   created_at: string;
 };
+
+/** A deleted event's copy, kept 30 days so it can be restored. */
+export type DeletedEvent = {
+  event_id: string;
+  title: string;
+  event_date: string; // yyyy-MM-dd
+  status: Status;
+  deleted_by_id: string;
+  deleted_at: string;
+};
+
+/** An unfinished event someone is assigned to (shown before deactivating them). */
+export type OpenAssignment = { id: string; title: string; event_date: string };

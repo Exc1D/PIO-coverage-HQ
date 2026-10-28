@@ -134,7 +134,11 @@ export async function createEventAction(_prev: CreateEventState, formData: FormD
 
 export type DeleteResult = { ok: true } | Extract<CommandResult, { ok: false }>;
 
-/** Permanently delete an event and its activity. Cancelling is the reversible option. */
+/**
+ * Delete an event and its activity. The database keeps a copy for 30 days so a
+ * mistake can be undone (README, "Troubleshooting"); cancelling is the everyday
+ * reversible option.
+ */
 export async function deleteEventAction(eventId: string, version: number): Promise<DeleteResult> {
   const me = await actor();
   if ("ok" in me) return me;
@@ -144,10 +148,12 @@ export async function deleteEventAction(eventId: string, version: number): Promi
     return { ok: false, code: "rejected", message: "Invalid request." };
   }
 
-  const { error } = await db().rpc("delete_event", { p_event_id: eventId, p_expected_version: version });
+  const { error } = await db().rpc("delete_event", { p_event_id: eventId, p_expected_version: version, p_deleted_by: me.id });
   if (error) {
     // not_found: the client navigates away, so don't re-render the missing event.
     if (error.code === DB_ERRORS.notFound) return { ok: false, code: "not_found", message: "This event no longer exists." };
+    // The database re-checks the role, so a head demoted since loading the page is refused.
+    if (error.code === DB_ERRORS.forbidden) return { ok: false, code: "rejected", message: "Only the head can delete events." };
     refresh();
     if (error.code === DB_ERRORS.conflict) {
       return { ok: false, code: "conflict", message: "Someone else just updated this event. It has been reloaded; please check it before deleting." };
@@ -158,5 +164,29 @@ export async function deleteEventAction(eventId: string, version: number): Promi
   // No refresh here: re-rendering the deleted event's page would 404. The
   // client navigates away and refreshes the page it lands on.
   console.info("event deleted", { eventId, by: me.id });
+  return { ok: true };
+}
+
+export type RestoreResult = { ok: true } | Extract<CommandResult, { ok: false }>;
+
+/** Bring back an event deleted in the last 30 days (Undo, or Recently deleted on Staff). */
+export async function restoreEventAction(eventId: string): Promise<RestoreResult> {
+  const me = await actor();
+  if ("ok" in me) return me;
+  if (!me.roles.includes("head")) return { ok: false, code: "rejected", message: "Only the head can restore events." };
+  if (!idSchema.safeParse(eventId).success) return { ok: false, code: "rejected", message: "Invalid request." };
+
+  const { error } = await db().rpc("restore_deleted_event", { p_event_id: eventId, p_restored_by: me.id });
+  refresh();
+  if (error) {
+    if (error.code === DB_ERRORS.forbidden) return { ok: false, code: "rejected", message: "Only the head can restore events." };
+    if (error.code === DB_ERRORS.notFound) {
+      return { ok: false, code: "not_found", message: "This event can’t be restored: it was deleted over 30 days ago or already brought back." };
+    }
+    if (error.code === DB_ERRORS.conflict) return { ok: false, code: "conflict", message: "This event is already back on the board." };
+    console.error("restore_deleted_event failed", error.code, error.message);
+    return { ok: false, code: "error", message: "The event couldn't be restored. Please try again." };
+  }
+  console.info("event restored", { eventId, by: me.id });
   return { ok: true };
 }

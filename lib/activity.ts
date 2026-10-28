@@ -57,6 +57,8 @@ export function describeActivity(a: ActivityRow, nameOf: (id: string | null | un
       return "Cancelled";
     case "restore":
       return `Restored to ${s(a.to_status)}`;
+    case "undelete":
+      return "Brought back after being deleted";
     default:
       return a.action.replace(/_/g, " ");
   }

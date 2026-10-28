@@ -93,7 +93,7 @@ export async function attemptLogin(staffId: string, pin: string): Promise<LoginR
 
   await createSession(staff.id, staff.session_version);
   // Occasional housekeeping on successful sign-ins keeps the security tables small.
-  if (Math.random() < 0.1) await pruneSecurityLogs(now).catch((e) => console.error("prune failed", e));
+  if (Math.random() < 0.1) await pruneExpiredData().catch((e) => console.error("prune failed", e));
   return { ok: true };
 }
 
@@ -127,11 +127,12 @@ export async function lockedStaff(now = new Date()): Promise<Map<string, Date>> 
   return out;
 }
 
-/** Housekeeping: drop sign-in attempts older than 30 days and rate-limit hits older than 2 days. */
-export async function pruneSecurityLogs(now = new Date()): Promise<void> {
-  const day = 86_400_000;
-  await Promise.all([
-    db().from("pin_attempts").delete().lt("created_at", new Date(now.getTime() - 30 * day).toISOString()),
-    db().from("rate_limit_hits").delete().lt("created_at", new Date(now.getTime() - 2 * day).toISOString()),
-  ]);
+/**
+ * Housekeeping: drop sign-in attempts older than 30 days, rate-limit hits older
+ * than 2 days and deleted events older than 30 days (prune_expired_data).
+ */
+export async function pruneExpiredData(): Promise<void> {
+  const { data, error } = await db().rpc("prune_expired_data");
+  if (error) throw new Error(`Could not prune old data: ${error.message}`);
+  console.info("pruned expired data", data);
 }

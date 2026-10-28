@@ -34,3 +34,9 @@ describe("openCaptionFeedback (newest first)", () => {
     expect(describeActivity(request, () => "x")).toBe("Requested caption changes; moved back to In production");
   });
 });
+
+describe("describeActivity", () => {
+  it("describes an event brought back after a delete", () => {
+    expect(describeActivity(row("undelete"), () => "x")).toBe("Brought back after being deleted");
+  });
+});
