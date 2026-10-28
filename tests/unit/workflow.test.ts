@@ -34,6 +34,7 @@ function ev(overrides: Partial<WorkflowEvent> = {}): WorkflowEvent {
     venue: "Capitol",
     municipality: "daet",
     source: "provincial_government",
+    coverage: "regular",
     requested_by: null,
     contact: null,
     notes: null,
@@ -44,6 +45,8 @@ function ev(overrides: Partial<WorkflowEvent> = {}): WorkflowEvent {
     editor_id: "editor",
     writer_id: "writer",
     proofreader_id: null,
+    cameraman_id: null,
+    obs_tech_id: null,
     approved_by_id: null,
     coverage_confirmed: false,
     photos_done: false,
@@ -578,5 +581,121 @@ describe("caption review", () => {
     err(run(fp, { type: "request_caption_changes", reason: " " }, proof), "invalid_input");
     err(run(fp, { type: "request_caption_changes", reason: "x" }, writer), "forbidden");
     err(run(prod, { type: "request_caption_changes", reason: "x" }, proof), "wrong_status");
+  });
+});
+
+describe("live coverage", () => {
+  const cam: Actor = { id: "cam", roles: ["cameraman"] };
+  const obs: Actor = { id: "obs", roles: ["obs_tech"] };
+  const crew = { cameraman_id: "cam", obs_tech_id: "obs" };
+  const regularTeam = { photographer_id: null, videographer_id: null, editor_id: null, writer_id: null };
+  const liveOnly = (o: Partial<WorkflowEvent> = {}) => ev({ coverage: "live", ...regularTeam, ...crew, ...o });
+  const liveCovered = liveOnly({ status: "covered", coverage_confirmed: true });
+  const both = (o: Partial<WorkflowEvent> = {}) => ev({ coverage: "live_and_regular", ...crew, ...o });
+
+  it("a live-only event skips production: requested → scheduled → covered → posted", () => {
+    expect(nextStatus("covered", "live")).toBe("posted");
+    expect(previousStatus("posted", "live")).toBe("covered");
+    expect(nextStatus("covered", "live_and_regular")).toBe("in_production");
+  });
+
+  it("coverage can't be confirmed until both the cameraman and OBS tech are assigned", () => {
+    const sched = { status: "scheduled" as const };
+    for (const missing of [{ cameraman_id: null }, { obs_tech_id: null }]) {
+      err(run(liveOnly({ ...sched, ...missing }), { type: "set_coverage_confirmed", value: true }, head), "requirement");
+      err(run(both({ ...sched, ...missing }), { type: "set_coverage_confirmed", value: true }, head), "requirement");
+      expect(availability(liveOnly({ ...sched, ...missing }), head).set_coverage_confirmed.state).toBe("blocked");
+    }
+    ok(run(liveOnly(sched), { type: "set_coverage_confirmed", value: true }, head));
+    ok(run(both(sched), { type: "set_coverage_confirmed", value: true }, head));
+    // Unticking never needs the crew.
+    ok(run(liveOnly({ ...sched, coverage_confirmed: true, obs_tech_id: null }), { type: "set_coverage_confirmed", value: false }, head));
+  });
+
+  it("the live crew can mark the event covered", () => {
+    const sched = liveOnly({ status: "scheduled", coverage_confirmed: true });
+    expect(ok(run(sched, { type: "mark_covered" }, cam)).next.status).toBe("covered");
+    expect(ok(run(both({ status: "scheduled", coverage_confirmed: true }), { type: "mark_covered" }, obs)).next.status).toBe("covered");
+    err(run(ev({ status: "scheduled", coverage_confirmed: true }), { type: "mark_covered" }, cam), "forbidden");
+  });
+
+  it("a live-only event has no photos, caption or production", () => {
+    err(run(liveCovered, { type: "start_production" }, head), "wrong_status");
+    err(run(liveCovered, { type: "set_photos_done", value: true }, head), "wrong_status");
+    err(run(liveOnly({ status: "scheduled" }), { type: "set_caption_done", value: true }, head), "wrong_status");
+    err(run(liveOnly({ status: "scheduled" }), { type: "submit_caption", value: "x" }, head), "wrong_status");
+    err(run(liveCovered, { type: "edit_caption_text", value: "x" }, head), "wrong_status");
+    expect(availability(liveCovered, head).set_photos_done.state).toBe("hidden");
+  });
+
+  it("the live crew, a page admin or the head posts the live video straight from covered", () => {
+    const r = ok(run(liveCovered, { type: "mark_posted", postLink: "https://fb.watch/live1" }, obs));
+    expect(r.patch).toEqual({ post_link: "https://fb.watch/live1", posted_at: NOW.toISOString(), status: "posted" });
+    ok(run(liveCovered, { type: "mark_posted", postLink: "https://fb.watch/live1" }, cam));
+    ok(run(liveCovered, { type: "mark_posted", postLink: "https://fb.watch/live1" }, admin));
+    err(run(liveCovered, { type: "mark_posted", postLink: "https://fb.watch/live1" }, writer), "forbidden");
+    // Not before it's covered, and a regular event still goes through production.
+    err(run(liveOnly({ status: "scheduled", coverage_confirmed: true }), { type: "mark_posted", postLink: "https://fb.watch/x" }, head), "wrong_status");
+    err(run(both({ status: "covered", coverage_confirmed: true }), { type: "mark_posted", postLink: "https://fb.watch/x" }, head), "wrong_status");
+    // The live crew can't post a regular event's article.
+    err(run(both({ status: "scheduled_for_posting", scheduled_post_at: NOW.toISOString() }), { type: "mark_posted", postLink: "https://fb.watch/x" }, obs), "forbidden");
+  });
+
+  it("steps back from a posted live video to covered", () => {
+    const posted = liveOnly({ status: "posted", coverage_confirmed: true, posted_at: NOW.toISOString(), post_link: "https://fb.watch/x" });
+    const r = ok(run(posted, { type: "step_back", reason: "Wrong link" }, head));
+    expect(r.patch).toEqual({ posted_at: null, post_link: null, status: "covered" });
+  });
+
+  it("the live crew can add the recording's Drive link", () => {
+    ok(run(liveCovered, { type: "edit_drive_link", value: "https://drive.google.com/x" }, cam));
+  });
+
+  it("live crew slots only exist on live events", () => {
+    const camAssignee = { id: "cam", roles: ["cameraman"] as const, active: true };
+    err(run(ev(), { type: "assign", slot: "cameraman", assignee: camAssignee }, head), "invalid_input");
+    err(run(liveOnly(), { type: "assign", slot: "writer", assignee: { id: "w", roles: ["writer"], active: true } }, head), "invalid_input");
+    expect(ok(run(liveOnly({ cameraman_id: null }), { type: "assign", slot: "cameraman", assignee: camAssignee }, head)).patch).toEqual({
+      cameraman_id: "cam",
+    });
+    err(run(liveOnly({ cameraman_id: null }), { type: "assign", slot: "cameraman", assignee: { id: "v", roles: ["videographer"], active: true } }, head), "invalid_input");
+  });
+
+  it("a confirmed live stream keeps its crew: swap people, don't remove them", () => {
+    const confirmed = liveOnly({ status: "scheduled", coverage_confirmed: true });
+    err(run(confirmed, { type: "assign", slot: "obs_tech", assignee: null }, head), "requirement");
+    ok(run(confirmed, { type: "assign", slot: "obs_tech", assignee: { id: "obs2", roles: ["obs_tech"], active: true } }, head));
+    ok(run(liveOnly({ status: "scheduled" }), { type: "assign", slot: "obs_tech", assignee: null }, head));
+    // Other slots on a confirmed event can still be cleared.
+    ok(run(both({ status: "scheduled", coverage_confirmed: true }), { type: "assign", slot: "writer", assignee: null }, head));
+  });
+
+  it("changing the coverage clears the slots that no longer apply", () => {
+    const toLive = ok(run(ev({ status: "scheduled" }), { type: "edit_details", changes: { coverage: "live" } }, head));
+    expect(toLive.patch).toEqual({ coverage: "live", photographer_id: null, videographer_id: null, editor_id: null, writer_id: null });
+    expect(toLive.activity[0].details).toMatchObject({ changes: { coverage: { from: "regular", to: "live" } } });
+
+    const toRegular = ok(run(both({ status: "scheduled" }), { type: "edit_details", changes: { coverage: "regular" } }, head));
+    expect(toRegular.patch).toEqual({ coverage: "regular", cameraman_id: null, obs_tech_id: null });
+
+    const addRegular = ok(run(liveOnly(), { type: "edit_details", changes: { coverage: "live_and_regular" } }, head));
+    expect(addRegular.patch).toEqual({ coverage: "live_and_regular" });
+  });
+
+  it("the coverage can't change once production starts, or add a live stream to confirmed coverage", () => {
+    err(run(ev({ status: "in_production", coverage_confirmed: true }), { type: "edit_details", changes: { coverage: "live" } }, head), "invalid_input");
+    err(run(ev({ status: "scheduled", coverage_confirmed: true }), { type: "edit_details", changes: { coverage: "live_and_regular" } }, head), "requirement");
+    // Dropping the live stream from confirmed coverage is fine.
+    ok(run(both({ status: "covered", coverage_confirmed: true }), { type: "edit_details", changes: { coverage: "regular" } }, head));
+  });
+
+  it("on the board, a covered live-only event drops onto Posted and asks for the link", () => {
+    expect(dropCommand(liveCovered, "posted", obs)).toEqual({ ok: true, type: "mark_posted", needsInput: true });
+    err(dropCommand(liveCovered, "in_production", head) as Result, "invalid_input");
+    expect(dropCommand(liveOnly({ status: "posted", coverage_confirmed: true }), "covered", head)).toEqual({
+      ok: true,
+      type: "step_back",
+      needsInput: true,
+    });
   });
 });

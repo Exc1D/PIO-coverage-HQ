@@ -1,6 +1,6 @@
 // Human-readable descriptions of event_activity rows.
 
-import { SLOT_LABELS, STATUS_LABELS, type Slot, type Status } from "./constants";
+import { SLOT_LABELS, SLOTS, STATUS_LABELS, type Slot, type Status } from "./constants";
 import type { ActivityRow } from "./types";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -10,12 +10,15 @@ const FIELD_LABELS: Record<string, string> = {
   venue: "venue",
   municipality: "municipality",
   source: "source",
+  coverage: "coverage",
   requested_by: "requester",
   contact: "contact",
   notes: "notes",
   caption_text: "caption text",
   drive_folder_url: "Drive link",
   scheduled_post_at: "posting schedule",
+  // Slots cleared when the coverage changes.
+  ...Object.fromEntries(SLOTS.map((slot) => [`${slot}_id`, SLOT_LABELS[slot].toLowerCase()])),
 };
 
 const TICK_LABELS: Record<string, string> = {

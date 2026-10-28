@@ -1,7 +1,7 @@
 import { CalendarIcon, MapPinIcon, UserIcon } from "lucide-react";
 import { Fragment } from "react";
-import { StatusBadge } from "@/components/app/labels";
-import { MUNICIPALITY_LABELS, SLOT_LABELS, SLOTS, type Slot } from "@/lib/constants";
+import { LiveChip, StatusBadge } from "@/components/app/labels";
+import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, type Slot } from "@/lib/constants";
 import { formatEventDate } from "@/lib/format";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
 import type { EventRow, Staff } from "@/lib/types";
@@ -44,7 +44,7 @@ export function EventPeek({ event, staffById }: { event: EventRow; staffById: Ma
       </div>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t pt-2">
-        {SLOTS.map((slot) => {
+        {slotsFor(event.coverage).map((slot) => {
           const person = slotStaff(event, slot, staffById);
           return (
             <Fragment key={slot}>
@@ -57,13 +57,18 @@ export function EventPeek({ event, staffById }: { event: EventRow; staffById: Ma
         })}
       </dl>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-2">
-        <span className={event.photos_done ? "text-green-700" : "text-muted-foreground"}>
-          {event.photos_done ? "✓" : "○"} Photos/Video
-        </span>
-        <span className={event.caption_done ? "text-green-700" : "text-muted-foreground"}>
-          {event.caption_done ? "✓" : "○"} Caption
-        </span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2">
+        <LiveChip coverage={event.coverage} />
+        {hasRegular(event.coverage) && (
+          <>
+            <span className={event.photos_done ? "text-green-700" : "text-muted-foreground"}>
+              {event.photos_done ? "✓" : "○"} Photos/Video
+            </span>
+            <span className={event.caption_done ? "text-green-700" : "text-muted-foreground"}>
+              {event.caption_done ? "✓" : "○"} Caption
+            </span>
+          </>
+        )}
         <span className="text-muted-foreground">Due {formatManila(manilaStartOfDay(event.due_date), "MMM d")}</span>
       </div>
 

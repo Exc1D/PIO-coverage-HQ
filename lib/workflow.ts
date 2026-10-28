@@ -3,10 +3,14 @@
 // `availability` / `dropCommand` to show only the actions that will succeed.
 
 import {
-  PIPELINE,
   SLOT_LABELS,
   canFillSlot,
+  hasLive,
+  LIVE_SLOTS,
+  pipelineFor,
+  slotsFor,
   STATUS_LABELS,
+  type Coverage,
   type Role,
   type Slot,
   type Status,
@@ -26,6 +30,7 @@ export type WorkflowEvent = Pick<
   | "venue"
   | "municipality"
   | "source"
+  | "coverage"
   | "requested_by"
   | "contact"
   | "notes"
@@ -36,6 +41,8 @@ export type WorkflowEvent = Pick<
   | "editor_id"
   | "writer_id"
   | "proofreader_id"
+  | "cameraman_id"
+  | "obs_tech_id"
   | "approved_by_id"
   | "coverage_confirmed"
   | "photos_done"
@@ -61,6 +68,7 @@ export type EditableDetails = Pick<
   | "venue"
   | "municipality"
   | "source"
+  | "coverage"
   | "requested_by"
   | "contact"
   | "notes"
@@ -132,6 +140,10 @@ const isAssignedMedia = (e: WorkflowEvent, a: Actor) =>
   e.photographer_id === a.id || e.videographer_id === a.id;
 const isAssignedEditor = (e: WorkflowEvent, a: Actor) => e.editor_id === a.id;
 const isAssignedWriter = (e: WorkflowEvent, a: Actor) => e.writer_id === a.id;
+const isAssignedLiveCrew = (e: WorkflowEvent, a: Actor) => e.cameraman_id === a.id || e.obs_tech_id === a.id;
+const liveOnly = (e: WorkflowEvent) => e.coverage === "live";
+/** A live-only event is posted straight from covered: the live video is the post. */
+const postsFromCovered = (e: WorkflowEvent) => liveOnly(e) && e.status === "covered";
 const canProofread = (a: Actor) => isHead(a) || hasRole(a, "proofreader");
 
 const label = (s: Status) => STATUS_LABELS[s];
@@ -148,6 +160,18 @@ function notCancelled(e: WorkflowEvent, what: string): Check {
     : OK;
 }
 
+/** Photos, video and the article don't apply to a live-stream-only event. */
+function hasRegularWork(e: WorkflowEvent, what: string): Check {
+  return liveOnly(e) ? fail("wrong_status", `${what} isn't part of a live-stream-only event.`) : OK;
+}
+
+/** The live crew must be assigned before a live stream's coverage is confirmed. */
+function liveCrewReady(e: Pick<WorkflowEvent, "coverage" | "cameraman_id" | "obs_tech_id">): Check {
+  return !hasLive(e.coverage) || (e.cameraman_id && e.obs_tech_id)
+    ? OK
+    : fail("requirement", "Assign a cameraman and an OBS tech for the live stream first.");
+}
+
 const first = (...checks: Array<() => Check>): Check => {
   for (const c of checks) {
     const r = c();
@@ -156,17 +180,22 @@ const first = (...checks: Array<() => Check>): Check => {
   return OK;
 };
 
-/** The status one step back in the pipeline, or null if there is none. */
-export function previousStatus(status: Status): Status | null {
-  const i = PIPELINE.indexOf(status);
-  return i > 0 ? PIPELINE[i - 1] : null;
+/** The status one step back in this coverage's pipeline, or null if there is none. */
+export function previousStatus(status: Status, coverage: Coverage = "regular"): Status | null {
+  const steps = pipelineFor(coverage);
+  const i = steps.indexOf(status);
+  return i > 0 ? steps[i - 1] : null;
 }
 
-/** The status one step forward in the pipeline, or null if there is none. */
-export function nextStatus(status: Status): Status | null {
-  const i = PIPELINE.indexOf(status);
-  return i >= 0 && i < PIPELINE.length - 1 ? PIPELINE[i + 1] : null;
+/** The status one step forward in this coverage's pipeline, or null if there is none. */
+export function nextStatus(status: Status, coverage: Coverage = "regular"): Status | null {
+  const steps = pipelineFor(coverage);
+  const i = steps.indexOf(status);
+  return i >= 0 && i < steps.length - 1 ? steps[i + 1] : null;
 }
+
+/** Statuses at which the coverage can still change (nothing is in production yet). */
+const COVERAGE_EDITABLE: readonly Status[] = ["requested", "scheduled", "covered"];
 
 function cleanReason(reason: string): string | Failure {
   const r = reason.trim();
@@ -194,15 +223,17 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
     first(
       () => inStatus(e, ["requested", "scheduled"], "Confirming coverage"),
       () => (isHead(a) ? OK : fail("forbidden", "Only the head can confirm coverage.")),
+      // Unticking is always fine; ticking needs the live crew.
+      () => (e.coverage_confirmed ? OK : liveCrewReady(e)),
     ),
 
   mark_covered: (e, a) =>
     first(
       () => inStatus(e, ["scheduled"], "Marking as covered"),
       () =>
-        isHead(a) || isAssignedMedia(e, a)
+        isHead(a) || isAssignedMedia(e, a) || isAssignedLiveCrew(e, a)
           ? OK
-          : fail("forbidden", "Only the assigned photographer/videographer or the head can mark this covered."),
+          : fail("forbidden", "Only the assigned photographer/videographer, the live crew or the head can mark this covered."),
       () =>
         e.coverage_confirmed
           ? OK
@@ -212,6 +243,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
   start_production: (e, a) =>
     first(
       () => inStatus(e, ["covered"], "Starting production"),
+      () => hasRegularWork(e, "Production"),
       () =>
         isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a) || isAssignedWriter(e, a)
           ? OK
@@ -221,6 +253,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
   set_photos_done: (e, a) =>
     first(
       () => inStatus(e, ["covered", "in_production"], "Changing “Photos/Video done”"),
+      () => hasRegularWork(e, "“Photos/Video done”"),
       () =>
         isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a)
           ? OK
@@ -230,6 +263,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
   set_caption_done: (e, a) =>
     first(
       () => inStatus(e, ["scheduled", "covered", "in_production"], "Changing “Caption done”"),
+      () => hasRegularWork(e, "“Caption done”"),
       () =>
         isHead(a) || isAssignedWriter(e, a)
           ? OK
@@ -239,6 +273,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
   submit_caption: (e, a) =>
     first(
       () => inStatus(e, ["scheduled", "covered", "in_production"], "Submitting the caption"),
+      () => hasRegularWork(e, "A caption"),
       () =>
         isHead(a) || isAssignedWriter(e, a)
           ? OK
@@ -278,11 +313,16 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
 
   mark_posted: (e, a) =>
     first(
-      () => inStatus(e, ["scheduled_for_posting"], "Marking as posted"),
+      () => (postsFromCovered(e) ? OK : inStatus(e, ["scheduled_for_posting"], "Marking as posted")),
       () =>
-        isHead(a) || hasRole(a, "page_admin")
+        isHead(a) || hasRole(a, "page_admin") || (postsFromCovered(e) && isAssignedLiveCrew(e, a))
           ? OK
-          : fail("forbidden", "Only a page admin or the head can mark posts as published."),
+          : fail(
+              "forbidden",
+              postsFromCovered(e)
+                ? "Only the live crew, a page admin or the head can add the live video."
+                : "Only a page admin or the head can mark posts as published.",
+            ),
     ),
 
   cancel: (e, a) =>
@@ -303,7 +343,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
   step_back: (e, a) =>
     first(
       () =>
-        previousStatus(e.status)
+        previousStatus(e.status, e.coverage)
           ? OK
           : fail("wrong_status", `There is no earlier step from ${label(e.status)}.`),
       () => (isHead(a) ? OK : fail("forbidden", "Only the head can move an event back a step.")),
@@ -324,6 +364,7 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
   edit_caption_text: (e, a) =>
     first(
       () => notCancelled(e, "Editing the caption"),
+      () => hasRegularWork(e, "A caption"),
       () =>
         // Proofreaders fix small mistakes in place while reviewing.
         isHead(a) || isAssignedWriter(e, a) || (e.status === "for_proofreading" && hasRole(a, "proofreader"))
@@ -335,9 +376,9 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
     first(
       () => notCancelled(e, "Editing the Drive link"),
       () =>
-        isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a)
+        isHead(a) || isAssignedMedia(e, a) || isAssignedEditor(e, a) || isAssignedLiveCrew(e, a)
           ? OK
-          : fail("forbidden", "Only the assigned photographer/videographer/editor or the head can edit the Drive link."),
+          : fail("forbidden", "Only the assigned photographer/videographer/editor, the live crew or the head can edit the Drive link."),
     ),
 };
 
@@ -560,7 +601,7 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
     case "step_back": {
       const reason = cleanReason(cmd.reason);
       if (typeof reason !== "string") return reason;
-      const to = previousStatus(event.status) as Status;
+      const to = previousStatus(event.status, event.coverage) as Status;
       const details: Record<string, unknown> = { reason };
       switch (event.status) {
         case "covered":
@@ -594,6 +635,9 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
     case "assign": {
       const field = `${cmd.slot}_id` as const;
       const nextId = cmd.assignee?.id ?? null;
+      if (!slotsFor(event.coverage).includes(cmd.slot)) {
+        return fail("invalid_input", `This event has no ${SLOT_LABELS[cmd.slot].toLowerCase()}: check its coverage.`);
+      }
       if (cmd.assignee) {
         if (!cmd.assignee.active) return fail("invalid_input", "That staff member is inactive.");
         if (!canFillSlot(cmd.assignee.roles, cmd.slot)) {
@@ -601,6 +645,9 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
         }
       }
       if (event[field] === nextId) return fail("no_change", "Nothing to change.");
+      if (nextId === null && event.coverage_confirmed && (LIVE_SLOTS as readonly Slot[]).includes(cmd.slot)) {
+        return fail("requirement", "A confirmed live stream needs its cameraman and OBS tech. Assign someone else instead.");
+      }
       set(d, field, nextId);
       d.activity.push({
         action: "assign",
@@ -623,6 +670,22 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
         const value = c[key];
         if (value !== undefined && value !== event[key]) {
           set(d, key, value as never);
+        }
+      }
+      if (d.next.coverage !== event.coverage) {
+        if (!COVERAGE_EDITABLE.includes(event.status)) {
+          return fail("invalid_input", `The coverage can't change once the event is ${label(event.status)}.`);
+        }
+        if (event.coverage_confirmed && !liveCrewReady(d.next).ok) {
+          return fail(
+            "requirement",
+            "Coverage is already confirmed. Untick “Coverage confirmed” (or move the event back to Scheduled) before adding a live stream.",
+          );
+        }
+        // Clear the slots the new coverage doesn't have, so nobody is credited for work that isn't part of it.
+        const kept = slotsFor(d.next.coverage);
+        for (const slot of slotsFor(event.coverage)) {
+          if (!kept.includes(slot) && event[`${slot}_id`] !== null) set(d, `${slot}_id`, null);
         }
       }
       if (Object.keys(d.patch).length === 0) return fail("no_change", "Nothing to change.");
@@ -692,7 +755,7 @@ export function dropCommand(event: WorkflowEvent, to: Status, actor: Actor | nul
     return fail("wrong_status", "Restore this event from its drawer first.");
   }
 
-  if (to === nextStatus(event.status)) {
+  if (to === nextStatus(event.status, event.coverage)) {
     if (event.status === "in_production") {
       return fail(
         "requirement",
@@ -700,12 +763,14 @@ export function dropCommand(event: WorkflowEvent, to: Status, actor: Actor | nul
       );
     }
     // Every other forward step has a command; posted has no next status.
-    const fwd = FORWARD[event.status] as { type: CommandType; needsInput: boolean };
+    const fwd = postsFromCovered(event)
+      ? { type: "mark_posted" as const, needsInput: true }
+      : (FORWARD[event.status] as { type: CommandType; needsInput: boolean });
     const c = canPerform(event, fwd.type, actor);
     return c.ok ? { ok: true, ...fwd } : c;
   }
 
-  if (to === previousStatus(event.status)) {
+  if (to === previousStatus(event.status, event.coverage)) {
     const c = canPerform(event, "step_back", actor);
     return c.ok ? { ok: true, type: "step_back", needsInput: true } : c;
   }

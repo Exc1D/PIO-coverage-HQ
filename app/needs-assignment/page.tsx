@@ -6,7 +6,7 @@ import { ViewOnlyNotice } from "@/components/app/view-only-notice";
 import { NeedsAssignmentList } from "@/components/assign/needs-assignment-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
-import { NEEDS_ASSIGNMENT_DAYS } from "@/lib/constants";
+import { NEEDS_ASSIGNMENT_DAYS, SLOTS } from "@/lib/constants";
 import { listEventsByDate } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import { needsAssignment } from "@/lib/metrics";
@@ -21,7 +21,8 @@ export default function NeedsAssignmentPage() {
       <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Needs assignment</h1>
       <p className="mb-4 text-sm text-muted-foreground">
         Requested or scheduled events in the next {NEEDS_ASSIGNMENT_DAYS} days with no writer, or no photographer or
-        videographer. Pick people right here; each name shows how many other events they already have that day.
+        videographer, or, for a live stream, no cameraman or OBS tech. Pick people right here; each name shows how many
+        other events they already have that day.
       </p>
       <Suspense fallback={<ListSkeleton />}>
         <Loader />
@@ -35,7 +36,7 @@ function workload(events: EventRow[]): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   for (const e of events) {
     const day = (out[e.event_date] ??= {});
-    const people = new Set([e.photographer_id, e.videographer_id, e.editor_id, e.writer_id, e.proofreader_id].filter(Boolean) as string[]);
+    const people = new Set(SLOTS.map((s) => e[`${s}_id`]).filter(Boolean) as string[]);
     for (const id of people) day[id] = (day[id] ?? 0) + 1;
   }
   return out;

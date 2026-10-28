@@ -2,6 +2,8 @@
 // the dashboard, reports and CSV export all use these so they can't disagree.
 
 import {
+  hasLive,
+  hasRegular,
   NEEDS_ASSIGNMENT_DAYS,
   PIPELINE,
   SOURCES,
@@ -28,11 +30,14 @@ export type MetricEvent = Pick<
   | "due_date"
   | "posted_at"
   | "source"
+  | "coverage"
   | "photographer_id"
   | "videographer_id"
   | "editor_id"
   | "writer_id"
   | "proofreader_id"
+  | "cameraman_id"
+  | "obs_tech_id"
 >;
 
 // ---------------------------------------------------------------------------
@@ -145,16 +150,45 @@ export function isStuck(e: MetricEvent, today: string): boolean {
   return inPipeline(e) && today > e.due_date;
 }
 
+/** Someone an event's minimum team is still missing. */
+export type TeamGap = "writer" | "photo_video" | "cameraman" | "obs_tech";
+
+export const TEAM_GAP_LABELS: Record<TeamGap, string> = {
+  writer: "writer",
+  photo_video: "photo/video",
+  cameraman: "cameraman",
+  obs_tech: "OBS tech",
+};
+
+/**
+ * Who is missing from the minimum team: a writer and a photographer or
+ * videographer for regular coverage, a cameraman and an OBS tech for a live stream.
+ */
+export function teamGaps(
+  e: Pick<MetricEvent, "coverage" | "writer_id" | "photographer_id" | "videographer_id" | "cameraman_id" | "obs_tech_id">,
+): TeamGap[] {
+  const gaps: TeamGap[] = [];
+  if (hasRegular(e.coverage)) {
+    if (!e.writer_id) gaps.push("writer");
+    if (!e.photographer_id && !e.videographer_id) gaps.push("photo_video");
+  }
+  if (hasLive(e.coverage)) {
+    if (!e.cameraman_id) gaps.push("cameraman");
+    if (!e.obs_tech_id) gaps.push("obs_tech");
+  }
+  return gaps;
+}
+
 /**
  * Needs assignment = requested/scheduled, event within the next 14 days
- * (today through today + 14), and no writer or no photographer/videographer.
+ * (today through today + 14), and a gap in the minimum team (see teamGaps).
  */
 export function needsAssignment(e: MetricEvent, today: string): boolean {
   return (
     (e.status === "requested" || e.status === "scheduled") &&
     e.event_date >= today &&
     e.event_date <= addDays(today, NEEDS_ASSIGNMENT_DAYS) &&
-    (e.writer_id === null || (e.photographer_id === null && e.videographer_id === null))
+    teamGaps(e).length > 0
   );
 }
 
@@ -227,9 +261,27 @@ export function pipelineCounts(events: readonly MetricEvent[]): Record<PipelineS
   return out;
 }
 
-export type Credit = { written: number; proofread: number; photographed: number; videographed: number; edited: number };
+export type Credit = {
+  written: number;
+  proofread: number;
+  photographed: number;
+  videographed: number;
+  edited: number;
+  /** Live streams worked as cameraman. */
+  liveCamera: number;
+  /** Live streams worked as OBS tech. */
+  liveObs: number;
+};
 
-export const emptyCredit = (): Credit => ({ written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0 });
+export const emptyCredit = (): Credit => ({
+  written: 0,
+  proofread: 0,
+  photographed: 0,
+  videographed: 0,
+  edited: 0,
+  liveCamera: 0,
+  liveObs: 0,
+});
 
 /** Per-person credit by role, counted only from events posted in the period. */
 export function creditsByPerson(events: readonly MetricEvent[], period: Period): Map<string, Credit> {
@@ -246,6 +298,8 @@ export function creditsByPerson(events: readonly MetricEvent[], period: Period):
     bump(e.photographer_id, "photographed");
     bump(e.videographer_id, "videographed");
     bump(e.editor_id, "edited");
+    bump(e.cameraman_id, "liveCamera");
+    bump(e.obs_tech_id, "liveObs");
   }
   return out;
 }
@@ -253,6 +307,8 @@ export function creditsByPerson(events: readonly MetricEvent[], period: Period):
 export type DashboardSummary = {
   postsPublished: number;
   eventsCovered: number;
+  /** Of the events covered, how many were livestreamed. */
+  liveStreams: number;
   inPipeline: number;
   stuck: number;
   bySource: Record<Source, number>;
@@ -265,6 +321,7 @@ export function summarize(events: readonly MetricEvent[], period: Period, today:
   return {
     postsPublished: postsInPeriod(events, period).length,
     eventsCovered: events.filter((e) => countsAsCovered(e, period)).length,
+    liveStreams: events.filter((e) => hasLive(e.coverage) && countsAsCovered(e, period)).length,
     inPipeline: events.filter(inPipeline).length,
     stuck: events.filter((e) => isStuck(e, today)).length,
     bySource: postsBySource(events, period),

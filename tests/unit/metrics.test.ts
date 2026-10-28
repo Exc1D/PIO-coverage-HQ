@@ -21,6 +21,7 @@ import {
   postsBySource,
   postsInPeriod,
   summarize,
+  teamGaps,
   weekPeriod,
   type MetricEvent,
 } from "@/lib/metrics";
@@ -34,11 +35,14 @@ function ev(o: Partial<MetricEvent> = {}): MetricEvent {
     due_date: addDays(event_date, 2),
     posted_at: "2026-10-11T02:00:00Z",
     source: "provincial_government",
+    coverage: "regular",
     photographer_id: "rico",
     videographer_id: null,
     editor_id: null,
     writer_id: "ana",
     proofreader_id: "grace",
+    cameraman_id: null,
+    obs_tech_id: null,
     ...o,
   };
 }
@@ -206,16 +210,30 @@ describe("credits", () => {
       october,
     );
     expect(Object.fromEntries(credits)).toEqual({
-      ana: { written: 1, proofread: 0, photographed: 0, videographed: 0, edited: 0 },
-      liza: { written: 1, proofread: 0, photographed: 0, videographed: 0, edited: 0 },
-      grace: { written: 0, proofread: 1, photographed: 0, videographed: 0, edited: 0 },
-      rico: { written: 0, proofread: 0, photographed: 2, videographed: 0, edited: 0 },
-      paolo: { written: 0, proofread: 0, photographed: 0, videographed: 1, edited: 0 },
+      ana: { written: 1, proofread: 0, photographed: 0, videographed: 0, edited: 0, liveCamera: 0, liveObs: 0 },
+      liza: { written: 1, proofread: 0, photographed: 0, videographed: 0, edited: 0, liveCamera: 0, liveObs: 0 },
+      grace: { written: 0, proofread: 1, photographed: 0, videographed: 0, edited: 0, liveCamera: 0, liveObs: 0 },
+      rico: { written: 0, proofread: 0, photographed: 2, videographed: 0, edited: 0, liveCamera: 0, liveObs: 0 },
+      paolo: { written: 0, proofread: 0, photographed: 0, videographed: 1, edited: 0, liveCamera: 0, liveObs: 0 },
     });
   });
   it("one person in several roles gets each credit", () => {
-    const c = creditsByPerson([ev({ writer_id: "x", proofreader_id: "x", photographer_id: "x", videographer_id: "x", editor_id: "x" })], october);
-    expect(c.get("x")).toEqual({ written: 1, proofread: 1, photographed: 1, videographed: 1, edited: 1 });
+    const c = creditsByPerson(
+      [
+        ev({
+          coverage: "live_and_regular",
+          writer_id: "x",
+          proofreader_id: "x",
+          photographer_id: "x",
+          videographer_id: "x",
+          editor_id: "x",
+          cameraman_id: "x",
+          obs_tech_id: "x",
+        }),
+      ],
+      october,
+    );
+    expect(c.get("x")).toEqual({ written: 1, proofread: 1, photographed: 1, videographed: 1, edited: 1, liveCamera: 1, liveObs: 1 });
   });
 });
 
@@ -295,5 +313,39 @@ describe("period navigation and lists", () => {
       [null, ["04"]],
     ]);
     expect(postsGroupedBySource([ev({ source: "community" })], october).map((g) => g.source)).toEqual(["community"]);
+  });
+});
+
+describe("live coverage", () => {
+  const today = "2026-10-20";
+  const october = monthPeriod("2026-10-01");
+  const regular = { photographer_id: null, videographer_id: null, editor_id: null, writer_id: null, proofreader_id: null };
+
+  it("a live stream needs a cameraman and an OBS tech; regular coverage, a writer and photo/video", () => {
+    expect(teamGaps(ev({ coverage: "live", ...regular }))).toEqual(["cameraman", "obs_tech"]);
+    expect(teamGaps(ev({ coverage: "live", ...regular, cameraman_id: "ben", obs_tech_id: "kim" }))).toEqual([]);
+    expect(teamGaps(ev({ coverage: "live_and_regular", writer_id: null, obs_tech_id: "kim" }))).toEqual(["writer", "cameraman"]);
+    expect(teamGaps(ev({ ...regular }))).toEqual(["writer", "photo_video"]);
+  });
+
+  it("needs assignment counts a missing live crew", () => {
+    const scheduled = { status: "scheduled" as const, event_date: "2026-10-22" };
+    expect(needsAssignment(ev({ ...scheduled, coverage: "live_and_regular", cameraman_id: "ben" }), today)).toBe(true);
+    expect(needsAssignment(ev({ ...scheduled, coverage: "live", ...regular, cameraman_id: "ben", obs_tech_id: "kim" }), today)).toBe(false);
+  });
+
+  it("counts livestreamed events among those covered", () => {
+    const s = summarize(
+      [
+        ev({ coverage: "live", status: "covered" }),
+        ev({ coverage: "live_and_regular" }),
+        ev({ coverage: "live", status: "scheduled" }), // not covered yet
+        ev(),
+      ],
+      october,
+      today,
+    );
+    expect(s.eventsCovered).toBe(3);
+    expect(s.liveStreams).toBe(2);
   });
 });

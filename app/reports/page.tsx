@@ -157,7 +157,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
           </p>
         ) : (
           <div className="overflow-x-auto rounded-xl border print:overflow-visible print:rounded-none print:border-0">
-            <table className="w-full min-w-[760px] text-sm print:min-w-0 print:text-[10pt]">
+            <table className="w-full min-w-[900px] text-sm print:min-w-0 print:text-[10pt]">
               <thead className="border-b bg-muted/50 print:bg-transparent">
                 <tr>
                   <th scope="col" className={th}>Posted</th>
@@ -168,13 +168,14 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                   <th scope="col" className={th}>Photo / Video</th>
                   <th scope="col" className={th}>Editor</th>
                   <th scope="col" className={th}>Proofreader</th>
+                  <th scope="col" className={th}>Live crew</th>
                   <th scope="col" className={cn(th, "print:hidden")}>Post</th>
                 </tr>
               </thead>
               {report.groups.map((g) => (
                 <tbody key={g.label} className="border-b last:border-0">
                   <tr className="bg-muted/30 print:bg-transparent">
-                    <th scope="rowgroup" colSpan={9} className="px-2 py-2 text-left font-semibold">
+                    <th scope="rowgroup" colSpan={10} className="px-2 py-2 text-left font-semibold">
                       <span className="inline-flex items-center gap-2">
                         {g.source && <span aria-hidden className="size-2.5 rounded-[3px] print:hidden" style={{ backgroundColor: SOURCE_COLORS[g.source] }} />}
                         {g.label}
@@ -188,6 +189,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                         <Link href={`/events/${r.id}`} className="hover:underline print:no-underline">
                           {r.title}
                         </Link>
+                        {r.coverage !== "Regular" && <span className="block text-xs text-muted-foreground print:text-black">{r.coverage}</span>}
                       </td>
                       <td className={cn(td, "whitespace-nowrap")}>{r.eventDate}</td>
                       <td className={td}>{r.municipality}</td>
@@ -195,6 +197,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.photoVideo}</td>
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.editor}</td>
                       <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.proofreader}</td>
+                      <td className={cn(td, "whitespace-nowrap print:whitespace-normal")}>{r.liveCrew}</td>
                       <td className={cn(td, "print:hidden")}>
                         {r.link && (
                           <a href={r.link} target="_blank" rel="noopener noreferrer" className="-my-1 inline-flex min-h-7 items-center px-1 text-sm underline underline-offset-4">
@@ -205,7 +208,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                     </tr>
                   ))}
                   <tr className="border-t">
-                    <td colSpan={8} className="px-2 py-1.5 text-right text-xs font-medium text-muted-foreground print:text-black">
+                    <td colSpan={9} className="px-2 py-1.5 text-right text-xs font-medium text-muted-foreground print:text-black">
                       {g.label} subtotal: <span className="tabular-nums text-foreground">{g.rows.length}</span>
                     </td>
                   </tr>
@@ -214,7 +217,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
               {/* A tbody, not tfoot: browsers repeat tfoot on every printed page. */}
               <tbody className="border-t-2">
                 <tr>
-                  <td colSpan={8} className="px-2 py-2 text-right font-semibold">
+                  <td colSpan={9} className="px-2 py-2 text-right font-semibold">
                     Total posts: <span className="tabular-nums">{report.totalPosts}</span>
                   </td>
                 </tr>
@@ -231,7 +234,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
         </h2>
         <p className="text-sm text-muted-foreground print:text-black">Counted only from events posted in {period.label}.</p>
         <div className="overflow-x-auto rounded-xl border print:overflow-visible print:rounded-none print:border-0">
-          <table className="w-full min-w-[560px] text-sm print:min-w-0 print:text-[10pt]">
+          <table className="w-full min-w-[720px] text-sm print:min-w-0 print:text-[10pt]">
             <thead className="border-b bg-muted/50 print:bg-transparent">
               <tr>
                 <th scope="col" className={th}>Person</th>
@@ -240,6 +243,8 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                 <th scope="col" className={cn(th, "text-right")}>Photographed</th>
                 <th scope="col" className={cn(th, "text-right")}>Videographed</th>
                 <th scope="col" className={cn(th, "text-right")}>Edited</th>
+                <th scope="col" className={cn(th, "text-right")}>Live camera</th>
+                <th scope="col" className={cn(th, "text-right")}>Live OBS</th>
                 <th scope="col" className={cn(th, "text-right")}>Total</th>
               </tr>
             </thead>
@@ -250,7 +255,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
                     {p.name}
                     <span className="block text-xs font-normal text-muted-foreground print:hidden">{p.roles}</span>
                   </th>
-                  {[p.written, p.proofread, p.photographed, p.videographed, p.edited].map((v, i) => (
+                  {[p.written, p.proofread, p.photographed, p.videographed, p.edited, p.liveCamera, p.liveObs].map((v, i) => (
                     <td key={i} className={cn(td, "text-right tabular-nums", v === 0 && "text-muted-foreground")}>
                       {v}
                     </td>
@@ -262,7 +267,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
             <tbody className="border-t-2 font-semibold">
               <tr>
                 <th scope="row" className={cn(td, "text-left")}>Total</th>
-                {[t.written, t.proofread, t.photographed, t.videographed, t.edited, t.total].map((v, i) => (
+                {[t.written, t.proofread, t.photographed, t.videographed, t.edited, t.liveCamera, t.liveObs, t.total].map((v, i) => (
                   <td key={i} className={cn(td, "text-right tabular-nums")}>
                     {v}
                   </td>

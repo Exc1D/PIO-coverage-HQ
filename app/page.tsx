@@ -15,6 +15,8 @@ import {
   needsAssignment,
   previousPeriod,
   summarize,
+  TEAM_GAP_LABELS,
+  teamGaps,
   upcoming,
   type Credit,
   type Period,
@@ -69,6 +71,12 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
     (c) => `${c.photographed} photographed · ${c.videographed} videographed`,
   );
   const edited = personSeries(s.credits, staff, (c) => c.edited);
+  const live = personSeries(
+    s.credits,
+    staff,
+    (c) => c.liveCamera + c.liveObs,
+    (c) => `${c.liveCamera} on camera · ${c.liveObs} on OBS`,
+  );
 
   const needs = events.filter((e) => needsAssignment(e, today));
   const stuck = events.filter((e) => isStuck(e, today)).sort((a, b) => a.due_date.localeCompare(b.due_date));
@@ -96,7 +104,12 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile label="Posts published" value={s.postsPublished} delta={{ value: s.postsPublished - p.postsPublished, against: againstLabel(period) }} />
-        <StatTile label="Events covered" value={s.eventsCovered} delta={{ value: s.eventsCovered - p.eventsCovered, against: againstLabel(period) }} />
+        <StatTile
+          label="Events covered"
+          value={s.eventsCovered}
+          delta={{ value: s.eventsCovered - p.eventsCovered, against: againstLabel(period) }}
+          hint={s.liveStreams ? `${s.liveStreams} livestreamed` : undefined}
+        />
         <StatTile label="In the pipeline now" value={s.inPipeline} hint="Not yet posted or cancelled" />
         <StatTile label="Stuck" value={s.stuck} hint="Past the 2-day posting target" tone="alert" />
       </div>
@@ -152,24 +165,25 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           </h2>
           <p className="text-sm text-muted-foreground">Counted from events posted in this period.</p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
           {personCard("Articles written", "Writer credits", written)}
           {personCard("Captions proofread", "Proofreader credits", proofread)}
           {personCard("Events photographed / videographed", "Photographer and videographer credits", media)}
           {personCard("Photos and video edited", "Editor credits", edited)}
+          {personCard("Live streams", "Cameraman and OBS tech credits", live)}
         </div>
       </section>
 
       <div className="grid gap-3 lg:grid-cols-3">
         <EventList
           title="Needs assignment"
-          description="Next 14 days, missing a writer or photo/video"
+          description="Next 14 days, missing a writer, photo/video or live crew"
           events={needs}
           staff={staff}
           empty="Everyone is assigned for the next 14 days."
           meta={(e) => (
             <span className="font-medium text-amber-800">
-              {[!e.writer_id && "No writer", !e.photographer_id && !e.videographer_id && "No photo/video"].filter(Boolean).join(" · ")}
+              {teamGaps(e).map((g) => `No ${TEAM_GAP_LABELS[g]}`).join(" · ")}
             </span>
           )}
           href={{ label: "Assign people", to: "/needs-assignment" }}

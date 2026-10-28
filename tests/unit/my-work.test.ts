@@ -24,6 +24,8 @@ const ev = (p: Partial<MyEvent> & { event_date: string }): MyEvent => ({
   editor_id: null,
   writer_id: null,
   proofreader_id: null,
+  cameraman_id: null,
+  obs_tech_id: null,
   ...p,
 });
 

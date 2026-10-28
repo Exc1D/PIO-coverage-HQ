@@ -1,5 +1,15 @@
-import { FlagIcon } from "lucide-react";
-import { SOURCE_COLORS, SOURCE_LABELS, STATUS_LABELS, type Source, type Status } from "@/lib/constants";
+import { FlagIcon, RadioIcon } from "lucide-react";
+import {
+  COVERAGE_LABELS,
+  COVERAGE_SHORT,
+  hasLive,
+  SOURCE_COLORS,
+  SOURCE_LABELS,
+  STATUS_LABELS,
+  type Coverage,
+  type Source,
+  type Status,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export const SOURCE_SHORT: Record<Source, string> = {
@@ -59,6 +69,20 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   return (
     <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium", STATUS_TONE[status], className)}>
       {STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+/** Marks events with a live stream; regular coverage is the default and shows nothing. */
+export function LiveChip({ coverage, className }: { coverage: Coverage; className?: string }) {
+  if (!hasLive(coverage)) return null;
+  return (
+    <span
+      className={cn("inline-flex items-center gap-1 rounded-md bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-800", className)}
+      title={COVERAGE_LABELS[coverage]}
+    >
+      <RadioIcon aria-hidden className="size-3.5" />
+      {COVERAGE_SHORT[coverage]}
     </span>
   );
 }

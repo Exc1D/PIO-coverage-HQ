@@ -44,6 +44,8 @@ const ROLE_HINTS: Record<Role, string> = {
   writer: "Posts captions in the event; marks them done",
   proofreader: "Reviews, corrects and approves captions",
   page_admin: "Schedules and posts on Facebook",
+  cameraman: "Operates the camera for live streams; marks them covered",
+  obs_tech: "Runs OBS for live streams; adds the live video link",
 };
 
 function Field({ name, label, error, ...rest }: { name: string; label: string; error?: string } & React.ComponentProps<typeof Input>) {

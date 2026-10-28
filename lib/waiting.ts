@@ -3,6 +3,7 @@
 // go stale. Mirrors the steps in lib/workflow.ts.
 
 import type { Slot } from "./constants";
+import { teamGaps, type TeamGap } from "./metrics";
 import type { EventRow } from "./types";
 
 export type WaitingEvent = Pick<
@@ -11,6 +12,7 @@ export type WaitingEvent = Pick<
   | "event_date"
   | "source"
   | "municipality"
+  | "coverage"
   | "coverage_confirmed"
   | "photos_done"
   | "caption_done"
@@ -19,6 +21,8 @@ export type WaitingEvent = Pick<
   | "editor_id"
   | "writer_id"
   | "proofreader_id"
+  | "cameraman_id"
+  | "obs_tech_id"
 >;
 
 /** An assigned person, or anyone with a role when no one specific is on it. */
@@ -36,12 +40,16 @@ const staff = (e: WaitingEvent, slot: Slot): Party | null => {
 
 const present = (p: Party | null): p is Party => p !== null;
 
-/** What's missing from the minimum team (a writer, and a photographer or videographer). */
-function missingTeam(e: WaitingEvent): string[] {
-  return [!e.writer_id && "a writer", !e.photographer_id && !e.videographer_id && "photo/video"].filter(
-    (v): v is string => typeof v === "string",
-  );
-}
+const GAP_TASKS: Record<TeamGap, string> = {
+  writer: "a writer",
+  photo_video: "photo/video",
+  cameraman: "a cameraman",
+  obs_tech: "an OBS tech",
+};
+
+/** "a, b and c" */
+const listOf = (items: readonly string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items.join("");
 
 /** Who still owes photos/video: the editor once there is one, else whoever shot it. */
 function photoWork(e: WaitingEvent): Waiting[] {
@@ -63,17 +71,19 @@ export function waitingOn(e: WaitingEvent, today: string, opts: { changesRequest
       return [{ who: HEAD, task: e.source && e.municipality ? "Schedule the event" : "Add source and municipality, then schedule" }];
 
     case "scheduled": {
-      const missing = missingTeam(e);
-      if (missing.length) return [{ who: HEAD, task: `Assign ${missing.join(" and ")}` }];
+      const missing = teamGaps(e);
+      if (missing.length) return [{ who: HEAD, task: `Assign ${listOf(missing.map((g) => GAP_TASKS[g]))}` }];
       if (!e.coverage_confirmed) return [{ who: HEAD, task: "Confirm coverage" }];
       if (e.event_date > today) return [];
-      return [staff(e, "photographer"), staff(e, "videographer")]
+      return [staff(e, "photographer"), staff(e, "videographer"), staff(e, "cameraman"), staff(e, "obs_tech")]
         .filter(present)
         .map((who) => ({ who, task: "Mark as covered" }));
     }
 
     case "covered":
     case "in_production": {
+      // Live only: the live video is the post; the OBS tech usually has its link.
+      if (e.coverage === "live") return [{ who: staff(e, "obs_tech") ?? PAGE_ADMIN, task: "Add the live video link" }];
       const out: Waiting[] = [];
       if (!e.photos_done) out.push(...photoWork(e));
       if (!e.caption_done) {

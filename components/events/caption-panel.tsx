@@ -133,7 +133,7 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          {canEdit ? "No caption yet. Post it here so the proofreader can review it in the event." : "No caption posted yet."}
+          {canEdit ? "No caption yet." : "No caption posted yet."}
         </p>
       )}
 

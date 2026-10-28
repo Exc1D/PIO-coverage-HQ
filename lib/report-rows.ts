@@ -2,7 +2,7 @@
 // export so the two can never disagree.
 
 import { staffName } from "./format";
-import { MUNICIPALITY_LABELS, SOURCE_LABELS, type Source } from "./constants";
+import { COVERAGE_SHORT, MUNICIPALITY_LABELS, SOURCE_LABELS, type Source } from "./constants";
 import { creditsByPerson, emptyCredit, postsGroupedBySource, type Credit, type Period } from "./metrics";
 import { formatManila, manilaStartOfDay } from "./time";
 import type { EventRow, Staff } from "./types";
@@ -13,10 +13,12 @@ export type PostRow = {
   title: string;
   eventDate: string; // "Oct 18, 2026"
   municipality: string;
+  coverage: string; // "Regular", "Live", "Live + regular"
   writer: string;
   photoVideo: string;
   editor: string;
   proofreader: string;
+  liveCrew: string; // "cameraman / OBS tech"
   link: string;
 };
 
@@ -24,7 +26,16 @@ export type SourceGroup = { source: Source | null; label: string; rows: PostRow[
 
 export type PersonRow = { id: string; name: string; roles: string } & Credit & { total: number };
 
-const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer", "photo_editor", "video_editor"] as const;
+const PEOPLE_ROLES = [
+  "writer",
+  "proofreader",
+  "photographer",
+  "videographer",
+  "photo_editor",
+  "video_editor",
+  "cameraman",
+  "obs_tech",
+] as const;
 
 export function postGroups(events: readonly EventRow[], period: Period, staff: readonly Staff[]): SourceGroup[] {
   const name = (id: string | null) => staffName(staff, id) ?? "";
@@ -37,10 +48,12 @@ export function postGroups(events: readonly EventRow[], period: Period, staff: r
       title: e.title,
       eventDate: formatManila(manilaStartOfDay(e.event_date), "MMM d, yyyy"),
       municipality: e.municipality ? MUNICIPALITY_LABELS[e.municipality] : "",
+      coverage: COVERAGE_SHORT[e.coverage],
       writer: name(e.writer_id),
       photoVideo: [name(e.photographer_id), name(e.videographer_id)].filter(Boolean).join(" / "),
       editor: name(e.editor_id),
       proofreader: name(e.proofreader_id),
+      liveCrew: [name(e.cameraman_id), name(e.obs_tech_id)].filter(Boolean).join(" / "),
       link: e.post_link ?? "",
     })),
   }));
@@ -61,7 +74,7 @@ export function peopleRows(events: readonly EventRow[], period: Period, staff: r
         name: s.display_name + (s.active ? "" : " (inactive)"),
         roles: s.roles.filter((r) => (PEOPLE_ROLES as readonly string[]).includes(r)).join(", "),
         ...c,
-        total: c.written + c.proofread + c.photographed + c.videographed + c.edited,
+        total: c.written + c.proofread + c.photographed + c.videographed + c.edited + c.liveCamera + c.liveObs,
       };
     })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));

@@ -71,7 +71,7 @@ export function CommandDialog({
   onClose,
   onSubmit,
 }: {
-  event: Pick<EventRow, "title" | "status" | "scheduled_post_at" | "cancelled_from_status">;
+  event: Pick<EventRow, "title" | "status" | "scheduled_post_at" | "cancelled_from_status" | "coverage">;
   type: InputCommand | null;
   onClose: () => void;
   onSubmit: (payload: CommandPayload) => void;
@@ -116,7 +116,9 @@ export function CommandDialog({
     onClose();
   }
 
-  const back = previousStatus(event.status);
+  const back = previousStatus(event.status, event.coverage);
+  // A live-only event's post is the live video itself.
+  const liveVideo = event.coverage === "live";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -124,7 +126,7 @@ export function CommandDialog({
         {type && (
           <form onSubmit={submit} className="grid gap-4">
             <DialogHeader>
-              <DialogTitle>{TITLES[type]}</DialogTitle>
+              <DialogTitle>{type === "mark_posted" && liveVideo ? "Add the live video" : TITLES[type]}</DialogTitle>
               <DialogDescription className="line-clamp-2">{event.title}</DialogDescription>
             </DialogHeader>
 
@@ -138,7 +140,7 @@ export function CommandDialog({
             {type === "mark_posted" && (
               <>
                 <div className="grid gap-2">
-                  <Label htmlFor={`${id}-link`}>Facebook post link</Label>
+                  <Label htmlFor={`${id}-link`}>{liveVideo ? "Live video link on Facebook" : "Facebook post link"}</Label>
                   <Input
                     id={`${id}-link`}
                     name="postLink"
@@ -153,7 +155,7 @@ export function CommandDialog({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor={`${id}-when`}>Posted at (Manila time)</Label>
+                  <Label htmlFor={`${id}-when`}>{liveVideo ? "Went live at (Manila time)" : "Posted at (Manila time)"}</Label>
                   <Input id={`${id}-when`} name="when" type="datetime-local" required defaultValue={manilaLocalNow()} max={manilaLocalNow()} className="h-11" />
                 </div>
               </>

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CommandPayload } from "@/lib/commands";
-import type { Municipality, Source } from "@/lib/constants";
+import type { Coverage, Municipality, Source } from "@/lib/constants";
 import type { EventRow } from "@/lib/types";
 import { EventFields } from "./event-fields";
 
@@ -31,6 +31,7 @@ export function EditDetailsDialog({
         venue: str("venue"),
         municipality: orNull<Municipality>("municipality"),
         source: orNull<Source>("source"),
+        coverage: str("coverage") as Coverage,
         requested_by: str("requested_by"),
         contact: str("contact"),
         notes: str("notes"),

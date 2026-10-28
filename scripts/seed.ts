@@ -1,4 +1,4 @@
-// Development seed: 8 placeholder staff (PIN 1234) and the 28 sample events
+// Development seed: 10 placeholder staff (PIN 1234) and the 28 sample events
 // from supabase/seed/pio-coverage-pipeline.csv, shifted so the newest event
 // is two weeks from today (Asia/Manila).
 //
@@ -11,8 +11,8 @@ import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import { parse } from "csv-parse/sync";
 import { config } from "dotenv";
-import type { Municipality, Role, Source, Status } from "../lib/constants";
-import { MUNICIPALITY_LABELS, SOURCE_LABELS, STATUS_LABELS } from "../lib/constants";
+import type { Coverage, Municipality, Role, Source, Status } from "../lib/constants";
+import { COVERAGE_SHORT, MUNICIPALITY_LABELS, SOURCE_LABELS, STATUS_LABELS } from "../lib/constants";
 import { addDays, daysBetween, manilaDate, manilaDateTime } from "../lib/time";
 
 config({ path: resolve(process.cwd(), ".env.local") });
@@ -48,6 +48,8 @@ const STAFF: { display: string; full: string; roles: Role[] }[] = [
   { display: "Ana R.", full: "Ana R.", roles: ["writer"] },
   { display: "Mark V.", full: "Mark V.", roles: ["writer"] },
   { display: "Liza C.", full: "Liza C.", roles: ["writer"] },
+  { display: "Ben A.", full: "Ben A.", roles: ["cameraman", "videographer"] },
+  { display: "Kim L.", full: "Kim L.", roles: ["obs_tech"] },
 ];
 
 type CsvRow = Record<string, string>;
@@ -58,6 +60,7 @@ function invert<T extends string>(labels: Record<T, string>): Map<string, T> {
 const statusByLabel = invert<Status>(STATUS_LABELS);
 const sourceByLabel = invert<Source>(SOURCE_LABELS);
 const municipalityByLabel = invert<Municipality>(MUNICIPALITY_LABELS);
+const coverageByLabel = invert<Coverage>(COVERAGE_SHORT);
 
 function lookup<T>(map: Map<string, T>, label: string, what: string): T {
   const v = map.get(label.trim().toLowerCase());
@@ -123,12 +126,14 @@ async function main() {
     if (status === "posted" && postAt && postAt > now) postAt = new Date(now.getTime() - 60_000);
 
     const proofreader = person(r["Proofreader"]);
+    const coverage = lookup(coverageByLabel, r["Coverage"], "coverage");
     const row = {
       // "Oct 01 - Title" → "Title" (the date prefix would be wrong after shifting)
       title: r["Task Name"].replace(/^[A-Z][a-z]{2} \d{1,2} - /, ""),
       event_date: eventDate,
       source: lookup(sourceByLabel, r["Event Source"], "source"),
       municipality: lookup(municipalityByLabel, r["Municipality"], "municipality"),
+      coverage,
       notes: r["Description"] || null,
       status,
       cancelled_from_status: status === "cancelled" ? "scheduled" : null,
@@ -136,13 +141,16 @@ async function main() {
       videographer_id: person(r["Videographer"]),
       writer_id: person(r["Writer"]),
       proofreader_id: proofreader,
+      cameraman_id: person(r["Cameraman"]),
+      obs_tech_id: person(r["OBS Tech"]),
       approved_by_id: AFTER_APPROVED.includes(status) ? proofreader : null,
       coverage_confirmed: coveredOrLater,
       photos_done: r["Photos Edited & Branded"] === "Yes",
       caption_done: r["Caption Drafted"] === "Yes",
       drive_folder_url: coveredOrLater ? `https://drive.google.com/drive/folders/placeholder-${n}` : null,
+      // A live-only event's post is the live video, with no posting schedule.
       scheduled_post_at:
-        status === "scheduled_for_posting" || status === "posted" ? (postAt?.toISOString() ?? null) : null,
+        coverage !== "live" && (status === "scheduled_for_posting" || status === "posted") ? (postAt?.toISOString() ?? null) : null,
       posted_at: status === "posted" ? postAt!.toISOString() : null,
       // The CSV only has "(paste post link)" placeholders.
       post_link: status === "posted" ? `https://www.facebook.com/example/posts/seed-${n}` : null,

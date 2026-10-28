@@ -3,12 +3,13 @@
 import { CheckCircle2Icon } from "lucide-react";
 import Link from "next/link";
 import { useOptimistic } from "react";
-import { SourceChip, StatusBadge } from "@/components/app/labels";
+import { LiveChip, SourceChip, StatusBadge } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
 import { EventPeek } from "@/components/events/event-peek";
 import { useCommandRunner } from "@/components/events/use-command-runner";
-import { MUNICIPALITY_LABELS, SLOT_LABELS, canFillSlot, type Slot } from "@/lib/constants";
+import { hasLive, hasRegular, LIVE_SLOTS, MUNICIPALITY_LABELS, SLOT_LABELS, canFillSlot, type Coverage, type Slot } from "@/lib/constants";
 import { formatEventDate, staffName } from "@/lib/format";
+import { TEAM_GAP_LABELS, teamGaps, type TeamGap } from "@/lib/metrics";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { availability } from "@/lib/workflow";
@@ -21,7 +22,19 @@ type Props = {
   load: Record<string, Record<string, number>>;
 };
 
-const SLOTS: Slot[] = ["writer", "photographer", "videographer", "editor"];
+const REGULAR_SLOTS: Slot[] = ["writer", "photographer", "videographer", "editor"];
+
+/** The slots to pick on this page: the usual team, the live crew, or both. */
+const slotsToAssign = (c: Coverage): Slot[] => [...(hasRegular(c) ? REGULAR_SLOTS : []), ...(hasLive(c) ? LIVE_SLOTS : [])];
+
+/** The gap a slot helps fill (photographer and videographer share one). */
+const SLOT_GAP: Partial<Record<Slot, TeamGap>> = {
+  writer: "writer",
+  photographer: "photo_video",
+  videographer: "photo_video",
+  cameraman: "cameraman",
+  obs_tech: "obs_tech",
+};
 
 const select =
   "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60";
@@ -37,9 +50,8 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
     <ul className="grid gap-3">
       {items.map((e) => {
         const canAssign = availability(e, actor).assign.state === "available";
-        const missingWriter = !e.writer_id;
-        const missingMedia = !e.photographer_id && !e.videographer_id;
-        const done = !missingWriter && !missingMedia;
+        const gaps = teamGaps(e);
+        const done = gaps.length === 0;
         return (
           <li key={e.id} className={cn("rounded-xl border bg-card p-4", done && "border-green-300 bg-green-50/40")}>
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -57,6 +69,7 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <SourceChip source={e.source} short />
+                <LiveChip coverage={e.coverage} />
                 <StatusBadge status={e.status} />
               </div>
             </div>
@@ -67,17 +80,18 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
                 </span>
               ) : (
                 <span className="text-amber-800">
-                  Missing: {[missingWriter && "writer", missingMedia && "photographer or videographer"].filter(Boolean).join(" and ")}
+                  Missing: {gaps.map((g) => (g === "photo_video" ? "photographer or videographer" : TEAM_GAP_LABELS[g])).join(", ")}
                 </span>
               )}
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              {SLOTS.map((slot) => {
+              {slotsToAssign(e.coverage).map((slot) => {
                 const id = `${e.id}-${slot}`;
                 const current = e[`${slot}_id`];
                 const dayLoad = load[e.event_date] ?? {};
                 const eligible = staff.filter((s) => (s.active && canFillSlot(s.roles, slot)) || s.id === current);
-                const missing = slot === "writer" ? missingWriter : missingMedia && !current;
+                const gap = SLOT_GAP[slot];
+                const missing = gap !== undefined && gaps.includes(gap) && !current;
                 return (
                   <div key={slot} className="grid gap-1.5">
                     <label htmlFor={id} className={cn("text-xs font-medium", missing ? "text-amber-800" : "text-muted-foreground")}>
