@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { gridRange, isMonthString, monthGrid, monthOf, shiftMonth } from "@/lib/calendar";
 import { MUNICIPALITY_LABELS, SOURCE_COLORS, SOURCE_LABELS, SOURCES } from "@/lib/constants";
-import { listEventsByDate, listPostedBetween } from "@/lib/data/events";
+import { listEventsByDate, listPostedInPeriod } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
+import { formatTime, staffName } from "@/lib/format";
 import { addDays, formatManila, manilaDate, manilaStartOfDay } from "@/lib/time";
 import type { EventRow, Staff } from "@/lib/types";
 import { segmentedItem, segmentedList } from "@/components/app/segmented";
@@ -28,13 +29,8 @@ export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   );
 }
 
-function timeLabel(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-}
-
 function toItem(e: EventRow, view: View, staff: Staff[]): CalItem {
-  const name = (id: string | null) => (id ? staff.find((s) => s.id === id)?.display_name : undefined);
+  const name = (id: string | null) => staffName(staff, id);
   const people = [
     name(e.photographer_id) && `P: ${name(e.photographer_id)}`,
     name(e.videographer_id) && `V: ${name(e.videographer_id)}`,
@@ -46,7 +42,7 @@ function toItem(e: EventRow, view: View, staff: Staff[]): CalItem {
     id: e.id,
     title: e.title,
     day: posted ? manilaDate(e.posted_at as string) : e.event_date,
-    time: posted ? formatManila(e.posted_at as string, "h:mm a") : e.start_time ? timeLabel(e.start_time) : null,
+    time: posted ? formatManila(e.posted_at as string, "h:mm a") : e.start_time ? formatTime(e.start_time) : null,
     source: e.source,
     status: e.status,
     place: [e.venue, e.municipality && MUNICIPALITY_LABELS[e.municipality]].filter(Boolean).join(" · "),
@@ -66,7 +62,7 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
   const [events, staff] = await Promise.all([
     view === "events"
       ? listEventsByDate(from, to)
-      : listPostedBetween(manilaStartOfDay(from), manilaStartOfDay(addDays(to, 1))),
+      : listPostedInPeriod({ start: manilaStartOfDay(from), end: manilaStartOfDay(addDays(to, 1)) }),
     listStaff(),
   ]);
   const items = events.map((e) => toItem(e, view, staff));

@@ -19,6 +19,7 @@ import {
   type Credit,
   type Period,
 } from "@/lib/metrics";
+import { staffName } from "@/lib/format";
 import { dashboardPeriod } from "@/lib/period-params";
 import { manilaDate } from "@/lib/time";
 import type { Staff } from "@/lib/types";
@@ -38,9 +39,8 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
 const againstLabel = (p: Period) => (p.kind === "week" ? "last week" : p.kind === "month" ? "last month" : "previous period");
 
 function personSeries(credits: Map<string, Credit>, staff: Staff[], pick: (c: Credit) => number, detail?: (c: Credit) => string) {
-  const name = (id: string) => staff.find((s) => s.id === id)?.display_name ?? "Unknown";
   return [...credits.entries()]
-    .map(([id, c]) => ({ name: name(id), value: pick(c), detail: detail?.(c) }))
+    .map(([id, c]) => ({ name: staffName(staff, id) ?? "Unknown", value: pick(c), detail: detail?.(c) }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
 }

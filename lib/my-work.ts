@@ -1,7 +1,9 @@
 // "My work": one person's events, month by month (by event date, Manila).
 // Pure, so the page and its tests can't disagree.
 
+import { isMonthString, shiftMonth } from "./calendar";
 import { SLOTS, type Slot } from "./constants";
+import { byDateAndTime } from "./metrics";
 import { endOfMonth, formatManila, manilaDate, manilaStartOfDay } from "./time";
 import type { EventRow } from "./types";
 
@@ -12,19 +14,12 @@ export type MyEvent = Pick<EventRow, "id" | "event_date" | "start_time" | "statu
   [K in `${Slot}_id`]: string | null;
 };
 
-const MONTH_RE = /^(\d{4})-(\d{2})$/;
-
 /** The slots `staffId` fills on an event, in slot order. */
 export function mySlots(e: MyEvent, staffId: string): Slot[] {
   return SLOTS.filter((s) => e[`${s}_id`] === staffId);
 }
 
-/** "2026-10" moved by `delta` months. */
-export function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split("-").map(Number);
-  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-  return d.toISOString().slice(0, 7);
-}
+export { shiftMonth };
 
 /**
  * ?month=yyyy-MM, if it's a real month from 2000 up to the current Manila
@@ -33,9 +28,7 @@ export function shiftMonth(month: string, delta: number): string {
 export function monthParam(raw: string | string[] | undefined, now: Date): string {
   const current = manilaDate(now).slice(0, 7);
   const value = Array.isArray(raw) ? raw[0] : raw;
-  const m = value?.match(MONTH_RE);
-  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12 || value! < "2000-01" || value! > current) return current;
-  return value!;
+  return value && isMonthString(value) && value <= current ? value : current;
 }
 
 /** The `count` months ending with `month`, oldest first. */
@@ -68,13 +61,7 @@ export function monthSummaries(events: readonly MyEvent[], months: readonly stri
 
 /** Events held in `month`, earliest first (by date, then start time; no time last). */
 export function eventsInMonth<T extends MyEvent>(events: readonly T[], month: string): T[] {
-  return events
-    .filter((e) => e.event_date.startsWith(month))
-    .sort((a, b) =>
-      a.event_date === b.event_date
-        ? (a.start_time ?? "99").localeCompare(b.start_time ?? "99")
-        : a.event_date.localeCompare(b.event_date),
-    );
+  return events.filter((e) => e.event_date.startsWith(month)).sort(byDateAndTime);
 }
 
 /** How many of the month's (non-cancelled) events this person filled each slot on. */

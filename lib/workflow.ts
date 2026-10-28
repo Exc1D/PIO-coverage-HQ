@@ -91,28 +91,6 @@ export type Command =
 
 export type CommandType = Command["type"];
 
-export const COMMAND_TYPES: readonly CommandType[] = [
-  "schedule",
-  "set_coverage_confirmed",
-  "mark_covered",
-  "start_production",
-  "set_photos_done",
-  "set_caption_done",
-  "submit_caption",
-  "approve",
-  "request_caption_changes",
-  "schedule_post",
-  "reschedule_post",
-  "mark_posted",
-  "cancel",
-  "restore",
-  "step_back",
-  "assign",
-  "edit_details",
-  "edit_caption_text",
-  "edit_drive_link",
-];
-
 export type ActivityEntry = {
   action: string;
   from_status: Status | null;
@@ -362,6 +340,8 @@ const GUARDS: Record<CommandType, (e: WorkflowEvent, a: Actor) => Check> = {
           : fail("forbidden", "Only the assigned photographer/videographer/editor or the head can edit the Drive link."),
     ),
 };
+
+export const COMMAND_TYPES = Object.keys(GUARDS) as readonly CommandType[];
 
 /** Can `actor` run a command of this type on `event` (ignoring command input)? */
 export function canPerform(event: WorkflowEvent, type: CommandType, actor: Actor): Check {

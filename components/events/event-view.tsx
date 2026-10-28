@@ -13,7 +13,7 @@ import {
 import { useOptimistic, useState } from "react";
 import { OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
 import { WaitingOn } from "@/components/app/waiting-on";
-import { formatEventDate } from "@/lib/format";
+import { formatEventDate, staffName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,7 +83,7 @@ export function EventView({
   const [deleting, setDeleting] = useState(false);
   const avail = availability(event, actor);
   const run = (payload: CommandPayload) => runCommand(event, payload, setOptimistic);
-  const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : null);
+  const name = (id: string | null) => staffName(staff, id);
   const nameOrSomeone = (id: string | null | undefined) => name(id ?? null) ?? "someone";
   const stuck = isStuck(event, today);
   const Heading = headingLevel;

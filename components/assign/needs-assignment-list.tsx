@@ -8,7 +8,7 @@ import { Peek } from "@/components/app/peek";
 import { EventPeek } from "@/components/events/event-peek";
 import { useCommandRunner } from "@/components/events/use-command-runner";
 import { MUNICIPALITY_LABELS, SLOT_LABELS, canFillSlot, type Slot } from "@/lib/constants";
-import { formatEventDate } from "@/lib/format";
+import { formatEventDate, staffName } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { availability } from "@/lib/workflow";
@@ -90,7 +90,7 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
                         value={current ?? ""}
                         onChange={(ev) => {
                           const staffId = ev.target.value || null;
-                          const who = staff.find((s) => s.id === staffId)?.display_name;
+                          const who = staffName(staff, staffId);
                           run(
                             e,
                             { type: "assign", slot, staffId },
@@ -114,7 +114,7 @@ export function NeedsAssignmentList({ events, staff, me, load }: Props) {
                       </select>
                     ) : (
                       <p className="flex h-11 items-center text-sm">
-                        {current ? staff.find((s) => s.id === current)?.display_name : <span className="text-muted-foreground">Unassigned</span>}
+                        {staffName(staff, current) ?? <span className="text-muted-foreground">Unassigned</span>}
                       </p>
                     )}
                   </div>

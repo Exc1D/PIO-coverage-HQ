@@ -7,7 +7,9 @@ import { hashPin, pinSchema } from "@/lib/auth/pin";
 import { AuthError, createSession, requireHead } from "@/lib/auth/session";
 import { ROLES, type Role } from "@/lib/constants";
 import { db, DB_ERRORS } from "@/lib/db/server";
+import { fieldErrors } from "@/lib/form-errors";
 import { listStaff } from "@/lib/data/staff";
+import { bumpVersion } from "@/lib/compare-and-set";
 import { checkStaffChange } from "@/lib/staff-rules";
 import type { Staff } from "@/lib/types";
 
@@ -27,12 +29,6 @@ async function head(): Promise<Staff | { error: string }> {
     if (e instanceof AuthError) return { error: e.message };
     throw e;
   }
-}
-
-function fieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const i of error.issues) out[String(i.path[0])] ??= i.message;
-  return out;
 }
 
 const namesSchema = z.object({
@@ -108,12 +104,25 @@ export async function updateStaffAction(staffId: string, _prev: StaffFormState, 
  * applied (e.g. a new PIN with old sessions still valid).
  */
 async function updateAndRevoke(staffId: string, changes: Record<string, unknown>): Promise<number> {
-  const { data, error } = await db().from("staff").select("session_version").eq("id", staffId).single<{ session_version: number }>();
-  if (error) throw new Error(`Could not load staff: ${error.message}`);
-  const next = data.session_version + 1;
-  const { error: upd } = await db().from("staff").update({ ...changes, session_version: next }).eq("id", staffId);
-  if (upd) throw new Error(`Could not update staff: ${upd.message}`);
-  return next;
+  // Compare-and-set: two heads acting at once can't both write the same version
+  // (which would leave a session from the old version valid).
+  return bumpVersion(
+    async () => {
+      const { data, error } = await db().from("staff").select("session_version").eq("id", staffId).single<{ session_version: number }>();
+      if (error) throw new Error(`Could not load staff: ${error.message}`);
+      return data.session_version;
+    },
+    async (current, next) => {
+      const { data, error } = await db()
+        .from("staff")
+        .update({ ...changes, session_version: next })
+        .eq("id", staffId)
+        .eq("session_version", current)
+        .select("id");
+      if (error) throw new Error(`Could not update staff: ${error.message}`);
+      return data.length > 0;
+    },
+  );
 }
 
 export async function resetPinAction(staffId: string, _prev: StaffFormState, formData: FormData): Promise<StaffFormState> {

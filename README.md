@@ -255,13 +255,12 @@ lib/text-diff.ts     word diff for comparing caption versions
 lib/commands.ts      zod schema for event commands (server); lib/command-preview.ts for the browser
 lib/data/            database reads (server only)
 lib/auth/            PIN hashing, sessions, lockout
-lib/notify.ts        hook for future notifications (currently a no-op)
 supabase/migrations/ SQL schema
 scripts/seed.ts      development seed
 tests/unit, tests/e2e
 ```
 
-Notifications such as email or SMS are out of scope. `lib/notify.ts` is called after every saved change with the activity it produced, so a channel can be added there later.
+Notifications such as email or SMS are out of scope. To add one, send it from the Server Actions in `app/actions/` after a change is saved; each one has the activity rows it wrote.
 
 ## Troubleshooting
 

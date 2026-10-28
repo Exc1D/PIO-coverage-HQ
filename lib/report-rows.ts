@@ -1,8 +1,9 @@
 // Report tables, built once and shared by the Reports page and its CSV
 // export so the two can never disagree.
 
+import { staffName } from "./format";
 import { MUNICIPALITY_LABELS, SOURCE_LABELS, type Source } from "./constants";
-import { creditsByPerson, postsGroupedBySource, type Credit, type Period } from "./metrics";
+import { creditsByPerson, emptyCredit, postsGroupedBySource, type Credit, type Period } from "./metrics";
 import { formatManila, manilaStartOfDay } from "./time";
 import type { EventRow, Staff } from "./types";
 
@@ -26,7 +27,7 @@ export type PersonRow = { id: string; name: string; roles: string } & Credit & {
 const PEOPLE_ROLES = ["writer", "proofreader", "photographer", "videographer", "photo_editor", "video_editor"] as const;
 
 export function postGroups(events: readonly EventRow[], period: Period, staff: readonly Staff[]): SourceGroup[] {
-  const name = (id: string | null) => (id ? (staff.find((s) => s.id === id)?.display_name ?? "Unknown") : "");
+  const name = (id: string | null) => staffName(staff, id) ?? "";
   return postsGroupedBySource(events, period).map((g) => ({
     source: g.source,
     label: g.source ? SOURCE_LABELS[g.source] : "No source",
@@ -54,7 +55,7 @@ export function peopleRows(events: readonly EventRow[], period: Period, staff: r
   return staff
     .filter((s) => credits.has(s.id) || (s.active && s.roles.some((r) => (PEOPLE_ROLES as readonly string[]).includes(r))))
     .map((s) => {
-      const c = credits.get(s.id) ?? { written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0 };
+      const c = credits.get(s.id) ?? emptyCredit();
       return {
         id: s.id,
         name: s.display_name + (s.active ? "" : " (inactive)"),
@@ -67,17 +68,11 @@ export function peopleRows(events: readonly EventRow[], period: Period, staff: r
 }
 
 export function peopleTotals(rows: readonly PersonRow[]): Credit & { total: number } {
-  return rows.reduce(
-    (t, r) => ({
-      written: t.written + r.written,
-      proofread: t.proofread + r.proofread,
-      photographed: t.photographed + r.photographed,
-      videographed: t.videographed + r.videographed,
-      edited: t.edited + r.edited,
-      total: t.total + r.total,
-    }),
-    { written: 0, proofread: 0, photographed: 0, videographed: 0, edited: 0, total: 0 },
-  );
+  const totals = { ...emptyCredit(), total: 0 };
+  for (const r of rows) {
+    for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] += r[k];
+  }
+  return totals;
 }
 
 /** "2026-10" or "2026-W43"-style slug for file names. */
