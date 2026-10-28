@@ -8,6 +8,8 @@ It replaces chat threads and memory with one place to:
 - see every event's status until it's posted, and catch stuck events early;
 - report output by week and month: total posts, the split by event source, and each person's work by role.
 
+**Live app:** [pio-production.vercel.app](https://pio-production.vercel.app) · public request form: [pio-production.vercel.app/request](https://pio-production.vercel.app/request)
+
 All dates, weeks (Monday–Sunday) and months are computed in **Asia/Manila**. Timestamps are stored in UTC.
 
 ---
@@ -156,11 +158,11 @@ Do **not** run `pnpm seed` against production; it creates staff with a shared PI
 
 ### 3. First run
 
-1. Open `https://<your-app>.vercel.app/setup` and create the **head's** account and PIN.
+1. Open `https://pio-production.vercel.app/setup` and create the **head's** account and PIN.
 2. As the head, open **Staff** and add the team, with roles and PINs. Give each person their PIN in person.
 3. Share the links:
-   - **Staff and viewers:** `https://<your-app>.vercel.app/`. Add `?k=<VIEW_KEY>` if you set one.
-   - **Organisers and LGUs:** `https://<your-app>.vercel.app/request`.
+   - **Staff and viewers:** `https://pio-production.vercel.app/`. Add `?k=<VIEW_KEY>` if you set one.
+   - **Organisers and LGUs:** `https://pio-production.vercel.app/request`.
 
 ### Updating
 
