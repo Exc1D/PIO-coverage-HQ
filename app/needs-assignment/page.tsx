@@ -20,9 +20,7 @@ export default function NeedsAssignmentPage() {
     <main className="mx-auto w-full max-w-4xl px-4 py-6">
       <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Needs assignment</h1>
       <p className="mb-4 text-sm text-muted-foreground">
-        Requested or scheduled events in the next {NEEDS_ASSIGNMENT_DAYS} days with no writer, or no photographer or
-        videographer, or, for a live stream, no cameraman or OBS tech. Pick people right here; each name shows how many
-        other events they already have that day.
+        Next {NEEDS_ASSIGNMENT_DAYS} days, missing people. The number by a name is how many other events they have that day.
       </p>
       <Suspense fallback={<ListSkeleton />}>
         <Loader />
@@ -57,7 +55,7 @@ async function Loader() {
     <div className="grid gap-6">
       {!me && <ViewOnlyNotice returnTo="/needs-assignment" />}
       {me && !me.roles.includes("head") && (
-        <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">Only the head can assign people. You can see who’s missing below.</p>
+        <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">Only the head can assign people.</p>
       )}
 
       {needs.length === 0 ? (

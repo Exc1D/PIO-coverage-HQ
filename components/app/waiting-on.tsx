@@ -2,7 +2,7 @@ import { HourglassIcon } from "lucide-react";
 import type { Role } from "@/lib/constants";
 import type { Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import type { Party, Waiting } from "@/lib/waiting";
+import { isMe, type Party, type Waiting } from "@/lib/waiting";
 
 // No "use client": rendered by the board (client) and the dashboard (server).
 
@@ -21,12 +21,6 @@ export function partyName(p: Party, staffById: Map<string, Staff>): string {
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** Is this party the signed-in person (by assignment, or by holding the role)? */
-export function isMe(p: Party, me: { id: string; roles: readonly Role[] } | null): boolean {
-  if (!me) return false;
-  return p.kind === "staff" ? p.id === me.id : me.roles.includes(p.role);
-}
 
 /**
  * "Waiting on Ana R. · Finish the caption". `compact` (board cards) shows

@@ -2,7 +2,7 @@
 // from the status, the progress boxes and the team (never stored), so it can't
 // go stale. Mirrors the steps in lib/workflow.ts.
 
-import type { Slot } from "./constants";
+import type { Role, Slot } from "./constants";
 import { teamGaps, type TeamGap } from "./metrics";
 import type { EventRow } from "./types";
 
@@ -109,6 +109,12 @@ export function waitingOn(e: WaitingEvent, today: string, opts: { changesRequest
     default:
       return [];
   }
+}
+
+/** Is this party the signed-in person (by assignment, or by holding the role)? */
+export function isMe(p: Party, me: { id: string; roles: readonly Role[] } | null): boolean {
+  if (!me) return false;
+  return p.kind === "staff" ? p.id === me.id : me.roles.includes(p.role);
 }
 
 /** Stable key for grouping by party. */

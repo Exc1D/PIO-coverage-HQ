@@ -160,8 +160,8 @@ export function EventCard({ event, staffById, me, today, onToggle, overlay = fal
         <LiveChip coverage={event.coverage} />
         {stuck && <OverdueFlag dueDate={event.due_date} />}
         {event.status === "scheduled" && event.coverage_confirmed && (
-          <span className="inline-flex items-center gap-1 text-xs text-green-700">
-            <CheckCircle2Icon className="size-3.5" aria-hidden /> Coverage confirmed
+          <span className="inline-flex items-center gap-1 text-xs text-green-700" title="Coverage confirmed">
+            <CheckCircle2Icon className="size-3.5" aria-hidden /> Confirmed
           </span>
         )}
       </div>

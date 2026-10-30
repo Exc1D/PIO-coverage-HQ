@@ -20,9 +20,7 @@ export default function BoardPage() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Pipeline</h1>
-          <p className="text-sm text-muted-foreground">
-            Every event from request to posted. Drag a card by its handle to move it one step.
-          </p>
+          <p className="text-sm text-muted-foreground">Drag a card by its handle to move it a step.</p>
         </div>
         <Suspense fallback={null}>
           <NewEventButton />

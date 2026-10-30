@@ -158,10 +158,12 @@ export function EventList({
   meta,
   href,
   staff,
+  className,
 }: {
   title: string;
   description: string;
   events: EventRow[];
+  className?: string;
   /** For the peek's team list. */
   staff: Staff[];
   empty: string;
@@ -170,7 +172,7 @@ export function EventList({
 }) {
   const staffById = new Map(staff.map((s) => [s.id, s]));
   return (
-    <section className="flex flex-col rounded-xl border bg-card" aria-label={title}>
+    <section className={cn("flex flex-col rounded-xl border bg-card", className)} aria-label={title}>
       <header className="flex items-baseline justify-between gap-2 border-b px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold">

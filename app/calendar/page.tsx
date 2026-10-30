@@ -77,7 +77,7 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
         <div>
           <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Calendar</h1>
           <p className="text-sm text-muted-foreground">
-            {view === "events" ? "Events by event date" : "Facebook posts by the date they were published"} ·{" "}
+            {view === "events" ? "By event date" : "By posting date"} ·{" "}
             {inMonth} in {formatManila(manilaStartOfDay(`${month}-01`), "MMMM")}
           </p>
         </div>

@@ -60,7 +60,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Reports</h1>
-          <p className="text-sm text-muted-foreground">Posted events and who did the work, by week or month.</p>
+          <p className="text-sm text-muted-foreground">Posted events and who did the work.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">

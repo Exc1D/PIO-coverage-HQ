@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Suspense, ViewTransition } from "react";
 import { HideOnPublic } from "@/components/app/hide-on-public";
 import { TabBar } from "@/components/app/main-nav";
-import { SiteHeader } from "@/components/app/site-header";
+import { RoleTabBar, SiteHeader } from "@/components/app/site-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -50,17 +50,16 @@ export default function RootLayout({ children, drawer }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <HideOnPublic>
             <footer className="border-t py-4 text-center text-xs text-muted-foreground print:hidden">
-              Public coverage request form:{" "}
+              Share with organisers:{" "}
               <Link href="/request" className="font-medium text-foreground underline underline-offset-4">
-                /request
-              </Link>{" "}
-              (share this link with LGUs and organisers)
+                coverage request form
+              </Link>
             </footer>
           </HideOnPublic>
         </Suspense>
         <Suspense fallback={<TabBar static />}>
           <HideOnPublic>
-            <TabBar />
+            <RoleTabBar />
           </HideOnPublic>
         </Suspense>
         {drawer}

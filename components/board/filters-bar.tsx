@@ -7,19 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { MUNICIPALITIES, MUNICIPALITY_LABELS, SOURCES, SOURCE_LABELS } from "@/lib/constants";
 import type { Staff } from "@/lib/types";
-import { hasFilters, readFilters, RECENT_POSTED_DAYS } from "./board-filters";
+import { clearFilters, hasFilters, readFilters, RECENT_POSTED_DAYS, setParam } from "./board-filters";
 
 const field =
   "h-10 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
-
-/** Updates the query string in place; the board re-filters instantly without a server round trip. */
-function setParam(key: string, value: string | null) {
-  const params = new URLSearchParams(window.location.search);
-  if (value) params.set(key, value);
-  else params.delete(key);
-  const qs = params.toString();
-  window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-}
 
 export function FiltersBar({ staff }: { staff: Staff[] }) {
   const f = readFilters(new URLSearchParams(useSearchParams()));
@@ -34,7 +25,6 @@ export function FiltersBar({ staff }: { staff: Staff[] }) {
         <FilterIcon className="size-4" aria-hidden />
         Filters
         {active && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">On</span>}
-        <span className="ml-auto text-xs text-muted-foreground group-open:hidden">Source, place, person, dates</span>
       </summary>
       <div className="grid gap-3 border-t p-3 sm:grid-cols-2 lg:grid-cols-6">
         <div className="grid gap-1.5">
@@ -85,13 +75,13 @@ export function FiltersBar({ staff }: { staff: Staff[] }) {
             Show cancelled
           </label>
           {active && (
-            <Button variant="ghost" size="sm" onClick={() => window.history.replaceState(null, "", window.location.pathname)}>
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
               <XIcon aria-hidden /> Clear
             </Button>
           )}
         </div>
         <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-6">
-          Without a date range, Posted shows the last {RECENT_POSTED_DAYS} days.
+          Posted shows the last {RECENT_POSTED_DAYS} days unless you pick dates.
         </p>
       </div>
     </details>

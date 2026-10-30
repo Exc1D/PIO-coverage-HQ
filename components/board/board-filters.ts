@@ -48,3 +48,18 @@ export function matchesFilters(e: EventRow, f: BoardFilters, today: string): boo
   }
   return true;
 }
+
+/** Updates the query string in place; the board re-filters instantly without a server round trip. */
+export function setParam(key: string, value: string | null) {
+  const params = new URLSearchParams(window.location.search);
+  if (value) params.set(key, value);
+  else params.delete(key);
+  const qs = params.toString();
+  window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+}
+
+/** Clears the filters but keeps the chosen view. */
+export function clearFilters() {
+  const view = new URLSearchParams(window.location.search).get("view");
+  window.history.replaceState(null, "", view ? `?view=${view}` : window.location.pathname);
+}
