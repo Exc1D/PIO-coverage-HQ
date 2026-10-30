@@ -108,6 +108,7 @@ export function EventView({
       slot={slot}
       currentId={event[`${slot}_id`]}
       currentName={name(event[`${slot}_id`])}
+      mine={me !== null && event[`${slot}_id`] === me.id}
       staff={staff}
       canAssign={canAssign}
       onAssign={(staffId) => run({ type: "assign", slot, staffId })}
@@ -410,6 +411,7 @@ function TeamRow({
   slot,
   currentId,
   currentName,
+  mine,
   staff,
   canAssign,
   onAssign,
@@ -417,6 +419,8 @@ function TeamRow({
   slot: Slot;
   currentId: string | null;
   currentName: string | null;
+  /** The signed-in person fills this slot. */
+  mine: boolean;
   staff: Staff[];
   canAssign: boolean;
   onAssign: (staffId: string | null) => void;
@@ -429,6 +433,7 @@ function TeamRow({
         <label htmlFor={canAssign ? id : undefined} className="text-xs text-muted-foreground">
           {SLOT_LABELS[slot]}
         </label>
+        {mine && <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 text-[11px] font-medium text-primary">You</span>}
       </dt>
       <dd className="min-w-0">
         {canAssign ? (

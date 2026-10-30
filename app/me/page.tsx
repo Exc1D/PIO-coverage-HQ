@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
 import { MUNICIPALITY_LABELS, ROLE_LABELS, SLOT_LABELS } from "@/lib/constants";
-import { isMe } from "@/components/app/waiting-on";
 import { listEventsForStaff, listInProgressEvents } from "@/lib/data/events";
 import { isStuck } from "@/lib/metrics";
-import { waitingOn } from "@/lib/waiting";
+import { isMe, waitingOn } from "@/lib/waiting";
 import { formatEventDate } from "@/lib/format";
 import {
   eventsInMonth,
@@ -212,7 +211,7 @@ async function MyWork({ searchParams }: { searchParams: PageProps<"/me">["search
           </ul>
         )}
         <p className="text-xs text-muted-foreground">
-          Events are grouped by the month they were held. Reports credit work by the month it was posted.
+          Grouped by event date. Reports count by posting date.
         </p>
       </section>
     </div>

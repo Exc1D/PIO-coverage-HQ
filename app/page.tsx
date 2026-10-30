@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { StatusBadge } from "@/components/app/labels";
+import { OverdueFlag, StatusBadge } from "@/components/app/labels";
 import { LazyPersonBars, LazySourceDonut } from "@/components/dashboard/lazy-charts";
 import { ChartCard, EmptyChart, EventList, PipelineBars, StatTile, WaitingBoard } from "@/components/dashboard/parts";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
+import { PersonTabs, type PersonTab } from "@/components/dashboard/person-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SOURCE_COLORS, SOURCE_LABELS, SOURCES, STATUS_LABELS } from "@/lib/constants";
+import { getCurrentStaff } from "@/lib/auth/session";
+import { SOURCE_COLORS, SOURCE_LABELS, SOURCES, STATUS_LABELS, type Role } from "@/lib/constants";
 import { listEventsForDashboard } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import {
@@ -25,6 +27,8 @@ import { staffName } from "@/lib/format";
 import { dashboardPeriod } from "@/lib/period-params";
 import { manilaDate } from "@/lib/time";
 import type { Staff } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { isMe, waitingOn } from "@/lib/waiting";
 
 export const metadata: Metadata = { title: "HQ Dashboard" };
 
@@ -49,6 +53,7 @@ function personSeries(credits: Map<string, Credit>, staff: Staff[], pick: (c: Cr
 
 async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   await connection();
+  const me = await getCurrentStaff();
   const now = new Date();
   const today = manilaDate(now);
   const period = dashboardPeriod(await searchParams, now);
@@ -88,19 +93,62 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
       description={description}
       table={{ head: ["Person", "Count"], rows: data.map((d) => [d.name, d.detail ? `${d.value} (${d.detail})` : d.value]) }}
     >
-      {data.length ? <LazyPersonBars data={data} /> : <EmptyChart>No posted events in this period yet.</EmptyChart>}
+      {data.length ? <LazyPersonBars data={data} /> : <EmptyChart>Nothing posted in this period yet.</EmptyChart>}
     </ChartCard>
   );
+  const personTabs: (PersonTab & { roles: Role[] })[] = [
+    { value: "written", roles: ["writer"], label: "Writing", content: personCard("Articles written", "Writer credits", written) },
+    { value: "proofread", roles: ["proofreader"], label: "Proofreading", content: personCard("Captions proofread", "Proofreader credits", proofread) },
+    {
+      value: "media",
+      roles: ["photographer", "videographer"],
+      label: "Photo & video",
+      content: personCard("Events photographed / videographed", "Photographer and videographer credits", media),
+    },
+    { value: "edited", roles: ["photo_editor", "video_editor"], label: "Editing", content: personCard("Photos and video edited", "Editor credits", edited) },
+    { value: "live", roles: ["cameraman", "obs_tech"], label: "Live", content: personCard("Live streams", "Cameraman and OBS tech credits", live) },
+  ];
+  // Opens on the viewer's own kind of work.
+  const myTab = personTabs.find((t) => me?.roles.some((r) => t.roles.includes(r)));
+
+  // Assigning is the head's job, so others don't need the list.
+  const showNeeds = !me || me.roles.includes("head");
+  const onMe = me
+    ? events
+        .map((e) => ({ event: e, tasks: waitingOn(e, today).filter((w) => isMe(w.who, me)).map((w) => w.task) }))
+        .filter((x) => x.tasks.length > 0)
+        .sort((a, b) => Number(isStuck(b.event, today)) - Number(isStuck(a.event, today)) || a.event.due_date.localeCompare(b.event.due_date))
+    : [];
+  const tasksFor = new Map(onMe.map((x) => [x.event.id, x.tasks]));
 
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">HQ Dashboard</h1>
-          <p className="text-sm text-muted-foreground">{period.label} · Asia/Manila</p>
+          <p className="text-sm text-muted-foreground">{period.label}</p>
         </div>
         <PeriodSwitcher period={period} />
       </div>
+
+      {/* Signed in: what needs you comes first. */}
+      {me && (
+        <EventList
+          title="Waiting on you"
+          description="Overdue first"
+          events={onMe.map((x) => x.event)}
+          staff={staff}
+          empty="Nothing is waiting on you right now."
+          meta={(e) => (
+            <>
+              <span className="font-medium text-primary">{tasksFor.get(e.id)?.join(" · ")}</span>
+              {isStuck(e, today) && <OverdueFlag dueDate={e.due_date} />}
+            </>
+          )}
+          href={{ label: "My work", to: "/me" }}
+          className="border-primary/30"
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile label="Posts published" value={s.postsPublished} delta={{ value: s.postsPublished - p.postsPublished, against: againstLabel(period) }} />
@@ -110,18 +158,73 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           delta={{ value: s.eventsCovered - p.eventsCovered, against: againstLabel(period) }}
           hint={s.liveStreams ? `${s.liveStreams} livestreamed` : undefined}
         />
-        <StatTile label="In the pipeline now" value={s.inPipeline} hint="Not yet posted or cancelled" />
-        <StatTile label="Stuck" value={s.stuck} hint="Past the 2-day posting target" tone="alert" />
+        <StatTile label="In progress" value={s.inPipeline} />
+        <StatTile label="Stuck" value={s.stuck} hint="Past the 2-day target" tone="alert" />
       </div>
+
+      <div className={cn("grid gap-3", showNeeds ? "lg:grid-cols-3" : "md:grid-cols-2")}>
+        {showNeeds && (
+          <EventList
+            title="Needs assignment"
+            description="Next 14 days"
+            events={needs}
+            staff={staff}
+            empty="Everyone is assigned."
+            meta={(e) => (
+              <span className="font-medium text-amber-800">
+                {teamGaps(e).map((g) => `No ${TEAM_GAP_LABELS[g]}`).join(" · ")}
+              </span>
+            )}
+            href={{ label: "Assign people", to: "/needs-assignment" }}
+          />
+        )}
+        <EventList
+          title="Stuck"
+          description="Late and not yet posted"
+          events={stuck}
+          staff={staff}
+          empty="Nothing is overdue."
+          meta={(e) => (
+            <>
+              <StatusBadge status={e.status} />
+              <span className="font-medium text-red-700">{daysOverdue(e, today)} day{daysOverdue(e, today) === 1 ? "" : "s"} late</span>
+            </>
+          )}
+        />
+        <EventList
+          title="Next 7 days"
+          description="From today"
+          events={next7}
+          staff={staff}
+          empty="No events in the next 7 days."
+          meta={(e) => <StatusBadge status={e.status} />}
+        />
+      </div>
+
+      {/* The whole team's queue: the head's tool. Staff have their own list at the top, so theirs starts folded. */}
+      <details open={showNeeds || undefined} className="group grid gap-3" aria-labelledby="waiting-h">
+        <summary className="flex cursor-pointer list-none items-baseline gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <h2 id="waiting-h" className="text-lg font-semibold tracking-tight">
+            Waiting on
+          </h2>
+          <span className="text-sm text-muted-foreground">
+            <span className="group-open:hidden">Show the whole team</span>
+            <span className="hidden group-open:inline">Who acts next, most overdue first</span>
+          </span>
+        </summary>
+        <div className="mt-3">
+          <WaitingBoard events={events} staff={staff} today={today} />
+        </div>
+      </details>
 
       <div className="grid gap-3 md:grid-cols-2">
         <ChartCard
           title="Posts by source"
-          description="Published in this period"
+          description="Published this period"
           table={{ head: ["Source", "Posts", "Share"], rows: donut.map((d) => [d.label, d.value, pct(d.value)]) }}
         >
           {total === 0 ? (
-            <EmptyChart>No posts published in this period yet.</EmptyChart>
+            <EmptyChart>Nothing published in this period yet.</EmptyChart>
           ) : (
             <div className="grid items-center gap-4 sm:grid-cols-[200px_1fr]">
               <LazySourceDonut data={donut} total={total} />
@@ -148,68 +251,15 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
         </ChartCard>
       </div>
 
-      <section aria-labelledby="waiting-h" className="grid gap-3">
-        <div>
-          <h2 id="waiting-h" className="text-lg font-semibold tracking-tight">
-            Waiting on
-          </h2>
-          <p className="text-sm text-muted-foreground">Who has to act next on each event still in progress, most overdue first.</p>
-        </div>
-        <WaitingBoard events={events} staff={staff} today={today} />
-      </section>
-
       <section aria-labelledby="work-h" className="grid gap-3">
         <div>
           <h2 id="work-h" className="text-lg font-semibold tracking-tight">
             Work by person
           </h2>
-          <p className="text-sm text-muted-foreground">Counted from events posted in this period.</p>
+          <p className="text-sm text-muted-foreground">From events posted this period.</p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          {personCard("Articles written", "Writer credits", written)}
-          {personCard("Captions proofread", "Proofreader credits", proofread)}
-          {personCard("Events photographed / videographed", "Photographer and videographer credits", media)}
-          {personCard("Photos and video edited", "Editor credits", edited)}
-          {personCard("Live streams", "Cameraman and OBS tech credits", live)}
-        </div>
+        <PersonTabs tabs={personTabs} initial={myTab?.value ?? "written"} />
       </section>
-
-      <div className="grid gap-3 lg:grid-cols-3">
-        <EventList
-          title="Needs assignment"
-          description="Next 14 days, missing a writer, photo/video or live crew"
-          events={needs}
-          staff={staff}
-          empty="Everyone is assigned for the next 14 days."
-          meta={(e) => (
-            <span className="font-medium text-amber-800">
-              {teamGaps(e).map((g) => `No ${TEAM_GAP_LABELS[g]}`).join(" · ")}
-            </span>
-          )}
-          href={{ label: "Assign people", to: "/needs-assignment" }}
-        />
-        <EventList
-          title="Stuck"
-          description="Past the posting target and not yet posted"
-          events={stuck}
-          staff={staff}
-          empty="Nothing is overdue."
-          meta={(e) => (
-            <>
-              <StatusBadge status={e.status} />
-              <span className="font-medium text-red-700">{daysOverdue(e, today)} day{daysOverdue(e, today) === 1 ? "" : "s"} late</span>
-            </>
-          )}
-        />
-        <EventList
-          title="Next 7 days"
-          description="Coming up, today onwards"
-          events={next7}
-          staff={staff}
-          empty="No events in the next 7 days."
-          meta={(e) => <StatusBadge status={e.status} />}
-        />
-      </div>
     </div>
   );
 }

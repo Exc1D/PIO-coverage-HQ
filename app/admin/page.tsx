@@ -64,8 +64,7 @@ async function AdminLoader() {
           Recently deleted events <span className="font-normal text-muted-foreground">· {deleted.length}</span>
         </h2>
         <p className="text-xs text-muted-foreground">
-          Deleted events are kept for 30 days, then removed for good with the requester’s details. Restoring brings back
-          the event with its history.
+          Kept for 30 days with their history, then removed for good.
         </p>
         <RecentlyDeleted events={deleted} names={names} now={new Date().toISOString()} />
       </section>

@@ -23,12 +23,14 @@ import { CommandDialog, type InputCommand } from "@/components/events/command-di
 import { useCommandRunner } from "@/components/events/use-command-runner";
 import { STATUS_ACCENT } from "@/components/app/labels";
 import type { CommandPayload } from "@/lib/commands";
-import { PIPELINE, STATUS_LABELS, type Status } from "@/lib/constants";
+import { STATUS_LABELS, type Status } from "@/lib/constants";
+import { defaultView, isMyEvent, readView, viewColumns, viewsFor, type View } from "@/lib/focus";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { dropCommand } from "@/lib/workflow";
-import { matchesFilters, readFilters } from "./board-filters";
+import { matchesFilters, readFilters, setParam } from "./board-filters";
 import { EventCard } from "./event-card";
+import { ViewSwitcher } from "./view-switcher";
 
 type Props = {
   events: EventRow[];
@@ -53,7 +55,9 @@ const collisionDetection: CollisionDetection = (args) =>
 const AUTO_SCROLL = { acceleration: 2, threshold: { x: 0.15, y: 0.2 } };
 
 export function Board({ events, staff, me, today }: Props) {
-  const filters = readFilters(new URLSearchParams(useSearchParams()));
+  const params = new URLSearchParams(useSearchParams());
+  const filters = readFilters(params);
+  const view = readView(params.get("view"), me);
   const staffById = new Map(staff.map((s) => [s.id, s]));
   const { run: runCommand, actor } = useCommandRunner(staff, me);
   const [optimistic, applyOptimistic] = useOptimistic(events, (state: EventRow[], p: Patch) =>
@@ -90,8 +94,12 @@ export function Board({ events, staff, me, today }: Props) {
     else run(event, { type: r.type } as CommandPayload);
   }
 
-  const visible = optimistic.filter((e) => matchesFilters(e, filters, today));
-  const columns: Status[] = filters.cancelled ? [...PIPELINE, "cancelled"] : [...PIPELINE];
+  const filtered = optimistic.filter((e) => matchesFilters(e, filters, today));
+  const mine = me ? filtered.filter((e) => isMyEvent(e, me, today)) : [];
+  const visible = view === "mine" ? mine : filtered;
+  const columns = viewColumns(view, me, filters.cancelled);
+  const inColumns = (list: EventRow[], v: View) => list.filter((e) => viewColumns(v, me, filters.cancelled).includes(e.status)).length;
+  const counts: Record<View, number> = { all: inColumns(filtered, "all"), mine: inColumns(mine, "mine"), stage: inColumns(filtered, "stage") };
   const active = activeId ? optimistic.find((e) => e.id === activeId) ?? null : null;
 
   return (
@@ -114,6 +122,19 @@ export function Board({ events, staff, me, today }: Props) {
         },
       }}
     >
+      {me && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <ViewSwitcher views={viewsFor(me)} view={view} roles={me.roles} counts={counts} defaultView={defaultView(me)} />
+          {view === "mine" && counts.mine === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Nothing on your plate.{" "}
+              <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={() => setParam("view", "all")}>
+                Show everything
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       <div
         // Snapping is off while dragging: with mandatory snap, each small auto-scroll step
         // jumps a whole column, so the board flew to the first or last column.
@@ -125,7 +146,14 @@ export function Board({ events, staff, me, today }: Props) {
           const cards = visible.filter((e) => e.status === status);
           const legal = active ? dropCommand(active, status, actor).ok : null;
           return (
-            <Column key={status} status={status} count={cards.length} legal={active?.status === status ? null : legal}>
+            <Column
+              key={status}
+              status={status}
+              count={cards.length}
+              legal={active?.status === status ? null : legal}
+              // In "Mine", empty columns fold to a strip so your own cards are on screen first; they still take drops.
+              collapsed={view === "mine" && cards.length === 0}
+            >
               {cards.length === 0 ? (
                 <p className="flex flex-col items-center gap-1 py-6 text-center text-xs text-muted-foreground">
                   <InboxIcon className="size-4" aria-hidden />
@@ -176,14 +204,37 @@ function Column({
   status,
   count,
   legal,
+  collapsed,
   children,
 }: {
   status: Status;
   count: number;
   legal: boolean | null;
+  collapsed: boolean;
   children: React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  if (collapsed) {
+    return (
+      <section
+        ref={setNodeRef}
+        role="listitem"
+        aria-label={`${STATUS_LABELS[status]}, 0 events`}
+        title={STATUS_LABELS[status]}
+        style={{ borderTopColor: STATUS_ACCENT[status] }}
+        className={cn(
+          "flex w-11 shrink-0 snap-start flex-col items-center gap-3 rounded-xl border border-t-4 bg-muted/40 py-3",
+          legal === true && "border-green-500/60 bg-green-50/60",
+          legal === false && "opacity-60",
+          isOver && legal === true && "ring-2 ring-green-500",
+          isOver && legal === false && "ring-2 ring-red-400",
+        )}
+      >
+        <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: STATUS_ACCENT[status] }} />
+        <h2 className="text-xs font-medium text-muted-foreground [writing-mode:vertical-rl]">{STATUS_LABELS[status]}</h2>
+      </section>
+    );
+  }
   return (
     <section
       ref={setNodeRef}
