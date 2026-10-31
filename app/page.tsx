@@ -53,12 +53,11 @@ function personSeries(credits: Map<string, Credit>, staff: Staff[], pick: (c: Cr
 
 async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   await connection();
-  const me = await getCurrentStaff();
   const now = new Date();
   const today = manilaDate(now);
   const period = dashboardPeriod(await searchParams, now);
   const prev = previousPeriod(period);
-  const [events, staff] = await Promise.all([listEventsForDashboard([period, prev]), listStaff()]);
+  const [me, events, staff] = await Promise.all([getCurrentStaff(), listEventsForDashboard([period, prev]), listStaff()]);
 
   const s = summarize(events, period, today);
   const p = summarize(events, prev, today);

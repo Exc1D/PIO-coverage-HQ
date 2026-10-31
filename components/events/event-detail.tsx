@@ -12,13 +12,15 @@ import { EventView } from "./event-view";
 /** Loads one event and renders it; used by both the full page and the drawer. */
 export async function EventDetail({ id, headingLevel }: { id: string; headingLevel: "h1" | "h2" }) {
   if (!z.uuid().safeParse(id).success) notFound();
-  const me = await getCurrentStaff();
-  // Caption history is a working tool for staff; viewers see only the current caption.
-  const [event, activity, staff, revisions] = await Promise.all([
+  const signedIn = getCurrentStaff();
+  // Caption history is a working tool for staff; viewers see only the current
+  // caption. Only that query waits for the session; the rest start right away.
+  const [me, event, activity, staff, revisions] = await Promise.all([
+    signedIn,
     getEvent(id),
     getActivity(id),
     listStaff(),
-    me ? getCaptionRevisions(id) : [],
+    signedIn.then((me) => (me ? getCaptionRevisions(id) : [])),
   ]);
   if (!event) notFound();
 
