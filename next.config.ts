@@ -12,6 +12,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Automatic memoisation. eslint-config-next already enforces the rules it
+  // relies on (react-hooks/purity, refs, immutability, …).
+  reactCompiler: true,
   poweredByHeader: false,
   turbopack: {
     rules: {

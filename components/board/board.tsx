@@ -76,6 +76,11 @@ export function Board({ events, staff, me, today }: Props) {
     runCommand(event, payload, (next) => applyOptimistic({ id: event.id, next }));
   }
 
+  // Defined once rather than inline in the cards loop: the React Compiler can
+  // keep it stable, so starting a drag doesn't re-render every card.
+  const onToggle = (ev: EventRow, field: "photos_done" | "caption_done", value: boolean) =>
+    run(ev, { type: field === "photos_done" ? "set_photos_done" : "set_caption_done", value });
+
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
   }
@@ -167,9 +172,7 @@ export function Board({ events, staff, me, today }: Props) {
                     staffById={staffById}
                     me={actor}
                     today={today}
-                    onToggle={(ev, field, value) =>
-                      run(ev, { type: field === "photos_done" ? "set_photos_done" : "set_caption_done", value })
-                    }
+                    onToggle={onToggle}
                   />
                 ))
               )}
