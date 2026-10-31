@@ -1,10 +1,12 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { attemptLogin } from "@/lib/auth/login";
 import { hashPin, pinSchema } from "@/lib/auth/pin";
 import { createSession, destroySession } from "@/lib/auth/session";
+import { STAFF_TAG } from "@/lib/data/staff";
 import { db, DB_ERRORS } from "@/lib/db/server";
 import { fieldErrors } from "@/lib/form-errors";
 import { safeNext } from "@/lib/safe-next";
@@ -77,6 +79,7 @@ export async function setupAction(_prev: FormState, formData: FormData): Promise
     if (error.code === DB_ERRORS.conflict) redirect("/login");
     return { error: "Setup failed. Please try again.", values };
   }
+  updateTag(STAFF_TAG);
   await createSession(data.id, data.session_version);
   redirect("/");
 }

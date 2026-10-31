@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { lockedStaff } from "@/lib/auth/login";
 import { getCurrentStaff } from "@/lib/auth/session";
 import { listDeletedEvents } from "@/lib/data/events";
-import { listStaff, openAssignments, staffWithHistory } from "@/lib/data/staff";
+import { listStaffFresh, openAssignments, staffWithHistory } from "@/lib/data/staff";
 
 export const metadata: Metadata = { title: "Staff admin" };
 
@@ -43,7 +43,7 @@ async function AdminLoader() {
     return <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">Only the head can manage staff.</p>;
   }
   const [staff, locks, assignments, history, deleted] = await Promise.all([
-    listStaff(),
+    listStaffFresh(),
     lockedStaff(),
     openAssignments(),
     staffWithHistory(),

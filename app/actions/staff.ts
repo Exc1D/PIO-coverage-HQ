@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { clearLockout } from "@/lib/auth/login";
 import { hashPin, pinSchema } from "@/lib/auth/pin";
@@ -8,7 +8,7 @@ import { AuthError, createSession, requireHead } from "@/lib/auth/session";
 import { ROLES, type Role } from "@/lib/constants";
 import { db, DB_ERRORS } from "@/lib/db/server";
 import { fieldErrors } from "@/lib/form-errors";
-import { listStaff } from "@/lib/data/staff";
+import { listStaffFresh, STAFF_TAG } from "@/lib/data/staff";
 import { bumpVersion } from "@/lib/compare-and-set";
 import { checkStaffChange } from "@/lib/staff-rules";
 import type { Staff } from "@/lib/types";
@@ -71,6 +71,7 @@ export async function createStaffAction(_prev: StaffFormState, formData: FormDat
     console.error("create staff failed", error.code, error.message);
     return { error: "Couldn’t add this person. Please try again.", values: keepValues(raw) };
   }
+  updateTag(STAFF_TAG);
   refresh();
   return { ok: true, message: `${parsed.data.display_name} added. Give them their PIN in person.` };
 }
@@ -82,7 +83,7 @@ export async function updateStaffAction(staffId: string, _prev: StaffFormState, 
   const parsed = namesSchema.safeParse(raw);
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values: keepValues(raw) };
 
-  const rule = checkStaffChange(me.id, await listStaff(), staffId, { type: "roles", roles: parsed.data.roles as Role[] });
+  const rule = checkStaffChange(me.id, await listStaffFresh(), staffId, { type: "roles", roles: parsed.data.roles as Role[] });
   if (!rule.ok) return { error: rule.message, values: keepValues(raw) };
 
   const { error } = await db()
@@ -94,6 +95,7 @@ export async function updateStaffAction(staffId: string, _prev: StaffFormState, 
     console.error("update staff failed", error.code, error.message);
     return { error: "Couldn’t save the changes. Please try again.", values: keepValues(raw) };
   }
+  updateTag(STAFF_TAG);
   refresh();
   return { ok: true, message: `${parsed.data.display_name} updated.` };
 }
@@ -149,7 +151,7 @@ export async function resetPinAction(staffId: string, _prev: StaffFormState, for
 export async function setActiveAction(staffId: string, active: boolean): Promise<SimpleResult> {
   const me = await head();
   if ("error" in me) return { ok: false, message: me.error };
-  const rule = checkStaffChange(me.id, await listStaff(), staffId, { type: "active", active });
+  const rule = checkStaffChange(me.id, await listStaffFresh(), staffId, { type: "active", active });
   if (!rule.ok) return { ok: false, message: rule.message };
 
   try {
@@ -163,6 +165,7 @@ export async function setActiveAction(staffId: string, active: boolean): Promise
     console.error("set active failed", e);
     return { ok: false, message: "Couldn’t save the change. Please try again." };
   }
+  updateTag(STAFF_TAG);
   refresh();
   return { ok: true, message: active ? "Reactivated." : "Deactivated and signed out. Their past work still counts in reports." };
 }
@@ -187,6 +190,7 @@ export async function deleteStaffAction(staffId: string): Promise<SimpleResult> 
   if (!z.uuid().safeParse(staffId).success) return { ok: false, message: "Invalid request." };
 
   const { error } = await db().rpc("delete_staff", { p_staff_id: staffId, p_deleted_by: me.id });
+  updateTag(STAFF_TAG);
   refresh();
   if (error) {
     if (error.code === DB_ERRORS.forbidden) return { ok: false, message: "Only the head can delete accounts." };
