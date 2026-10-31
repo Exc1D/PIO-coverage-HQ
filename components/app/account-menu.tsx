@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClockIcon, ChevronDownIcon, LogOutIcon, UsersIcon } from "lucide-react";
+import { CalendarClockIcon, ChevronDownIcon, LogOutIcon, TornadoIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { useTransition } from "react";
 import { signOutAction } from "@/app/actions/auth";
@@ -41,6 +41,11 @@ export function AccountMenu({ name, roles }: { name: string; roles: Role[] }) {
         <DropdownMenuItem asChild>
           <Link href="/me" transitionTypes={["nav-forward"]}>
             <CalendarClockIcon aria-hidden /> My work
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/typhoon" transitionTypes={["nav-forward"]}>
+            <TornadoIcon aria-hidden /> Typhoon track
           </Link>
         </DropdownMenuItem>
         {roles.includes("head") && (
