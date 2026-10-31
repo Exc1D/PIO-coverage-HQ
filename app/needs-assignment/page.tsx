@@ -42,9 +42,12 @@ function workload(events: EventRow[]): Record<string, Record<string, number>> {
 
 async function Loader() {
   await connection();
-  const me = await getCurrentStaff();
   const today = manilaDate(new Date());
-  const [events, staff] = await Promise.all([listEventsByDate(today, addDays(today, NEEDS_ASSIGNMENT_DAYS)), listStaff()]);
+  const [me, events, staff] = await Promise.all([
+    getCurrentStaff(),
+    listEventsByDate(today, addDays(today, NEEDS_ASSIGNMENT_DAYS)),
+    listStaff(),
+  ]);
   const load = workload(events);
   const needs = events.filter((e) => needsAssignment(e, today));
   const assigned = events.filter(

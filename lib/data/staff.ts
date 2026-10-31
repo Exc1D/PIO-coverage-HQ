@@ -1,4 +1,5 @@
 import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { connection } from "next/server";
 import { db } from "@/lib/db/server";
 import { SLOTS } from "@/lib/constants";
@@ -6,14 +7,37 @@ import type { OpenAssignment, Staff } from "@/lib/types";
 
 const PUBLIC_COLUMNS = "id, full_name, display_name, roles, active";
 
-/** Staff for pickers and labels. Never includes PIN hashes. */
-export async function listStaff(opts: { activeOnly?: boolean } = {}): Promise<Staff[]> {
-  await connection();
+/** Cache tag for the staff list; actions that change a staff row call updateTag() with it. */
+export const STAFF_TAG = "staff";
+
+async function queryStaff(activeOnly: boolean): Promise<Staff[]> {
   let q = db().from("staff").select(PUBLIC_COLUMNS).order("display_name");
-  if (opts.activeOnly) q = q.eq("active", true);
+  if (activeOnly) q = q.eq("active", true);
   const { data, error } = await q;
   if (error) throw new Error(`Could not load staff: ${error.message}`);
   return data as Staff[];
+}
+
+/**
+ * Staff for pickers and labels. Never includes PIN hashes. Cached because
+ * nearly every page needs it and it rarely changes. On Vercel each instance
+ * holds its own copy: updateTag() clears the copy on the instance that made
+ * the change, and the short lifetime bounds staleness elsewhere.
+ */
+export async function listStaff(): Promise<Staff[]> {
+  "use cache";
+  cacheTag(STAFF_TAG);
+  cacheLife({ stale: 30, revalidate: 60, expire: 300 });
+  return queryStaff(false);
+}
+
+/**
+ * The staff list read straight from the database: for rules checked before a
+ * write, and for the pages where a just-made change must show (sign-in, Staff).
+ */
+export async function listStaffFresh(opts: { activeOnly?: boolean } = {}): Promise<Staff[]> {
+  await connection();
+  return queryStaff(opts.activeOnly ?? false);
 }
 
 /** Staff who appear anywhere in the record; their accounts can't be deleted, only deactivated. */

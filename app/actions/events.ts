@@ -7,7 +7,7 @@ import { AuthError, requireStaff } from "@/lib/auth/session";
 import { db, DB_ERRORS } from "@/lib/db/server";
 import { fieldErrors } from "@/lib/form-errors";
 import { getEvent } from "@/lib/data/events";
-import { listStaff } from "@/lib/data/staff";
+import { listStaffFresh } from "@/lib/data/staff";
 import type { EventRow, Staff } from "@/lib/types";
 import { applyCommand } from "@/lib/workflow";
 
@@ -39,7 +39,7 @@ export async function runEventCommand(eventId: string, version: number, payload:
     return { ok: false, code: "rejected", message: "Invalid request." };
   }
 
-  const [event, staff] = await Promise.all([getEvent(eventId), listStaff()]);
+  const [event, staff] = await Promise.all([getEvent(eventId), listStaffFresh()]);
   if (!event) return { ok: false, code: "not_found", message: "This event no longer exists." };
   if (event.version !== version) {
     refresh();

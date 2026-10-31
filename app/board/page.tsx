@@ -41,9 +41,8 @@ async function NewEventButton() {
 
 async function BoardLoader() {
   await connection();
-  const me = await getCurrentStaff();
   const today = manilaDate(new Date());
-  const [events, staff] = await Promise.all([listBoardEvents(today), listStaff()]);
+  const [me, events, staff] = await Promise.all([getCurrentStaff(), listBoardEvents(today), listStaff()]);
   return (
     <div className="grid gap-4">
       <FiltersBar staff={staff} />

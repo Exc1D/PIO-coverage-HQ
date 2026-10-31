@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { SignInForm } from "@/components/app/auth-forms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listStaff, staffCount } from "@/lib/data/staff";
+import { listStaffFresh, staffCount } from "@/lib/data/staff";
 import { safeNext } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -30,7 +30,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 }
 
 async function LoginLoader({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
-  const [staff, count, params] = await Promise.all([listStaff({ activeOnly: true }), staffCount(), searchParams]);
+  const [staff, count, params] = await Promise.all([listStaffFresh({ activeOnly: true }), staffCount(), searchParams]);
   if (count === 0) redirect("/setup");
   const next = safeNext(Array.isArray(params.next) ? params.next[0] : params.next);
   return <SignInForm staff={staff.map((s) => ({ id: s.id, display_name: s.display_name }))} next={next} />;

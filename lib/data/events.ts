@@ -15,28 +15,69 @@ export function redactForViewer<T extends Pick<EventRow, "requested_by" | "conta
 
 /**
  * Lists (board, dashboard, calendars, reports) never carry requester details
- * (personal data) or caption bodies. Add new personal-data columns here.
+ * (personal data) or caption bodies, so those columns are never selected.
  */
-function forList(e: EventRow): EventRow {
-  return { ...e, requested_by: null, contact: null, caption_text: null };
+type ListOmitted = "requested_by" | "contact" | "caption_text";
+
+// Every other column. A Record keyed by the remaining EventRow fields, so a new
+// column fails to typecheck until someone decides whether lists may carry it.
+const LIST_FIELDS: Record<Exclude<keyof EventRow, ListOmitted>, true> = {
+  id: true,
+  title: true,
+  event_date: true,
+  start_time: true,
+  venue: true,
+  municipality: true,
+  source: true,
+  coverage: true,
+  notes: true,
+  status: true,
+  cancelled_from_status: true,
+  photographer_id: true,
+  videographer_id: true,
+  editor_id: true,
+  writer_id: true,
+  proofreader_id: true,
+  cameraman_id: true,
+  obs_tech_id: true,
+  approved_by_id: true,
+  coverage_confirmed: true,
+  photos_done: true,
+  caption_done: true,
+  drive_folder_url: true,
+  scheduled_post_at: true,
+  posted_at: true,
+  post_link: true,
+  due_date: true,
+  version: true,
+  created_by_id: true,
+  created_at: true,
+  updated_at: true,
+};
+
+const LIST_COLUMNS = Object.keys(LIST_FIELDS).join(", ");
+
+/** Fill the unselected columns with null so lists keep the EventRow shape. */
+function forList(rows: unknown): EventRow[] {
+  return (rows as Omit<EventRow, ListOmitted>[]).map((e) => ({ ...e, requested_by: null, contact: null, caption_text: null }));
 }
 
 /**
  * Events for the board: everything still in progress, plus finished events
- * from roughly the last 90 days. Requester details and caption bodies are
- * dropped (cards don't need them).
+ * from roughly the last 90 days, without requester details or caption bodies
+ * (cards don't need them).
  */
 export async function listBoardEvents(today: string): Promise<EventRow[]> {
   await connection();
   const since = addDays(today, -BOARD_HISTORY_DAYS);
   const { data, error } = await db()
     .from("events")
-    .select("*")
+    .select(LIST_COLUMNS)
     .or(`status.not.in.(posted,cancelled),event_date.gte.${since}`)
     .order("event_date", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw new Error(`Could not load events: ${error.message}`);
-  return (data as EventRow[]).map(forList);
+  return forList(data);
 }
 
 export async function getEvent(id: string): Promise<EventRow | null> {
@@ -81,7 +122,7 @@ type Range = { start: Date; end: Date; startDate: string; endDate: string };
  * Everything the dashboard needs in one query: events still in progress
  * (pipeline, stuck, needs assignment, next 7 days), plus events posted or
  * held within any of the given periods (current and previous, for deltas).
- * Requester details are dropped; the dashboard never shows them.
+ * Requester details are left out; the dashboard never shows them.
  */
 export async function listEventsForDashboard(periods: Range[]): Promise<EventRow[]> {
   await connection();
@@ -92,11 +133,11 @@ export async function listEventsForDashboard(periods: Range[]): Promise<EventRow
   }
   const { data, error } = await db()
     .from("events")
-    .select("*")
+    .select(LIST_COLUMNS)
     .or(clauses.join(","))
     .order("event_date", { ascending: true });
   if (error) throw new Error(`Could not load dashboard data: ${error.message}`);
-  return (data as EventRow[]).map(forList);
+  return forList(data);
 }
 
 /** Posted events whose posted_at falls inside the period (reports, published calendar). */
@@ -104,13 +145,13 @@ export async function listPostedInPeriod(period: Pick<Range, "start" | "end">): 
   await connection();
   const { data, error } = await db()
     .from("events")
-    .select("*")
+    .select(LIST_COLUMNS)
     .eq("status", "posted")
     .gte("posted_at", period.start.toISOString())
     .lt("posted_at", period.end.toISOString())
     .order("posted_at", { ascending: true });
   if (error) throw new Error(`Could not load posts: ${error.message}`);
-  return (data as EventRow[]).map(forList);
+  return forList(data);
 }
 
 /** Non-cancelled events held between two Manila dates (inclusive). */
@@ -118,14 +159,14 @@ export async function listEventsByDate(from: string, to: string): Promise<EventR
   await connection();
   const { data, error } = await db()
     .from("events")
-    .select("*")
+    .select(LIST_COLUMNS)
     .neq("status", "cancelled")
     .gte("event_date", from)
     .lte("event_date", to)
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false });
   if (error) throw new Error(`Could not load events: ${error.message}`);
-  return (data as EventRow[]).map(forList);
+  return forList(data);
 }
 
 /** Every event still in progress (not posted or cancelled), soonest first. */
@@ -133,11 +174,11 @@ export async function listInProgressEvents(): Promise<EventRow[]> {
   await connection();
   const { data, error } = await db()
     .from("events")
-    .select("*")
+    .select(LIST_COLUMNS)
     .not("status", "in", "(posted,cancelled)")
     .order("event_date", { ascending: true });
   if (error) throw new Error(`Could not load events in progress: ${error.message}`);
-  return (data as EventRow[]).map(forList);
+  return forList(data);
 }
 
 /** Events (cancelled included) where `staffId` fills any slot, held between two Manila dates (inclusive). */
@@ -145,13 +186,13 @@ export async function listEventsForStaff(staffId: string, from: string, to: stri
   await connection();
   const { data, error } = await db()
     .from("events")
-    .select("*")
+    .select(LIST_COLUMNS)
     .or(SLOTS.map((s) => `${s}_id.eq.${staffId}`).join(","))
     .gte("event_date", from)
     .lte("event_date", to)
     .order("event_date", { ascending: true });
   if (error) throw new Error(`Could not load your events: ${error.message}`);
-  return (data as EventRow[]).map(forList);
+  return forList(data);
 }
 
 /** Deleted events still restorable (kept 30 days), newest delete first. */
