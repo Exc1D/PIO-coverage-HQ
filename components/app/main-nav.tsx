@@ -98,7 +98,7 @@ function TabBarLinks({ pathname, links }: { pathname: string | null; links: NavL
                   transitionTypes={TAB_SWITCH}
                   aria-current={current ? "page" : undefined}
                   className={cn(
-                    "group flex h-[3.25rem] flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    "group flex h-[3.25rem] flex-col items-center justify-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                     current && "text-primary",
                   )}
                 >

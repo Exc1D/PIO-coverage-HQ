@@ -65,6 +65,7 @@ export function Board({ events, staff, me, today }: Props) {
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ event: EventRow; type: InputCommand } | null>(null);
+  const [inView, setInView] = useState<Status | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -106,6 +107,17 @@ export function Board({ events, staff, me, today }: Props) {
   const inColumns = (list: EventRow[], v: View) => list.filter((e) => viewColumns(v, me, filters.cancelled).includes(e.status)).length;
   const counts: Record<View, number> = { all: inColumns(filtered, "all"), mine: inColumns(mine, "mine"), stage: inColumns(filtered, "stage") };
   const active = activeId ? optimistic.find((e) => e.id === activeId) ?? null : null;
+  const cardsIn = (status: Status) => visible.filter((e) => e.status === status);
+
+  // Phones show one column at a time; track which one so the strip above can mark it.
+  function onColumnsScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    const i = [...el.children].findIndex((c) => {
+      const col = c as HTMLElement;
+      return col.offsetLeft + col.offsetWidth / 2 > el.scrollLeft;
+    });
+    setInView(columns[i] ?? null);
+  }
 
   return (
     <DndContext
@@ -140,15 +152,35 @@ export function Board({ events, staff, me, today }: Props) {
           )}
         </div>
       )}
+      <nav
+        aria-label="Jump to column"
+        className="sticky top-[calc(3rem+env(safe-area-inset-top))] z-30 -mx-4 mb-2 flex gap-1 overflow-x-auto bg-background/95 px-4 py-1 sm:hidden"
+      >
+        {columns.map((status) => (
+          <button
+            key={status}
+            type="button"
+            aria-current={(inView ?? columns[0]) === status ? "true" : undefined}
+            onClick={() =>
+              document.getElementById(`column-${status}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" })
+            }
+            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground aria-[current]:bg-foreground aria-[current]:font-medium aria-[current]:text-background"
+          >
+            {STATUS_LABELS[status]}
+            <span className="tabular-nums">{cardsIn(status).length}</span>
+          </button>
+        ))}
+      </nav>
       <div
+        onScroll={onColumnsScroll}
         // Snapping is off while dragging: with mandatory snap, each small auto-scroll step
         // jumps a whole column, so the board flew to the first or last column.
-        className={cn("-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:snap-none", active ? "snap-none" : "snap-mandatory")}
+        className={cn("relative -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:snap-none", active ? "snap-none" : "snap-mandatory")}
         role="list"
         aria-label="Pipeline columns"
       >
         {columns.map((status) => {
-          const cards = visible.filter((e) => e.status === status);
+          const cards = cardsIn(status);
           const legal = active ? dropCommand(active, status, actor).ok : null;
           return (
             <Column
@@ -221,6 +253,7 @@ function Column({
     return (
       <section
         ref={setNodeRef}
+        id={`column-${status}`}
         role="listitem"
         aria-label={`${STATUS_LABELS[status]}, 0 events`}
         title={STATUS_LABELS[status]}
@@ -241,6 +274,7 @@ function Column({
   return (
     <section
       ref={setNodeRef}
+      id={`column-${status}`}
       role="listitem"
       aria-label={`${STATUS_LABELS[status]}, ${count} event${count === 1 ? "" : "s"}`}
       style={{ borderTopColor: STATUS_ACCENT[status] }}
