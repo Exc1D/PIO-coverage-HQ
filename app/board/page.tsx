@@ -10,6 +10,7 @@ import { getCurrentStaff } from "@/lib/auth/session";
 import { PIPELINE } from "@/lib/constants";
 import { listBoardEvents } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
+import { staffForViewer } from "@/lib/format";
 import { manilaDate } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Pipeline board" };
@@ -35,10 +36,10 @@ export default function BoardPage() {
   );
 }
 
-// Signed-out viewers can't move cards; the read-only notice speaks to them instead.
+// Signed-out viewers can't move cards, so they get the sign-in line instead.
 async function MoveHint() {
   const me = await getCurrentStaff();
-  if (!me) return null;
+  if (!me) return <ViewOnlyNotice returnTo="/board" />;
   return <p className="text-sm text-muted-foreground">Tap Move on a card, or drag it by its handle.</p>;
 }
 
@@ -54,9 +55,8 @@ async function BoardLoader() {
   const [me, events, staff] = await Promise.all([getCurrentStaff(), listBoardEvents(today), listStaff()]);
   return (
     <div className="grid gap-4">
-      <FiltersBar staff={staff} />
-      {!me && <ViewOnlyNotice returnTo="/board" />}
-      <Board events={events} staff={staff} me={me} today={today} />
+      <FiltersBar staff={me ? staff : []} viewOnly={!me} />
+      <Board events={events} staff={staffForViewer(staff, me !== null)} me={me} today={today} />
     </div>
   );
 }

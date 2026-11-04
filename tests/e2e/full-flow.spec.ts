@@ -14,6 +14,7 @@ async function expectStatus(page: Page, value: string) {
 
 /** The dashboard's "Posts published" tile and Ana's "written" credit for this week. */
 async function readDashboard(page: Page) {
+  await signIn(page, "Grace S.");
   await page.goto("/?period=week");
   const posts = Number(await page.getByRole("group", { name: "Posts published" }).locator("[data-value]").getAttribute("data-value"));
   const written = page.getByRole("region", { name: "Articles written" });
@@ -23,6 +24,7 @@ async function readDashboard(page: Page) {
     const row = written.getByRole("row", { name: /Ana R\./ });
     if (await row.count()) ana = Number((await row.getByRole("cell").nth(1).innerText()).trim());
   }
+  await signOut(page);
   return { posts, ana };
 }
 
@@ -111,7 +113,7 @@ test("an event goes from public request to published, and the dashboard counts i
   await expect(activity).toContainText("automatically (photos and caption done)");
   await signOut(page);
 
-  // 6. Dashboard counts update (viewer, no sign-in needed)
+  // 6. Dashboard counts update
   const after = await readDashboard(page);
   expect(after.posts).toBe(before.posts + 1);
   expect(after.ana).toBe(before.ana + 1);

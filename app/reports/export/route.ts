@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
+import { getCurrentStaff } from "@/lib/auth/session";
 import { toCsv, type Cell } from "@/lib/csv";
 import { loadReport } from "@/lib/data/reports";
 import { reportPeriod } from "@/lib/period-params";
@@ -6,6 +8,7 @@ import { periodSlug } from "@/lib/report-rows";
 
 // GET /reports/export?kind=month|week&date=yyyy-MM-dd&table=posts|people
 export async function GET(request: NextRequest) {
+  if (!(await getCurrentStaff())) redirect("/login?next=/reports"); // Credits every person by name.
   const params = Object.fromEntries(request.nextUrl.searchParams);
   const period = reportPeriod(params, new Date());
   const table = params.table === "people" ? "people" : "posts";
