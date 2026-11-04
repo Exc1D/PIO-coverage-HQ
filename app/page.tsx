@@ -41,7 +41,9 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <Suspense fallback={<DashboardSkeleton />}>
-        <Dashboard searchParams={searchParams} />
+        <div className="ios-reveal">
+          <Dashboard searchParams={searchParams} />
+        </div>
       </Suspense>
     </main>
   );

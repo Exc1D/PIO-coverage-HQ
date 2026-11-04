@@ -24,7 +24,9 @@ export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <Suspense fallback={<CalendarSkeleton />}>
-        <CalendarLoader searchParams={searchParams} />
+        <div className="ios-reveal">
+          <CalendarLoader searchParams={searchParams} />
+        </div>
       </Suspense>
     </main>
   );

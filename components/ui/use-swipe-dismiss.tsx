@@ -48,7 +48,7 @@ export function useSwipeDismiss<T extends HTMLElement>(onDismiss: () => void, fo
       if (b) b.style.transition = b.style.opacity = ""
     }
     const springBack = () => {
-      el.style.transition = "transform 420ms var(--ease-spring)"
+      el.style.transition = "transform 300ms var(--ease-ios)"
       el.style.transform = ""
       const b = backdrop()
       if (b) {

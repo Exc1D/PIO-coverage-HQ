@@ -21,7 +21,9 @@ export default function EventPage({ params }: PageProps<"/events/[id]">) {
         <ChevronLeftIcon className="size-6" strokeWidth={2.25} aria-hidden /> Board
       </Link>
       <Suspense fallback={<EventDetailSkeleton />}>
-        <EventLoader params={params} />
+        <div className="ios-reveal">
+          <EventLoader params={params} />
+        </div>
       </Suspense>
     </main>
   );

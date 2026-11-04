@@ -22,7 +22,9 @@ export default function SetupPage() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-            <SetupGate />
+            <div className="ios-reveal">
+              <SetupGate />
+            </div>
           </Suspense>
         </CardContent>
       </Card>

@@ -20,7 +20,9 @@ export default function AdminPage() {
         Add people, set their roles, reset PINs, deactivate leavers and restore deleted events. Head only.
       </p>
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-        <AdminLoader />
+        <div className="ios-reveal">
+          <AdminLoader />
+        </div>
       </Suspense>
     </main>
   );

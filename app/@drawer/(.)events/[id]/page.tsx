@@ -30,7 +30,9 @@ async function DrawerLoader({ params }: { params: PageProps<"/events/[id]">["par
       }
     >
       <Suspense fallback={<EventDetailSkeleton />}>
-        <EventDetail id={id} headingLevel="h2" />
+        <div className="ios-reveal">
+          <EventDetail id={id} headingLevel="h2" />
+        </div>
       </Suspense>
     </EventDrawer>
   );

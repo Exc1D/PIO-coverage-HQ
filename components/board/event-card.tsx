@@ -66,11 +66,12 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
   return (
     <article
       ref={setNodeRef}
+      data-flip-id={overlay ? undefined : event.id}
       className={cn(
-        "group relative rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,transform,opacity] duration-200 ease-[var(--ease-ios)] hover:-translate-y-px hover:shadow-md",
+        "group relative rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,translate,scale,opacity] duration-200 ease-[var(--ease-ios)] hover:-translate-y-px hover:shadow-md",
         late >= VERY_LATE_DAYS && "border-red-300",
         isDragging && "scale-[0.98] opacity-40",
-        // Picked up: lifts off the column with a little spring (globals.css).
+        // Picked up: lifts off the column (globals.css).
         overlay && "ios-lift rotate-[1.5deg] scale-[1.03] cursor-grabbing shadow-2xl ring-1 ring-black/5",
       )}
       aria-label={event.title}

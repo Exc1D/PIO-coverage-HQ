@@ -11,6 +11,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { useOptimistic, useState } from "react";
+import { scrollBehavior } from "@/components/app/use-flip";
 import { LiveChip, OverdueFlag, SourceChip, StatusBadge } from "@/components/app/labels";
 import { WaitingOn } from "@/components/app/waiting-on";
 import { formatEventDate, staffName } from "@/lib/format";
@@ -93,7 +94,7 @@ export function EventView({
   const stuck = isStuck(event, today);
   const goTo = (id: string) => {
     const heading = document.getElementById(id);
-    heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+    heading?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
     heading?.focus({ preventScroll: true });
   };
   // What clears a blocked action, if this person can do it. Otherwise the reason says who can.

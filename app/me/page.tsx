@@ -33,7 +33,9 @@ export default function MyWorkPage({ searchParams }: PageProps<"/me">) {
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-6">
       <Suspense fallback={<MyWorkSkeleton />}>
-        <MyWork searchParams={searchParams} />
+        <div className="ios-reveal">
+          <MyWork searchParams={searchParams} />
+        </div>
       </Suspense>
     </main>
   );
