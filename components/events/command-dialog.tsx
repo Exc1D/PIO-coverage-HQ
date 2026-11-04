@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -74,12 +74,20 @@ export function CommandDialog({
   event: Pick<EventRow, "title" | "status" | "scheduled_post_at" | "cancelled_from_status" | "coverage">;
   type: InputCommand | null;
   onClose: () => void;
-  onSubmit: (payload: CommandPayload) => void;
+  /** Resolves to null once saved, otherwise to the reason it wasn't. */
+  onSubmit: (payload: CommandPayload) => Promise<string | null>;
 }) {
   const id = useId();
   const open = type !== null;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
+  function close() {
+    setError(null);
+    onClose();
+  }
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!type) return;
     const f = new FormData(e.currentTarget);
@@ -112,8 +120,12 @@ export function CommandDialog({
       default:
         payload = { type, reason: str("reason") };
     }
-    onSubmit(payload);
-    onClose();
+    setSaving(true);
+    setError(null);
+    const problem = await onSubmit(payload);
+    setSaving(false);
+    if (problem) setError(problem);
+    else onClose();
   }
 
   const back = previousStatus(event.status, event.coverage);
@@ -121,7 +133,7 @@ export function CommandDialog({
   const liveVideo = event.coverage === "live";
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !saving && close()}>
       <DialogContent className="sm:max-w-md">
         {type && (
           <form onSubmit={submit} className="grid gap-4">
@@ -217,12 +229,18 @@ export function CommandDialog({
               </div>
             )}
 
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
             <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" disabled={saving} onClick={close}>
                 Never mind
               </Button>
-              <Button type="submit" variant={type === "cancel" ? "destructive" : "default"}>
-                {SUBMIT[type]}
+              <Button type="submit" disabled={saving} variant={type === "cancel" ? "destructive" : "default"}>
+                {saving ? "Saving…" : SUBMIT[type]}
               </Button>
             </DialogFooter>
           </form>

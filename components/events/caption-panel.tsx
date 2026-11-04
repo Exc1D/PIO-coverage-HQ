@@ -20,7 +20,8 @@ type Props = {
   feedback: ActivityRow | null;
   nameOf: (id: string | null | undefined) => string;
   pending: boolean;
-  onRun: (payload: CommandPayload) => void;
+  /** Resolves to null once saved, otherwise to the reason it wasn't. */
+  onRun: (payload: CommandPayload) => Promise<string | null>;
 };
 
 const when = (iso: string) => formatManila(iso, "MMM d · h:mm a");
@@ -34,6 +35,8 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
   const id = useId();
   const [editing, setEditing] = useState(false);
   const [comparing, setComparing] = useState(false);
+  const [saving, setSaving] = useState<"submit" | "save" | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const text = event.caption_text;
 
   const canEdit = avail.edit_caption_text.state === "available";
@@ -59,13 +62,18 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
     return (
       <form
         className="grid gap-2"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           const f = new FormData(e.currentTarget);
           const value = String(f.get("caption") ?? "");
           const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-          onRun(submitter?.value === "submit" ? { type: "submit_caption", value } : { type: "edit_caption_text", value });
-          setEditing(false);
+          const marking = submitter?.value === "submit";
+          setSaving(marking ? "submit" : "save");
+          setError(null);
+          const problem = await onRun(marking ? { type: "submit_caption", value } : { type: "edit_caption_text", value });
+          setSaving(null);
+          if (problem) setError(problem);
+          else setEditing(false);
         }}
       >
         <Label htmlFor={`${id}-caption`}>{proofreading ? "Correct the caption" : "Caption"}</Label>
@@ -78,16 +86,30 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
           placeholder="Paste or write the caption exactly as it should be posted."
           autoFocus
         />
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           {canSubmit && (
-            <Button type="submit" size="sm" name="intent" value="submit">
-              Save and mark Caption done
+            <Button type="submit" size="sm" name="intent" value="submit" disabled={saving !== null}>
+              {saving === "submit" ? "Saving…" : "Save and mark Caption done"}
             </Button>
           )}
-          <Button type="submit" size="sm" name="intent" value="save" variant={canSubmit ? "outline" : "default"}>
-            {proofreading ? "Save corrections" : "Save draft"}
+          <Button type="submit" size="sm" name="intent" value="save" variant={canSubmit ? "outline" : "default"} disabled={saving !== null}>
+            {saving === "save" ? "Saving…" : proofreading ? "Save corrections" : "Save draft"}
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={saving !== null}
+            onClick={() => {
+              setError(null);
+              setEditing(false);
+            }}
+          >
             Cancel
           </Button>
         </div>

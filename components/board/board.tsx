@@ -59,7 +59,7 @@ export function Board({ events, staff, me, today }: Props) {
   const filters = readFilters(params);
   const view = readView(params.get("view"), me);
   const staffById = new Map(staff.map((s) => [s.id, s]));
-  const { run: runCommand, actor } = useCommandRunner(staff, me);
+  const { run: runCommand, attempt, actor } = useCommandRunner(staff, me);
   const [optimistic, applyOptimistic] = useOptimistic(events, (state: EventRow[], p: Patch) =>
     state.map((e) => (e.id === p.id ? { ...e, ...p.next } : e)),
   );
@@ -234,7 +234,9 @@ export function Board({ events, staff, me, today }: Props) {
           event={dialog.event}
           type={dialog.type}
           onClose={() => setDialog(null)}
-          onSubmit={(payload) => run(dialog.event, payload)}
+          // The latest copy, not the one from when the dialog opened: after a conflict
+          // the page reloads the event, and retrying with the old version would always fail.
+          onSubmit={(payload) => attempt(events.find((e) => e.id === dialog.event.id) ?? dialog.event, payload)}
         />
       )}
     </DndContext>

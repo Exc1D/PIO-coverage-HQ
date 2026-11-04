@@ -415,6 +415,34 @@ export function availability(
   return out;
 }
 
+type TickCommand = "set_coverage_confirmed" | "set_photos_done" | "set_caption_done";
+
+const TICK_WHO: Record<TickCommand, string> = {
+  set_coverage_confirmed: "Head only",
+  set_photos_done: "Assigned team or head",
+  set_caption_done: "Assigned writer or head",
+};
+
+/** The first stage each tick box can be changed in, and how to say so. */
+const TICK_OPENS: Record<TickCommand, { at: Status; label: string }> = {
+  set_coverage_confirmed: { at: "requested", label: "requested" },
+  set_photos_done: { at: "covered", label: "covered" },
+  set_caption_done: { at: "scheduled", label: "scheduled" },
+};
+
+/** Why a tick box is locked for this person, in a few plain words, or null if they can tick it. */
+export function tickLockReason(event: WorkflowEvent, type: TickCommand, actor: Actor | null): string | null {
+  if (!actor) return "Sign in to tick";
+  const c = canPerform(event, type, actor);
+  if (c.ok) return null;
+  if (c.code === "requirement") return c.message;
+  if (c.code === "forbidden") return TICK_WHO[type];
+  const steps = pipelineFor(event.coverage);
+  const at = steps.indexOf(event.status);
+  const { at: opensAt, label } = TICK_OPENS[type];
+  return at >= 0 && at < steps.indexOf(opensAt) ? `Opens once it's ${label}` : "Locked at this stage";
+}
+
 // ---------------------------------------------------------------------------
 // Apply
 // ---------------------------------------------------------------------------

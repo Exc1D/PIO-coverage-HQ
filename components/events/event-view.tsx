@@ -34,7 +34,7 @@ import { formatManila, manilaStartOfDay } from "@/lib/time";
 import type { ActivityRow, CaptionRevision, EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { waitingOn } from "@/lib/waiting";
-import { availability, type CommandType } from "@/lib/workflow";
+import { availability, tickLockReason, type CommandType } from "@/lib/workflow";
 import { CaptionPanel } from "./caption-panel";
 import { CommandDialog, INPUT_COMMANDS, type InputCommand } from "./command-dialog";
 import { DeleteEventDialog } from "./delete-event-dialog";
@@ -79,13 +79,15 @@ export function EventView({
   captionRevisions,
   captionFeedback,
 }: Props) {
-  const { run: runCommand, pending, actor } = useCommandRunner(staff, me);
+  const { run: runCommand, attempt, pending, actor } = useCommandRunner(staff, me);
   const [event, setOptimistic] = useOptimistic(initial, (s: EventRow, next: Partial<EventRow>) => ({ ...s, ...next }));
   const [dialog, setDialog] = useState<InputCommand | null>(null);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const avail = availability(event, actor);
   const run = (payload: CommandPayload) => runCommand(event, payload, setOptimistic);
+  // For forms: no optimistic update, so the form's own contents don't change behind it while it saves.
+  const save = (payload: CommandPayload) => attempt(event, payload);
   const name = (id: string | null) => staffName(staff, id);
   const nameOrSomeone = (id: string | null | undefined) => name(id ?? null) ?? "someone";
   const stuck = isStuck(event, today);
@@ -184,7 +186,7 @@ export function EventView({
             <Tick
               id="coverage"
               label="Coverage confirmed"
-              hint={avail.set_coverage_confirmed.reason ?? "Head"}
+              hint={tickLockReason(event, "set_coverage_confirmed", actor) ?? "Head"}
               checked={event.coverage_confirmed}
               enabled={avail.set_coverage_confirmed.state === "available" && !pending}
               onChange={(v) => run({ type: "set_coverage_confirmed", value: v })}
@@ -194,7 +196,7 @@ export function EventView({
                 <Tick
                   id="photos"
                   label="Photos/Video done"
-                  hint="Photographer, videographer or editor"
+                  hint={tickLockReason(event, "set_photos_done", actor) ?? "Photographer, videographer or editor"}
                   checked={event.photos_done}
                   enabled={avail.set_photos_done.state === "available" && !pending}
                   onChange={(v) => run({ type: "set_photos_done", value: v })}
@@ -202,7 +204,7 @@ export function EventView({
                 <Tick
                   id="caption"
                   label="Caption done"
-                  hint="Writer"
+                  hint={tickLockReason(event, "set_caption_done", actor) ?? "Writer"}
                   checked={event.caption_done}
                   enabled={avail.set_caption_done.state === "available" && !pending}
                   onChange={(v) => run({ type: "set_caption_done", value: v })}
@@ -245,7 +247,7 @@ export function EventView({
             feedback={event.caption_done ? null : captionFeedback}
             nameOf={nameOrSomeone}
             pending={pending}
-            onRun={run}
+            onRun={save}
           />
         </Section>
       )}
@@ -256,7 +258,7 @@ export function EventView({
           label={regular ? "Photos and video" : "Recording"}
           url={event.drive_folder_url}
           canEdit={avail.edit_drive_link.state === "available"}
-          onSave={(value) => run({ type: "edit_drive_link", value })}
+          onSave={(value) => save({ type: "edit_drive_link", value })}
         />
         {hasPost && (
           <div className="grid gap-2 rounded-lg border p-3 text-sm">
@@ -331,8 +333,8 @@ export function EventView({
         </section>
       )}
 
-      <CommandDialog event={event} type={dialog} onClose={() => setDialog(null)} onSubmit={run} />
-      {editing && <EditDetailsDialog event={event} onClose={() => setEditing(false)} onSubmit={run} />}
+      <CommandDialog event={event} type={dialog} onClose={() => setDialog(null)} onSubmit={save} />
+      {editing && <EditDetailsDialog event={event} onClose={() => setEditing(false)} onSubmit={save} />}
       {/* The drawer renders the heading as h2, the full page as h1. */}
       <DeleteEventDialog
         event={event}
@@ -473,24 +475,46 @@ function DriveLink({
   label: string;
   url: string | null;
   canEdit: boolean;
-  onSave: (v: string | null) => void;
+  onSave: (v: string | null) => Promise<string | null>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (editing) {
     return (
       <form
         className="grid gap-2"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          onSave(String(new FormData(e.currentTarget).get("drive") ?? ""));
-          setEditing(false);
+          setSaving(true);
+          setError(null);
+          const problem = await onSave(String(new FormData(e.currentTarget).get("drive") ?? ""));
+          setSaving(false);
+          if (problem) setError(problem);
+          else setEditing(false);
         }}
       >
         <Label htmlFor="drive">Google Drive folder link</Label>
         <Input id="drive" name="drive" type="url" inputMode="url" defaultValue={url ?? ""} placeholder="https://drive.google.com/…" className="h-11" />
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <div className="flex gap-2">
-          <Button type="submit" size="sm">Save link</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+          <Button type="submit" size="sm" disabled={saving}>{saving ? "Saving…" : "Save link"}</Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={saving}
+            onClick={() => {
+              setError(null);
+              setEditing(false);
+            }}
+          >
+            Cancel
+          </Button>
         </div>
       </form>
     );

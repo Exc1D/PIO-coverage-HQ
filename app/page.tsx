@@ -121,7 +121,8 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
   const tasksFor = new Map(onMe.map((x) => [x.event.id, x.tasks]));
 
   return (
-    <div className="grid gap-6">
+    // minmax(0,1fr): an auto grid track grows to fit its widest child, which pushed the page sideways on phones.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">HQ Dashboard</h1>
@@ -250,7 +251,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
         </ChartCard>
       </div>
 
-      <section aria-labelledby="work-h" className="grid gap-3">
+      <section aria-labelledby="work-h" className="grid grid-cols-[minmax(0,1fr)] gap-3">
         <div>
           <h2 id="work-h" className="text-lg font-semibold tracking-tight">
             Work by person
@@ -265,8 +266,8 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
 
 function DashboardSkeleton() {
   return (
-    <div className="grid gap-6" aria-busy="true" aria-label="Loading the dashboard">
-      <div className="flex justify-between">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6" aria-busy="true" aria-label="Loading the dashboard">
+      <div className="flex flex-wrap justify-between gap-3">
         <Skeleton className="h-12 w-56" />
         <Skeleton className="h-10 w-64" />
       </div>

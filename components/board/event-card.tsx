@@ -26,7 +26,7 @@ import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { waitingOn } from "@/lib/waiting";
-import { availability, type Actor } from "@/lib/workflow";
+import { tickLockReason, type Actor } from "@/lib/workflow";
 
 type Props = {
   event: EventRow;
@@ -79,27 +79,34 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
     disabled: !canDrag || overlay,
     data: { event },
   });
-  const avail = availability(event, me);
   const stuck = isStuck(event, today);
   const gaps = teamGaps(event);
   const showTicks =
     hasRegular(event.coverage) && ["scheduled", "covered", "in_production", "for_proofreading"].includes(event.status);
 
   const tick = (field: "photos_done" | "caption_done", label: string, cmd: "set_photos_done" | "set_caption_done") => {
-    const enabled = avail[cmd].state === "available";
+    const locked = tickLockReason(event, cmd, me);
     const id = `${event.id}-${field}${overlay ? "-overlay" : ""}`;
     return (
-      <label htmlFor={id} className={cn("flex min-h-11 items-center gap-2 text-[13px]", !enabled && "text-muted-foreground")}>
+      <label htmlFor={id} className={cn("flex min-h-11 items-center gap-2 text-[13px]", locked && "text-muted-foreground")}>
         <input
           type="checkbox"
           id={id}
           checked={event[field]}
-          disabled={!enabled}
+          disabled={locked !== null}
           onChange={(e) => onToggle(event, field, e.target.checked)}
           aria-label={`${label} for ${event.title}`}
-          className="size-5 accent-primary disabled:opacity-60"
+          aria-describedby={locked ? `${id}-why` : undefined}
+          className="size-5 shrink-0 accent-primary disabled:opacity-60"
         />
-        {label}
+        <span className="grid">
+          {label}
+          {locked && (
+            <span id={`${id}-why`} className="text-xs">
+              {locked}
+            </span>
+          )}
+        </span>
       </label>
     );
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CommandPayload } from "@/lib/commands";
@@ -14,14 +15,20 @@ export function EditDetailsDialog({
 }: {
   event: EventRow;
   onClose: () => void;
-  onSubmit: (payload: CommandPayload) => void;
+  /** Resolves to null once saved, otherwise to the reason it wasn't. */
+  onSubmit: (payload: CommandPayload) => Promise<string | null>;
 }) {
-  function submit(e: React.FormEvent<HTMLFormElement>) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const str = (k: string) => String(f.get(k) ?? "");
     const orNull = <T extends string>(k: string) => (str(k) === "" ? null : (str(k) as T));
-    onSubmit({
+    setSaving(true);
+    setError(null);
+    const problem = await onSubmit({
       type: "edit_details",
       changes: {
         title: str("title"),
@@ -37,22 +44,31 @@ export function EditDetailsDialog({
         notes: str("notes"),
       },
     });
-    onClose();
+    setSaving(false);
+    if (problem) setError(problem);
+    else onClose();
   }
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && !saving && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <form onSubmit={submit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>Edit event details</DialogTitle>
           </DialogHeader>
           <EventFields values={event} idPrefix="edit" requireSourceAndPlace={event.status !== "requested"} />
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
               Discard changes
             </Button>
-            <Button type="submit">Save changes</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
