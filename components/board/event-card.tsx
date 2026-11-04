@@ -89,7 +89,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
     const enabled = avail[cmd].state === "available";
     const id = `${event.id}-${field}${overlay ? "-overlay" : ""}`;
     return (
-      <label htmlFor={id} className={cn("flex items-center gap-2 text-[13px]", !enabled && "text-muted-foreground")}>
+      <label htmlFor={id} className={cn("flex min-h-11 items-center gap-2 text-[13px]", !enabled && "text-muted-foreground")}>
         <input
           type="checkbox"
           id={id}
@@ -173,7 +173,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
       <WaitingOn items={waitingOn(event, today)} staffById={staffById} me={me} compact className="mt-2" />
 
       {showTicks && (
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2">
+        <div className="-mb-2 mt-2 flex flex-wrap gap-x-4 border-t">
           {tick("photos_done", "Photos/Video", "set_photos_done")}
           {tick("caption_done", "Caption", "set_caption_done")}
         </div>

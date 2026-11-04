@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/core";
 import { InboxIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useOptimistic, useState } from "react";
+import { useOptimistic, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CommandDialog, type InputCommand } from "@/components/events/command-dialog";
 import { useCommandRunner } from "@/components/events/use-command-runner";
@@ -66,6 +66,7 @@ export function Board({ events, staff, me, today }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ event: EventRow; type: InputCommand } | null>(null);
   const [inView, setInView] = useState<Status | null>(null);
+  const jumpStrip = useRef<HTMLElement>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -108,6 +109,8 @@ export function Board({ events, staff, me, today }: Props) {
   const counts: Record<View, number> = { all: inColumns(filtered, "all"), mine: inColumns(mine, "mine"), stage: inColumns(filtered, "stage") };
   const active = activeId ? optimistic.find((e) => e.id === activeId) ?? null : null;
   const cardsIn = (status: Status) => visible.filter((e) => e.status === status);
+  // Switching view or filters can drop the marked column, so fall back to the first.
+  const currentColumn = inView && columns.includes(inView) ? inView : columns[0];
 
   // Phones show one column at a time; track which one so the strip above can mark it.
   function onColumnsScroll(e: React.UIEvent<HTMLDivElement>) {
@@ -116,7 +119,13 @@ export function Board({ events, staff, me, today }: Props) {
       const col = c as HTMLElement;
       return col.offsetLeft + col.offsetWidth / 2 > el.scrollLeft;
     });
-    setInView(columns[i] ?? null);
+    const next = columns[i];
+    if (!next || next === inView) return;
+    setInView(next);
+    // Keep the marked button on screen. Set directly: a second smooth scrollIntoView can cancel the board's own.
+    const strip = jumpStrip.current;
+    const button = strip?.children[i] as HTMLElement | undefined;
+    if (strip && button) strip.scrollLeft = button.offsetLeft - (strip.clientWidth - button.offsetWidth) / 2;
   }
 
   return (
@@ -153,6 +162,7 @@ export function Board({ events, staff, me, today }: Props) {
         </div>
       )}
       <nav
+        ref={jumpStrip}
         aria-label="Jump to column"
         className="sticky top-[calc(3rem+env(safe-area-inset-top))] z-30 -mx-4 mb-2 flex gap-1 overflow-x-auto bg-background/95 px-4 py-1 sm:hidden"
       >
@@ -160,7 +170,7 @@ export function Board({ events, staff, me, today }: Props) {
           <button
             key={status}
             type="button"
-            aria-current={(inView ?? columns[0]) === status ? "true" : undefined}
+            aria-current={currentColumn === status ? "true" : undefined}
             onClick={() =>
               document.getElementById(`column-${status}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" })
             }
