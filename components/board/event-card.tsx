@@ -1,33 +1,20 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
-import {
-  ArrowRightIcon,
-  CameraIcon,
-  CheckCircle2Icon,
-  ClapperboardIcon,
-  GripVerticalIcon,
-  MonitorPlayIcon,
-  PenLineIcon,
-  ScissorsIcon,
-  SpellCheckIcon,
-  UserIcon,
-  VideoIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRightIcon, CheckCircle2Icon, GripVerticalIcon } from "lucide-react";
 import Link from "next/link";
 import { memo } from "react";
-import { LiveChip, OverdueFlag, SourceChip } from "@/components/app/labels";
+import { LiveChip, SourceChip } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
 import { WaitingOn } from "@/components/app/waiting-on";
 import { Button } from "@/components/ui/button";
-import { EventPeek, slotStaff } from "@/components/events/event-peek";
-import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, STATUS_LABELS, type Slot, type Status } from "@/lib/constants";
-import { isStuck, TEAM_GAP_LABELS, teamGaps } from "@/lib/metrics";
+import { EventPeek } from "@/components/events/event-peek";
+import { hasRegular, MUNICIPALITY_LABELS, STATUS_LABELS, type Status } from "@/lib/constants";
+import { daysOverdue, isStuck } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { waitingOn } from "@/lib/waiting";
+import { isMe, waitingOn } from "@/lib/waiting";
 import { dropCommand, nextStatus, tickLockReason, type Actor } from "@/lib/workflow";
 
 type Props = {
@@ -42,34 +29,13 @@ type Props = {
   overlay?: boolean;
 };
 
-// Partial so a new slot still renders (with the fallback icon) before it gets its own.
-const SLOT_ICON: Partial<Record<Slot, LucideIcon>> = {
-  photographer: CameraIcon,
-  videographer: VideoIcon,
-  editor: ScissorsIcon,
-  writer: PenLineIcon,
-  proofreader: SpellCheckIcon,
-  cameraman: ClapperboardIcon,
-  obs_tech: MonitorPlayIcon,
-};
-function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; staffById: Map<string, Staff> }) {
-  const person = slotStaff(event, slot, staffById);
-  if (!person) return null;
-  const label = SLOT_LABELS[slot];
-  const name = person === "unknown" ? "Unknown" : person.display_name;
-  const Icon = SLOT_ICON[slot] ?? UserIcon;
-  return (
-    // Plain icon + name, not a coloured pill: colour on the card is kept for status (source, overdue, gaps).
-    <span
-      className="inline-flex max-w-full items-center gap-1"
-      title={`${label}: ${person === "unknown" ? name : person.full_name}`}
-    >
-      <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-      <span className="sr-only">{label}: </span>
-      <span className="truncate">{name}</span>
-    </span>
-  );
-}
+const TICKS = [
+  { field: "photos_done", label: "Photos/Video", cmd: "set_photos_done" },
+  { field: "caption_done", label: "Caption", cmd: "set_caption_done" },
+] as const;
+
+// ponytail: a fixed line for "badly late" so a board full of stuck cards isn't all red. Tune it here if it marks too many or too few.
+const VERY_LATE_DAYS = 7;
 
 /**
  * Memoised: starting or ending a drag re-renders the board, and its props stay
@@ -87,43 +53,22 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
   const next = overlay ? null : nextStatus(event.status, event.coverage);
   const canMove = next !== null && dropCommand(event, next, me).ok;
   const stuck = isStuck(event, today);
-  const gaps = teamGaps(event);
-  const showTicks =
-    hasRegular(event.coverage) && ["scheduled", "covered", "in_production", "for_proofreading"].includes(event.status);
-
-  const tick = (field: "photos_done" | "caption_done", label: string, cmd: "set_photos_done" | "set_caption_done") => {
-    const locked = tickLockReason(event, cmd, me);
-    const id = `${event.id}-${field}${overlay ? "-overlay" : ""}`;
-    return (
-      <label htmlFor={id} className={cn("flex min-h-11 items-center gap-2 text-[13px]", locked && "text-muted-foreground")}>
-        <input
-          type="checkbox"
-          id={id}
-          checked={event[field]}
-          disabled={locked !== null}
-          onChange={(e) => onToggle(event, field, e.target.checked)}
-          aria-label={`${label} for ${event.title}`}
-          aria-describedby={locked ? `${id}-why` : undefined}
-          className="size-5 shrink-0 accent-primary disabled:opacity-60"
-        />
-        <span className="grid">
-          {label}
-          {locked && (
-            <span id={`${id}-why`} className="text-xs">
-              {locked}
-            </span>
-          )}
-        </span>
-      </label>
-    );
-  };
+  const late = stuck ? daysOverdue(event, today) : 0;
+  // One line: what's on you if anything, otherwise who's next. Everything else is in the drawer.
+  const waiting = waitingOn(event, today);
+  const nextUp = waiting.find((w) => isMe(w.who, me)) ?? waiting[0];
+  // Only ticks this person can use. The drawer explains the locked ones.
+  const ticks =
+    hasRegular(event.coverage) && ["scheduled", "covered", "in_production", "for_proofreading"].includes(event.status)
+      ? TICKS.filter((t) => tickLockReason(event, t.cmd, me) === null)
+      : [];
 
   return (
     <article
       ref={setNodeRef}
       className={cn(
         "group relative rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,transform,opacity] duration-200 ease-[var(--ease-ios)] hover:-translate-y-px hover:shadow-md",
-        stuck && "border-red-300",
+        late >= VERY_LATE_DAYS && "border-red-300",
         isDragging && "scale-[0.98] opacity-40",
         // Picked up: lifts off the column with a little spring (globals.css).
         overlay && "ios-lift rotate-[1.5deg] scale-[1.03] cursor-grabbing shadow-2xl ring-1 ring-black/5",
@@ -165,7 +110,11 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <SourceChip source={event.source} short />
         <LiveChip coverage={event.coverage} />
-        {stuck && <OverdueFlag dueDate={event.due_date} />}
+        {stuck && (
+          <span className="text-[13px] font-medium text-red-700">
+            {late} day{late === 1 ? "" : "s"} late
+          </span>
+        )}
         {event.status === "scheduled" && event.coverage_confirmed && (
           <span className="inline-flex items-center gap-1 text-[13px] text-green-700" title="Coverage confirmed">
             <CheckCircle2Icon className="size-3.5" aria-hidden /> Confirmed
@@ -173,23 +122,27 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
-        {slotsFor(event.coverage).map((slot) => (
-          <Assignee key={slot} slot={slot} event={event} staffById={staffById} />
-        ))}
-        {gaps.length > 0 && (
-          <span className="font-medium text-amber-800">
-            No {gaps.map((gap) => TEAM_GAP_LABELS[gap]).join(", no ")}
-          </span>
-        )}
-      </div>
+      {nextUp && <WaitingOn items={[nextUp]} staffById={staffById} me={me} compact className="mt-2" />}
+      {waiting.length > 1 && <p className="ml-5 text-xs text-muted-foreground">and {waiting.length - 1} more</p>}
 
-      <WaitingOn items={waitingOn(event, today)} staffById={staffById} me={me} compact className="mt-2" />
-
-      {showTicks && (
+      {ticks.length > 0 && (
         <div className="-mb-2 mt-2 flex flex-wrap gap-x-4 border-t">
-          {tick("photos_done", "Photos/Video", "set_photos_done")}
-          {tick("caption_done", "Caption", "set_caption_done")}
+          {ticks.map(({ field, label }) => {
+            const id = `${event.id}-${field}${overlay ? "-overlay" : ""}`;
+            return (
+              <label key={field} htmlFor={id} className="flex min-h-11 items-center gap-2 text-[13px]">
+                <input
+                  type="checkbox"
+                  id={id}
+                  checked={event[field]}
+                  onChange={(e) => onToggle(event, field, e.target.checked)}
+                  aria-label={`${label} for ${event.title}`}
+                  className="size-5 shrink-0 accent-primary"
+                />
+                {label}
+              </label>
+            );
+          })}
         </div>
       )}
 

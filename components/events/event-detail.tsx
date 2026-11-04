@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { z } from "zod";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
@@ -9,6 +10,19 @@ import { manilaDate } from "@/lib/time";
 import { ActivityTimeline } from "./activity-timeline";
 import { EventView } from "./event-view";
 
+// The page title and the body ask for the same event in one request. Only here: actions need fresh reads of getEvent.
+const loadEvent = cache(getEvent);
+
+/** The event's title for screen readers and the browser tab, or null if there is no such event. */
+export async function eventTitle(id: string) {
+  if (!z.uuid().safeParse(id).success) return null;
+  return (await loadEvent(id))?.title ?? null;
+}
+
+export async function EventTitle({ id }: { id: string }) {
+  return (await eventTitle(id)) ?? "Event";
+}
+
 /** Loads one event and renders it; used by both the full page and the drawer. */
 export async function EventDetail({ id, headingLevel }: { id: string; headingLevel: "h1" | "h2" }) {
   if (!z.uuid().safeParse(id).success) notFound();
@@ -17,7 +31,7 @@ export async function EventDetail({ id, headingLevel }: { id: string; headingLev
   // caption. Only that query waits for the session; the rest start right away.
   const [me, event, activity, staff, revisions] = await Promise.all([
     signedIn,
-    getEvent(id),
+    loadEvent(id),
     getActivity(id),
     listStaff(),
     signedIn.then((me) => (me ? getCaptionRevisions(id) : [])),

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { OverdueFlag, StatusBadge } from "@/components/app/labels";
@@ -41,6 +42,9 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
     </main>
   );
 }
+
+const NOW_LINK =
+  "inline-flex min-h-11 items-center rounded-sm tabular-nums underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const againstLabel = (p: Period) => (p.kind === "week" ? "last week" : p.kind === "month" ? "last month" : "previous period");
 
@@ -150,17 +154,20 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
         />
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Posts published" value={s.postsPublished} delta={{ value: s.postsPublished - p.postsPublished, against: againstLabel(period) }} />
-        <StatTile
-          label="Events covered"
-          value={s.eventsCovered}
-          delta={{ value: s.eventsCovered - p.eventsCovered, against: againstLabel(period) }}
-          hint={s.liveStreams ? `${s.liveStreams} livestreamed` : undefined}
-        />
-        <StatTile label="In progress" value={s.inPipeline} />
-        <StatTile label="Stuck" value={s.stuck} hint="Past the 2-day target" tone="alert" />
-      </div>
+      {/* What's next, in one line. The period's results sit lower down, above the charts. */}
+      <p className="flex flex-wrap gap-x-5 text-sm">
+        <Link href="/board?view=all&stuck=1" className={cn(NOW_LINK, stuck.length > 0 && "font-semibold text-red-700")}>
+          {stuck.length} stuck
+        </Link>
+        {showNeeds && (
+          <Link href="/needs-assignment" className={cn(NOW_LINK, needs.length > 0 && "font-semibold text-amber-800")}>
+            {needs.length} {needs.length === 1 ? "needs" : "need"} people
+          </Link>
+        )}
+        <Link href="/board?view=all" className={NOW_LINK}>
+          {s.inPipeline} in progress
+        </Link>
+      </p>
 
       <div className={cn("grid gap-3", showNeeds ? "lg:grid-cols-3" : "md:grid-cols-2")}>
         {showNeeds && (
@@ -219,6 +226,24 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
         </div>
       </details>
 
+      <section aria-labelledby="results-h" className="grid grid-cols-[minmax(0,1fr)] gap-3">
+        <div>
+          <h2 id="results-h" className="text-lg font-semibold tracking-tight">
+            Results
+          </h2>
+          <p className="text-sm text-muted-foreground">{period.label}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile label="Posts published" value={s.postsPublished} delta={{ value: s.postsPublished - p.postsPublished, against: againstLabel(period) }} />
+          <StatTile
+            label="Events covered"
+            value={s.eventsCovered}
+            delta={{ value: s.eventsCovered - p.eventsCovered, against: againstLabel(period) }}
+            hint={s.liveStreams ? `${s.liveStreams} livestreamed` : undefined}
+          />
+        </div>
+      </section>
+
       <div className="grid gap-3 md:grid-cols-2">
         <ChartCard
           title="Posts by source"
@@ -273,11 +298,7 @@ function DashboardSkeleton() {
         <Skeleton className="h-12 w-56" />
         <Skeleton className="h-10 w-64" />
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-28" />
-        ))}
-      </div>
+      <Skeleton className="h-11 w-72 max-w-full" />
       <div className="grid gap-3 md:grid-cols-2">
         <Skeleton className="h-72" />
         <Skeleton className="h-72" />

@@ -93,7 +93,13 @@ export function Peek({
   return (
     <>
       <HoverCard openDelay={350} closeDelay={120}>
-        <HoverCardTrigger asChild>
+        <HoverCardTrigger
+          asChild
+          // Keyboard focus only. A tap focuses the link too, and so does the drawer handing focus back when it closes.
+          onFocus={(e) => {
+            if (!e.currentTarget.matches(":focus-visible")) e.preventDefault();
+          }}
+        >
           <Slot.Root data-peek="" data-pressing={pressing || undefined} {...handlers}>
             {children}
           </Slot.Root>

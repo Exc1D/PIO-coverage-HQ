@@ -2,9 +2,12 @@ import { ChevronLeftIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { EventDetail, EventDetailSkeleton } from "@/components/events/event-detail";
+import { EventDetail, EventDetailSkeleton, eventTitle } from "@/components/events/event-detail";
 
-export const metadata: Metadata = { title: "Event" };
+export async function generateMetadata({ params }: PageProps<"/events/[id]">): Promise<Metadata> {
+  const { id } = await params;
+  return { title: (await eventTitle(id)) ?? "Event" };
+}
 
 export default function EventPage({ params }: PageProps<"/events/[id]">) {
   return (

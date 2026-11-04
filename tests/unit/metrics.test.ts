@@ -23,6 +23,7 @@ import {
   summarize,
   teamGaps,
   weekPeriod,
+  worstFirst,
   type MetricEvent,
 } from "@/lib/metrics";
 import { addDays } from "@/lib/time";
@@ -347,5 +348,13 @@ describe("live coverage", () => {
     );
     expect(s.eventsCovered).toBe(3);
     expect(s.liveStreams).toBe(2);
+  });
+});
+
+describe("worstFirst", () => {
+  it("puts stuck events first, most overdue on top, and leaves the rest in order", () => {
+    const dues = ["2026-06-25", "2026-06-18", "2026-06-21", "2026-06-10"];
+    const events = dues.map((due_date) => ev({ status: "in_production", due_date }));
+    expect(worstFirst(events, "2026-06-20").map((e) => e.due_date)).toEqual(["2026-06-10", "2026-06-18", "2026-06-25", "2026-06-21"]);
   });
 });

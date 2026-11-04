@@ -150,6 +150,14 @@ export function isStuck(e: MetricEvent, today: string): boolean {
   return inPipeline(e) && today > e.due_date;
 }
 
+/** Stuck events first, most overdue at the top. Everything else keeps its order. */
+export function worstFirst<T extends MetricEvent>(events: T[], today: string): T[] {
+  return [...events].sort((a, b) => {
+    const [sa, sb] = [isStuck(a, today), isStuck(b, today)];
+    return sa && sb ? a.due_date.localeCompare(b.due_date) : Number(sb) - Number(sa);
+  });
+}
+
 /** Someone an event's minimum team is still missing. */
 export type TeamGap = "writer" | "photo_video" | "cameraman" | "obs_tech";
 
