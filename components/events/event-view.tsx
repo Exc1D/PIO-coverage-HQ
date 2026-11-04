@@ -464,7 +464,7 @@ function TeamRow({
             value={currentId ?? ""}
             onChange={(e) => onAssign(e.target.value || null)}
             className={cn(
-              "h-10 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
               !currentId && NEEDED_SLOTS.includes(slot) && "border-amber-400 text-amber-800",
             )}
           >

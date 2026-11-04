@@ -139,7 +139,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
       {me && (
         <EventList
           title="Waiting on you"
-          description="Latest first"
+          description="Most days late first"
           events={onMe.map((x) => x.event)}
           staff={staff}
           empty="Nothing is waiting on you right now."
@@ -218,7 +218,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           </h2>
           <span className="text-sm text-muted-foreground">
             <span className="group-open:hidden">Show the whole team</span>
-            <span className="hidden group-open:inline">Who acts next, latest first</span>
+            <span className="hidden group-open:inline">Who acts next, most days late first</span>
           </span>
         </summary>
         <div className="mt-3">

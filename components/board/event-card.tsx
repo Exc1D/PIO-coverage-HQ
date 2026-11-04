@@ -83,9 +83,9 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
             <Peek href={`/events/${event.id}`} label={event.title} preview={<EventPeek event={event} staffById={staffById} />}>
               <Link
                 href={`/events/${event.id}`}
-                className="line-clamp-2 rounded-sm text-sm font-semibold leading-snug hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="relative -my-3.5 block rounded-sm py-3.5 text-sm font-semibold leading-snug hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {event.title}
+                <span className="line-clamp-2">{event.title}</span>
               </Link>
             </Peek>
           )}
@@ -123,7 +123,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
       </div>
 
       {nextUp && <WaitingOn items={[nextUp]} staffById={staffById} me={me} compact className="mt-2" />}
-      {waiting.length > 1 && (
+      {waiting.length > 1 && !overlay && (
         <Link href={`/events/${event.id}`} className="ml-5 inline-flex min-h-11 items-center rounded-sm text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           and {waiting.length - 1} more
         </Link>
