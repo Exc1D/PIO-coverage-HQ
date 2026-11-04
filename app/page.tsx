@@ -26,7 +26,7 @@ import {
   type Credit,
   type Period,
 } from "@/lib/metrics";
-import { staffForViewer, staffName } from "@/lib/format";
+import { redactForViewer, staffForViewer, staffName } from "@/lib/format";
 import { dashboardPeriod } from "@/lib/period-params";
 import { addDays, manilaDate } from "@/lib/time";
 import type { Staff } from "@/lib/types";
@@ -302,7 +302,7 @@ async function SignedOutHome({ today }: { today: string }) {
       <EventList
         title="Next 7 days"
         description="Events the office is covering, and the stage each is at"
-        events={upcoming(events, today)}
+        events={upcoming(events, today).map((e) => redactForViewer(e, false))}
         staff={staffForViewer(staff, false)}
         empty="No events in the next 7 days."
         moreHref="/calendar"

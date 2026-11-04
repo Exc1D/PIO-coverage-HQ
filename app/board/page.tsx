@@ -10,7 +10,7 @@ import { getCurrentStaff } from "@/lib/auth/session";
 import { PIPELINE } from "@/lib/constants";
 import { listBoardEvents } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
-import { staffForViewer } from "@/lib/format";
+import { redactForViewer, staffForViewer } from "@/lib/format";
 import { manilaDate } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Pipeline board" };
@@ -56,7 +56,7 @@ async function BoardLoader() {
   return (
     <div className="grid gap-4">
       <FiltersBar staff={me ? staff : []} viewOnly={!me} />
-      <Board events={events} staff={staffForViewer(staff, me !== null)} me={me} today={today} />
+      <Board events={events.map((e) => redactForViewer(e, me !== null))} staff={staffForViewer(staff, me !== null)} me={me} today={today} />
     </div>
   );
 }

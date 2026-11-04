@@ -8,11 +8,6 @@ import type { ActivityRow, CaptionRevision, DeletedEvent, EventRow } from "@/lib
 /** How far back the board loads finished (posted/cancelled) events. */
 const BOARD_HISTORY_DAYS = 90;
 
-/** Requester details are personal data: only signed-in staff may see them. */
-export function redactForViewer<T extends Pick<EventRow, "requested_by" | "contact">>(event: T, signedIn: boolean): T {
-  return signedIn ? event : { ...event, requested_by: null, contact: null };
-}
-
 /**
  * Lists (board, dashboard, calendars, reports) never carry requester details
  * (personal data) or caption bodies, so those columns are never selected.
