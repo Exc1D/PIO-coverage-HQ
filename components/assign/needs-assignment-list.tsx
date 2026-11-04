@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useOptimistic } from "react";
 import { LiveChip, SourceChip, StatusBadge } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
+import { useFlip } from "@/components/app/use-flip";
 import { EventPeek } from "@/components/events/event-peek";
 import { useCommandRunner } from "@/components/events/use-command-runner";
 import { hasLive, hasRegular, LIVE_SLOTS, MUNICIPALITY_LABELS, SLOT_LABELS, canFillSlot, type Coverage, type Slot } from "@/lib/constants";
@@ -42,18 +43,19 @@ const select =
 export function NeedsAssignmentList({ events, staff, me, load }: Props) {
   const { run, actor } = useCommandRunner(staff, me);
   const staffById = new Map(staff.map((s) => [s.id, s]));
+  const list = useFlip<HTMLUListElement>();
   const [items, patch] = useOptimistic(events, (state: EventRow[], p: { id: string; next: Partial<EventRow> }) =>
     state.map((e) => (e.id === p.id ? { ...e, ...p.next } : e)),
   );
 
   return (
-    <ul className="grid gap-3">
+    <ul ref={list} className="relative grid gap-3">
       {items.map((e) => {
         const canAssign = availability(e, actor).assign.state === "available";
         const gaps = teamGaps(e);
         const done = gaps.length === 0;
         return (
-          <li key={e.id} className={cn("rounded-xl border bg-card p-4", done && "border-green-300 bg-green-50/40")}>
+          <li key={e.id} data-flip-id={e.id} className={cn("rounded-xl border bg-card p-4 transition-colors duration-200", done && "border-green-300 bg-green-50/40")}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <Peek href={`/events/${e.id}`} label={e.title} preview={<EventPeek event={e} staffById={staffById} />}>

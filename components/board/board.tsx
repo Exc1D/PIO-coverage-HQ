@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { CommandDialog, type InputCommand } from "@/components/events/command-dialog";
 import { useCommandRunner } from "@/components/events/use-command-runner";
 import { STATUS_ACCENT } from "@/components/app/labels";
+import { MOVE_EASING, MOVE_MS, prefersReducedMotion, scrollBehavior, useFlip } from "@/components/app/use-flip";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS, type Status } from "@/lib/constants";
 import { defaultView, isMyEvent, readView, viewColumns, viewsFor, type View } from "@/lib/focus";
@@ -55,6 +56,10 @@ const collisionDetection: CollisionDetection = (args) =>
 // column has time to arrive under the pointer.
 const AUTO_SCROLL = { acceleration: 2, threshold: { x: 0.15, y: 0.2 } };
 
+// A dropped card lands the way a moved card slides, while the others make room.
+// No sideEffects: the default fades the card out under the overlay, and on a cancelled drop it fades back in only after the overlay has gone.
+const DROP_ANIMATION = { duration: MOVE_MS, easing: MOVE_EASING, sideEffects: null };
+
 export function Board({ events, staff, me, today }: Props) {
   const params = new URLSearchParams(useSearchParams());
   if (!me) params.delete("person"); // Signed out, nobody can be picked out by their id.
@@ -69,6 +74,8 @@ export function Board({ events, staff, me, today }: Props) {
   const [dialog, setDialog] = useState<{ event: EventRow; type: InputCommand } | null>(null);
   const [inView, setInView] = useState<Status | null>(null);
   const jumpStrip = useRef<HTMLElement>(null);
+  const dropped = useRef<string | null>(null);
+  const columnsRow = useFlip<HTMLDivElement>(dropped);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -102,6 +109,7 @@ export function Board({ events, staff, me, today }: Props) {
 
   function onDragEnd(e: DragEndEvent) {
     setActiveId(null);
+    dropped.current = String(e.active.id);
     const event = optimistic.find((x) => x.id === e.active.id);
     const to = e.over?.id as Status | undefined;
     if (event && to) onMove(event, to);
@@ -200,9 +208,9 @@ export function Board({ events, staff, me, today }: Props) {
             type="button"
             aria-current={currentColumn === status ? "true" : undefined}
             onClick={() =>
-              document.getElementById(`column-${status}`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" })
+              document.getElementById(`column-${status}`)?.scrollIntoView({ behavior: scrollBehavior(), block: "nearest", inline: "start" })
             }
-            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground aria-[current]:bg-foreground aria-[current]:font-medium aria-[current]:text-background"
+            className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground transition-colors duration-150 aria-[current]:bg-foreground aria-[current]:font-medium aria-[current]:text-background"
           >
             {STATUS_LABELS[status]}
             <span className="tabular-nums">{cardsIn(status).length}</span>
@@ -210,6 +218,7 @@ export function Board({ events, staff, me, today }: Props) {
         ))}
       </nav>
       <div
+        ref={columnsRow}
         onScroll={onColumnsScroll}
         // Snapping is off while dragging: with mandatory snap, each small auto-scroll step
         // jumps a whole column, so the board flew to the first or last column.
@@ -253,7 +262,7 @@ export function Board({ events, staff, me, today }: Props) {
         })}
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={prefersReducedMotion() ? null : DROP_ANIMATION}>
         {active ? (
           <EventCard event={active} staffById={staffById} me={actor} today={today} onToggle={() => {}} onMove={() => {}} overlay />
         ) : null}
@@ -298,7 +307,7 @@ function Column({
         aria-label={`${STATUS_LABELS[status]}, 0 events`}
         title={STATUS_LABELS[status]}
         className={cn(
-          "flex w-11 shrink-0 snap-start flex-col items-center gap-3 rounded-xl border bg-muted/40 py-3",
+          "flex w-11 shrink-0 snap-start flex-col items-center gap-3 rounded-xl border bg-muted/40 py-3 transition-[background-color,border-color,box-shadow,opacity] duration-150",
           legal === true && "border-green-500/60 bg-green-50/60",
           legal === false && "opacity-60",
           isOver && legal === true && "ring-2 ring-green-500",
@@ -317,7 +326,7 @@ function Column({
       role="listitem"
       aria-label={`${STATUS_LABELS[status]}, ${count} event${count === 1 ? "" : "s"}`}
       className={cn(
-        "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72",
+        "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72 transition-[background-color,border-color,box-shadow,opacity] duration-150",
         legal === true && "border-green-500/60 bg-green-50/60",
         legal === false && "opacity-60",
         isOver && legal === true && "ring-2 ring-green-500",

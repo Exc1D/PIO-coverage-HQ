@@ -106,7 +106,7 @@ function TabBarLinks({ pathname, links }: { pathname: string | null; links: NavL
                   <Icon
                     aria-hidden
                     strokeWidth={current ? 2.25 : 1.75}
-                    className="size-6 transition-transform duration-200 ease-[var(--ease-spring)] group-active:scale-[0.82]"
+                    className="size-6 transition-transform duration-200 ease-[var(--ease-ios)] group-active:scale-[0.82]"
                   />
                   {l.label}
                 </Link>

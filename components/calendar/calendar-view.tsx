@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { SourceChip, StatusBadge } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
+import { scrollBehavior } from "@/components/app/use-flip";
 import { byDay as groupByDay, type GridDay } from "@/lib/calendar";
 import { SOURCE_COLORS, SOURCE_LABELS, STATUS_LABELS, type Source, type Status } from "@/lib/constants";
 import { formatManila, manilaStartOfDay } from "@/lib/time";
@@ -95,8 +96,7 @@ export function CalendarView({
   // On a phone the list sits below the month, often off screen: bring it into view, or the tap looks like it did nothing.
   function pick(date: string, clicks: number) {
     flushSync(() => setSelected(date));
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    panel.current?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+    panel.current?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
     // Enter or Space reports 0 clicks. Stacked below the month, that scroll can carry the focused day off screen, so focus follows it.
     if (clicks === 0 && !window.matchMedia("(min-width: 1024px)").matches) panel.current?.focus({ preventScroll: true });
   }
@@ -126,7 +126,7 @@ export function CalendarView({
                     <td
                       key={d.date}
                       className={cn(
-                        "relative h-16 border-b border-r align-top last:border-r-0 md:h-28",
+                        "relative h-16 border-b border-r align-top transition-colors duration-150 last:border-r-0 md:h-28",
                         !d.inMonth && "bg-muted/30",
                         isSelected && "bg-accent/70",
                       )}
@@ -204,9 +204,9 @@ export function CalendarView({
           <span className="ml-1 font-normal text-muted-foreground">· {dayItems.length}</span>
         </h2>
         {dayItems.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">{emptyLabel}</p>
+          <p key={selected} className="ios-reveal px-4 py-6 text-center text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
-          <ul className="divide-y">
+          <ul key={selected} className="ios-reveal divide-y">
             {dayItems.map((it) => (
               <li key={it.id}>
                 <Link

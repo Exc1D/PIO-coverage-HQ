@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // Matches the sheet's close animation in globals.css, so it slides away before the route changes.
-const CLOSE_MS = 300;
+const CLOSE_MS = 240;
 
 /**
  * An intercepted /events/[id]: a pull-down sheet on phones, a side panel on larger

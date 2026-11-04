@@ -27,12 +27,11 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.556 0.204 256.9);
 
-  /* Motion: iOS-like curves. --ease-ios is the sheet/push curve (fast start, long settle);
-     --ease-spring overshoots slightly, for things that "land". */
+  /* Motion: --ease-ios is a fast start and a long settle, with no overshoot. This is a tool people
+     are working in, so nothing bounces and nothing keeps them waiting. */
   --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
-  --duration-sheet: 480ms;
-  --duration-push: 420ms;
+  --duration-sheet: 340ms;
+  --duration-push: 300ms;
   --duration-fade: 200ms;
 
   /* Event source colors (keep in sync with lib/constants.ts) */
@@ -140,18 +139,18 @@
   animation: ios-fade-in var(--duration-sheet) var(--ease-ios) both;
 }
 .ios-overlay[data-state="closed"] {
-  animation: ios-fade-out 280ms var(--ease-ios) both;
+  animation: ios-fade-out 240ms var(--ease-ios) both;
 }
 
 .ios-sheet[data-state="open"] {
   animation: ios-sheet-in var(--duration-sheet) var(--ease-ios) both;
 }
 .ios-sheet[data-state="closed"] {
-  animation: ios-sheet-out 300ms var(--ease-ios) both;
+  animation: ios-sheet-out 240ms var(--ease-ios) both;
 }
 @media (min-width: 640px) {
   .ios-dialog[data-state="open"] {
-    animation: ios-pop-in 320ms var(--ease-ios) both;
+    animation: ios-pop-in 240ms var(--ease-ios) both;
   }
   .ios-dialog[data-state="closed"] {
     animation: ios-pop-out 180ms ease-in both;
@@ -244,7 +243,7 @@
 }
 
 /* Peek (components/app/peek.tsx). Holding a link presses it in slowly, the way iOS
-   signals that a long press is building; the preview then springs up from slightly small. */
+   signals that a long press is building; the preview then grows from slightly small. */
 /* Lists the colour transitions too: this unlayered rule replaces the trigger's own transition-colors. */
 [data-peek] {
   transition:
@@ -271,7 +270,7 @@
   }
 }
 .ios-peek[data-state="open"] {
-  animation: ios-peek-in 420ms var(--ease-spring) both;
+  animation: ios-peek-in 240ms var(--ease-ios) both;
 }
 .ios-peek[data-state="closed"] {
   animation: ios-pop-out 160ms ease-in both;
@@ -280,12 +279,23 @@
 /* A card picked up on the board lifts off the column. */
 @keyframes ios-lift {
   from {
-    transform: scale(1) rotate(0);
+    scale: 1;
+    rotate: 0deg;
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
   }
 }
 .ios-lift {
-  animation: ios-lift 220ms var(--ease-spring) both;
+  animation: ios-lift 180ms var(--ease-ios) both;
+}
+
+/* Loaded content replaces its skeleton, and a day's list replaces the last day's, with a fade rather than a pop.
+   backwards, not both: a finished animation must not hold a stacking context. */
+.ios-reveal {
+  animation: ios-fade-in var(--duration-fade) var(--ease-ios) backwards;
+}
+/* Browsers without ::details-content skip this and open instantly. */
+details[open]::details-content {
+  animation: ios-fade-in var(--duration-fade) var(--ease-ios);
 }
 
 @media (prefers-reduced-motion: reduce) {

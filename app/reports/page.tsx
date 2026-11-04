@@ -22,7 +22,9 @@ export default function ReportsPage({ searchParams }: PageProps<"/reports">) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 print:max-w-none print:px-0 print:py-0">
       <Suspense fallback={<ReportSkeleton />}>
-        <Report searchParams={searchParams} />
+        <div className="ios-reveal">
+          <Report searchParams={searchParams} />
+        </div>
       </Suspense>
     </main>
   );

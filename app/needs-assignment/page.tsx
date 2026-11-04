@@ -23,7 +23,9 @@ export default function NeedsAssignmentPage() {
         Next {NEEDS_ASSIGNMENT_DAYS} days, missing people. The number by a name is how many other events they have that day.
       </p>
       <Suspense fallback={<ListSkeleton />}>
-        <Loader />
+        <div className="ios-reveal">
+          <Loader />
+        </div>
       </Suspense>
     </main>
   );

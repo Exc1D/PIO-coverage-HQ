@@ -30,7 +30,9 @@ export default function BoardPage() {
         </Suspense>
       </div>
       <Suspense fallback={<BoardSkeleton />}>
-        <BoardLoader />
+        <div className="ios-reveal">
+          <BoardLoader />
+        </div>
       </Suspense>
     </main>
   );
