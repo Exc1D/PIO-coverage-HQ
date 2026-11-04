@@ -72,6 +72,7 @@ export function Board({ events, staff, me, today }: Props) {
     state.map((e) => (e.id === p.id ? { ...e, ...p.next } : e)),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [landing, setLanding] = useState(false);
   const [dialog, setDialog] = useState<{ event: EventRow; type: InputCommand } | null>(null);
   const [inView, setInView] = useState<Status | null>(null);
   const jumpStrip = useRef<HTMLElement>(null);
@@ -111,6 +112,9 @@ export function Board({ events, staff, me, today }: Props) {
   function endDrag(id: UniqueIdentifier) {
     setActiveId(null);
     dropped.current = { id: String(id), until: performance.now() + MOVE_MS };
+    setLanding(true);
+    // The overlay starts its trip a frame or two after the drop.
+    setTimeout(() => setLanding(false), MOVE_MS + 100);
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -226,8 +230,10 @@ export function Board({ events, staff, me, today }: Props) {
         ref={columnsRow}
         onScroll={onColumnsScroll}
         // Snapping is off while dragging: with mandatory snap, each small auto-scroll step
-        // jumps a whole column, so the board flew to the first or last column.
-        className={cn("relative -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:snap-none", active ? "snap-none" : "snap-mandatory")}
+        // jumps a whole column, so the board flew to the first or last column. It stays off while
+        // a dropped card lands: the overlay aims at where the card was when it set off, so the board can't move under it.
+        // Smooth scrolling is only on once it settles: it carries the board to the nearest column, but would slow the drag's auto-scroll.
+        className={cn("relative -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-4 md:snap-none", active || landing ? "snap-none" : "snap-mandatory motion-safe:scroll-smooth")}
         role="list"
         aria-label="Pipeline columns"
       >
