@@ -84,7 +84,7 @@ export function FiltersBar({ staff }: { staff: Staff[] }) {
         <div className="flex flex-wrap items-end justify-between gap-x-3 lg:flex-col lg:items-stretch">
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" className="size-4 accent-primary" checked={f.stuck} onChange={(e) => setParam("stuck", e.target.checked ? "1" : null)} />
-            Stuck only
+            Late only
           </label>
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" className="size-4 accent-primary" checked={f.cancelled} onChange={(e) => setParam("cancelled", e.target.checked ? "1" : null)} />

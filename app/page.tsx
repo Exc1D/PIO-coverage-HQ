@@ -139,7 +139,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
       {me && (
         <EventList
           title="Waiting on you"
-          description="Overdue first"
+          description="Latest first"
           events={onMe.map((x) => x.event)}
           staff={staff}
           empty="Nothing is waiting on you right now."
@@ -157,11 +157,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
       {/* What's next, in one line. The period's results sit lower down, above the charts. */}
       <p className="flex flex-wrap gap-x-5 text-sm">
         <Link href="/board?view=all&stuck=1" className={cn(NOW_LINK, stuck.length > 0 && "font-semibold text-red-700")}>
-          {stuck.length} stuck
+          {stuck.length} late
         </Link>
         {showNeeds && (
           <Link href="/needs-assignment" className={cn(NOW_LINK, needs.length > 0 && "font-semibold text-amber-800")}>
-            {needs.length} {needs.length === 1 ? "needs" : "need"} people
+            {needs.length} {needs.length === 1 ? "needs" : "need"} assignment
           </Link>
         )}
         <Link href="/board?view=all" className={NOW_LINK}>
@@ -187,11 +187,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           />
         )}
         <EventList
-          title="Stuck"
-          description="Late and not yet posted"
+          title="Late"
+          description="Past the posting target, not yet posted"
           events={stuck}
           staff={staff}
-          empty="Nothing is overdue."
+          empty="Nothing is late."
           moreHref="/board?view=all&stuck=1"
           meta={(e) => (
             <>
@@ -212,13 +212,13 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
 
       {/* The whole team's queue: the head's tool. Staff have their own list at the top, so theirs starts folded. */}
       <details open={showNeeds || undefined} className="group grid gap-3" aria-labelledby="waiting-h">
-        <summary className="flex cursor-pointer list-none items-baseline gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
           <h2 id="waiting-h" className="text-lg font-semibold tracking-tight">
             Waiting on
           </h2>
           <span className="text-sm text-muted-foreground">
             <span className="group-open:hidden">Show the whole team</span>
-            <span className="hidden group-open:inline">Who acts next, most overdue first</span>
+            <span className="hidden group-open:inline">Who acts next, latest first</span>
           </span>
         </summary>
         <div className="mt-3">

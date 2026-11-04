@@ -21,7 +21,7 @@ export function ErrorPanel({
         {error.digest && <span className="mt-1 block text-xs">Reference: {error.digest}</span>}
       </p>
       <div>
-        <Button onClick={reset}>Try again</Button>
+        <Button onClick={reset} className="min-h-11">Try again</Button>
       </div>
     </main>
   );

@@ -22,7 +22,7 @@ export function AccountMenu({ name, roles }: { name: string; roles: Role[] }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Account menu for ${name}`}
-        className="group flex items-center gap-1 rounded-full p-0.5 transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60 data-[state=open]:bg-accent sm:pr-1.5"
+        className="group flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full p-0.5 transition-colors duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60 data-[state=open]:bg-accent sm:pr-1.5"
       >
         <span aria-hidden className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
           {initials(name)}

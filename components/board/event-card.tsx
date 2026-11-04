@@ -123,7 +123,11 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
       </div>
 
       {nextUp && <WaitingOn items={[nextUp]} staffById={staffById} me={me} compact className="mt-2" />}
-      {waiting.length > 1 && <p className="ml-5 text-xs text-muted-foreground">and {waiting.length - 1} more</p>}
+      {waiting.length > 1 && (
+        <Link href={`/events/${event.id}`} className="ml-5 inline-flex min-h-11 items-center rounded-sm text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          and {waiting.length - 1} more
+        </Link>
+      )}
 
       {ticks.length > 0 && (
         <div className="-mb-2 mt-2 flex flex-wrap gap-x-4 border-t">
