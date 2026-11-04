@@ -44,7 +44,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/">) {
 }
 
 const NOW_LINK =
-  "inline-flex min-h-11 items-center rounded-sm tabular-nums underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex min-h-11 items-center rounded-sm tabular-nums underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const againstLabel = (p: Period) => (p.kind === "week" ? "last week" : p.kind === "month" ? "last month" : "previous period");
 

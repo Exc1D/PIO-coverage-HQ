@@ -93,10 +93,12 @@ export function CalendarView({
   const panel = useRef<HTMLElement>(null);
 
   // On a phone the list sits below the month, often off screen: bring it into view, or the tap looks like it did nothing.
-  function pick(date: string) {
+  function pick(date: string, clicks: number) {
     flushSync(() => setSelected(date));
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     panel.current?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+    // Enter or Space reports 0 clicks. Stacked below the month, that scroll can carry the focused day off screen, so focus follows it.
+    if (clicks === 0 && !window.matchMedia("(min-width: 1024px)").matches) panel.current?.focus({ preventScroll: true });
   }
 
   return (
@@ -132,7 +134,7 @@ export function CalendarView({
                       <div className="flex h-full flex-col gap-1 p-1">
                         <button
                           type="button"
-                          onClick={() => pick(d.date)}
+                          onClick={(e) => pick(d.date, e.detail)}
                           aria-label={label}
                           aria-pressed={isSelected}
                           // The ::after stretches the tap target over the whole cell.
@@ -171,7 +173,7 @@ export function CalendarView({
                               <li>
                                 <button
                                   type="button"
-                                  onClick={() => pick(d.date)}
+                                  onClick={(e) => pick(d.date, e.detail)}
                                   className="rounded-sm px-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 >
                                   +{list.length - MAX_CHIPS} more
@@ -192,9 +194,10 @@ export function CalendarView({
 
       <section
         ref={panel}
+        tabIndex={-1}
         aria-live="polite"
         aria-labelledby="day-h"
-        className="scroll-mt-20 scroll-mb-[calc(3.25rem+env(safe-area-inset-bottom)+1rem)] rounded-xl border bg-card sm:scroll-mb-4"
+        className="scroll-mt-20 scroll-mb-[calc(3.25rem+env(safe-area-inset-bottom)+1rem)] rounded-xl border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:scroll-mb-4"
       >
         <h2 id="day-h" className="border-b px-4 py-3 text-sm font-semibold">
           {formatManila(manilaStartOfDay(selected), "EEEE, MMMM d")}
