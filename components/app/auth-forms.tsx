@@ -7,9 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const selectClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive";
-
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
@@ -51,7 +48,7 @@ function PinInput({ name, label, error, autoComplete }: { name: string; label: s
   );
 }
 
-export function SignInForm({ staff, next }: { staff: { id: string; display_name: string }[]; next: string }) {
+export function SignInForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(signInAction, undefined);
   const fe = state?.fieldErrors ?? {};
   return (
@@ -59,26 +56,24 @@ export function SignInForm({ staff, next }: { staff: { id: string; display_name:
       <input type="hidden" name="next" value={next} />
       <FormError state={state} />
       <div className="grid gap-2">
-        <Label htmlFor="staffId">Your name</Label>
-        <select
-          id="staffId"
-          name="staffId"
+        <Label htmlFor="name">Your name</Label>
+        <Input
+          id="name"
+          name="name"
           required
-          defaultValue={state?.values?.staffId ?? ""}
-          className={selectClass}
-          aria-invalid={fe.staffId ? true : undefined}
-          aria-describedby={fe.staffId ? "staffId-error" : undefined}
-        >
-          <option value="" disabled>
-            Pick your name…
-          </option>
-          {staff.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.display_name}
-            </option>
-          ))}
-        </select>
-        <FieldError id="staffId-error" message={fe.staffId} />
+          maxLength={120}
+          defaultValue={state?.values?.name}
+          autoComplete="username"
+          autoCapitalize="words"
+          spellCheck={false}
+          className="h-11"
+          aria-invalid={fe.name ? true : undefined}
+          aria-describedby={fe.name ? "name-hint name-error" : "name-hint"}
+        />
+        <p id="name-hint" className="text-sm text-muted-foreground">
+          Your full name or short name, as on your staff account.
+        </p>
+        <FieldError id="name-error" message={fe.name} />
       </div>
       <PinInput name="pin" label="PIN" error={fe.pin} autoComplete="current-password" />
       <Button type="submit" size="lg" className="h-11" disabled={pending}>

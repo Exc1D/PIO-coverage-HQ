@@ -8,7 +8,7 @@ export const PIN = "1234";
 
 export async function signIn(page: Page, name: string) {
   await page.goto("/login");
-  await page.getByLabel("Your name").selectOption({ label: name });
+  await page.getByLabel("Your name").fill(name);
   await page.getByLabel("PIN").fill(PIN);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/");

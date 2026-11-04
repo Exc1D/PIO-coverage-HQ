@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db/server";
-import { getStaffAuthRecord } from "@/lib/data/staff";
+import { getStaffAuthRecord, listStaffFresh } from "@/lib/data/staff";
 import { clientIpHash } from "./ip";
 import {
   IP_THRESHOLD,
@@ -10,6 +10,7 @@ import {
   minutesUntil,
   type Attempt,
 } from "./lockout";
+import { findStaffByName } from "./name-match";
 import { verifyAgainstDummy, verifyPin } from "./pin";
 import { createSession } from "./session";
 
@@ -49,10 +50,11 @@ function lockedMessage(until: Date, now: Date): string {
  * An attempt refused because of a lock is removed again so it doesn't extend
  * the lock; a correct PIN flips its row to success.
  */
-export async function attemptLogin(staffId: string, pin: string): Promise<LoginResult> {
+export async function attemptLogin(name: string, pin: string): Promise<LoginResult> {
   const now = new Date();
   const ipHash = await clientIpHash();
-  const staff = await getStaffAuthRecord(staffId);
+  const match = findStaffByName(await listStaffFresh({ activeOnly: true }), name);
+  const staff = match && (await getStaffAuthRecord(match.id));
   const known = staff !== null && staff.active;
 
   const { data: reserved, error: insertError } = await db()

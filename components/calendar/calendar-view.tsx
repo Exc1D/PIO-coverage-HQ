@@ -126,7 +126,7 @@ export function CalendarView({
                     <td
                       key={d.date}
                       className={cn(
-                        "relative h-16 border-b border-r align-top transition-colors duration-150 last:border-r-0 md:h-28",
+                        "relative h-13 border-b border-r align-top transition-colors duration-150 last:border-r-0 md:h-28",
                         !d.inMonth && "bg-muted/30",
                         isSelected && "bg-accent/70",
                       )}
@@ -147,6 +147,8 @@ export function CalendarView({
                             className={cn(
                               "inline-flex size-6 items-center justify-center rounded-full",
                               isToday && "bg-primary font-semibold text-primary-foreground",
+                              // A ring as well as the cell tint, so the selected day doesn't rely on colour alone.
+                              isSelected && "ring-2 ring-foreground ring-offset-1 ring-offset-background",
                             )}
                           >
                             {Number(d.date.slice(8))}
@@ -155,11 +157,11 @@ export function CalendarView({
 
                         {/* Phones: dots and a count; tap the day to list its events below. */}
                         {list.length > 0 && (
-                          <div aria-hidden className="flex flex-1 flex-wrap content-start items-center gap-0.5 px-1 md:hidden">
-                            {list.slice(0, 4).map((it) => (
-                              <span key={it.id} className="size-2 rounded-full" style={{ backgroundColor: it.source ? SOURCE_COLORS[it.source] : "#a3a3a3" }} />
+                          <div aria-hidden className="flex items-center gap-0.5 px-1 md:hidden">
+                            {list.slice(0, 2).map((it) => (
+                              <span key={it.id} className="size-2 shrink-0 rounded-full" style={{ backgroundColor: it.source ? SOURCE_COLORS[it.source] : "#a3a3a3" }} />
                             ))}
-                            {list.length > 4 && <span className="text-[10px] text-muted-foreground">+{list.length - 4}</span>}
+                            <span className="ml-0.5 text-[11px] leading-none font-medium tabular-nums">{list.length}</span>
                           </div>
                         )}
 
