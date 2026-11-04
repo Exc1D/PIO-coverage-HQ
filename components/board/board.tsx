@@ -59,7 +59,7 @@ export function Board({ events, staff, me, today }: Props) {
   const filters = readFilters(params);
   const view = readView(params.get("view"), me);
   const staffById = new Map(staff.map((s) => [s.id, s]));
-  const { run: runCommand, actor } = useCommandRunner(staff, me);
+  const { run: runCommand, attempt, actor } = useCommandRunner(staff, me);
   const [optimistic, applyOptimistic] = useOptimistic(events, (state: EventRow[], p: Patch) =>
     state.map((e) => (e.id === p.id ? { ...e, ...p.next } : e)),
   );
@@ -108,6 +108,9 @@ export function Board({ events, staff, me, today }: Props) {
   const inColumns = (list: EventRow[], v: View) => list.filter((e) => viewColumns(v, me, filters.cancelled).includes(e.status)).length;
   const counts: Record<View, number> = { all: inColumns(filtered, "all"), mine: inColumns(mine, "mine"), stage: inColumns(filtered, "stage") };
   const active = activeId ? optimistic.find((e) => e.id === activeId) ?? null : null;
+  // The latest copy, not the one from when the dialog opened: after a conflict the page reloads
+  // the event, and the dialog must describe and submit what is true now.
+  const dialogEvent = dialog ? events.find((e) => e.id === dialog.event.id) ?? dialog.event : null;
   const cardsIn = (status: Status) => visible.filter((e) => e.status === status);
   // Switching view or filters can drop the marked column, so fall back to the first.
   const currentColumn = inView && columns.includes(inView) ? inView : columns[0];
@@ -229,12 +232,12 @@ export function Board({ events, staff, me, today }: Props) {
         ) : null}
       </DragOverlay>
 
-      {dialog && (
+      {dialog && dialogEvent && (
         <CommandDialog
-          event={dialog.event}
+          event={dialogEvent}
           type={dialog.type}
           onClose={() => setDialog(null)}
-          onSubmit={(payload) => run(dialog.event, payload)}
+          onSubmit={(payload) => attempt(dialogEvent, payload)}
         />
       )}
     </DndContext>

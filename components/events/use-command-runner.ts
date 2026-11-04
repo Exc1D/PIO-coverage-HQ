@@ -6,7 +6,7 @@ import { runEventCommand } from "@/app/actions/events";
 import { previewCommand } from "@/lib/command-preview";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS } from "@/lib/constants";
-import { OFFLINE_MESSAGE } from "@/lib/offline";
+import { NO_ANSWER_MESSAGE, OFFLINE_MESSAGE, SAVE_TIME_LIMIT_MS, withTimeLimit } from "@/lib/offline";
 import type { EventRow, Staff } from "@/lib/types";
 import { applyCommand, type Actor } from "@/lib/workflow";
 
@@ -20,43 +20,57 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
   const [pending, startTransition] = useTransition();
   const actor: Actor | null = me ? { id: me.id, roles: me.roles } : null;
 
-  function run(
+  /**
+   * Resolves to null once saved (or nothing changed), otherwise to the reason it
+   * wasn't. Forms use this to stay open with what was typed until the save lands.
+   */
+  function attempt(
     event: EventRow,
     payload: CommandPayload,
     showOptimistic?: (next: Partial<EventRow>) => void,
     successMessage?: string,
-  ) {
-    if (!actor) {
-      toast.error("Sign in with your PIN to make changes.");
-      return;
-    }
+  ): Promise<string | null> {
+    if (!actor) return Promise.resolve("Sign in with your PIN to make changes.");
     const parsed = previewCommand(payload, staff);
-    if (!parsed.ok) {
-      toast.error(parsed.message);
-      return;
-    }
+    if (!parsed.ok) return Promise.resolve(parsed.message);
     const preview = applyCommand(event, parsed.command, actor, new Date());
-    if (!preview.ok) {
-      if (preview.code !== "no_change") toast.error(preview.message);
-      return;
-    }
-    startTransition(async () => {
-      // The server bumps the version once per saved command; mirror that so a second
-      // quick action on the same event (e.g. ticking both boxes) sends the right one.
-      showOptimistic?.({ ...preview.next, version: event.version + 1 });
-      let res;
-      try {
-        res = await runEventCommand(event.id, event.version, payload);
-      } catch {
-        // Network failure: the optimistic change rolls back when the transition ends.
-        toast.error(OFFLINE_MESSAGE);
-        return;
-      }
-      if (!res.ok) toast.error(res.message);
-      else if (successMessage) toast.success(successMessage);
-      else if (preview.next.status !== event.status) toast.success(`Moved to ${STATUS_LABELS[preview.next.status]}`);
+    if (!preview.ok) return Promise.resolve(preview.code === "no_change" ? null : preview.message);
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        // The server bumps the version once per saved command; mirror that so a second
+        // quick action on the same event (e.g. ticking both boxes) sends the right one.
+        showOptimistic?.({ ...preview.next, version: event.version + 1 });
+        let res;
+        try {
+          // Forms can't be closed mid-save, so a stalled request mustn't hold them forever. A retry
+          // after a late landing is safe: the version check turns it into a conflict, not a double save.
+          res = await withTimeLimit(runEventCommand(event.id, event.version, payload), SAVE_TIME_LIMIT_MS, {
+            ok: false,
+            code: "rejected",
+            message: NO_ANSWER_MESSAGE,
+          });
+        } catch {
+          // Network failure: the optimistic change rolls back when the transition ends.
+          resolve(OFFLINE_MESSAGE);
+          return;
+        }
+        if (!res.ok) {
+          resolve(res.message);
+          return;
+        }
+        if (successMessage) toast.success(successMessage);
+        else if (preview.next.status !== event.status) toast.success(`Moved to ${STATUS_LABELS[preview.next.status]}`);
+        resolve(null);
+      });
     });
   }
 
-  return { run, pending, actor };
+  /** For one-tap actions with nothing typed to protect: failures show as a toast. */
+  function run(...args: Parameters<typeof attempt>) {
+    void attempt(...args).then((problem) => {
+      if (problem) toast.error(problem);
+    });
+  }
+
+  return { run, attempt, pending, actor };
 }

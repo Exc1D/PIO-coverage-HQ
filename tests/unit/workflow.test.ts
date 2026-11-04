@@ -7,6 +7,7 @@ import {
   dropCommand,
   nextStatus,
   previousStatus,
+  tickLockReason,
   type Actor,
   type Command,
   type Result,
@@ -492,6 +493,35 @@ describe("availability (UI)", () => {
     expect(a.mark_covered).toEqual({ state: "blocked", reason: expect.stringContaining("Coverage confirmed") });
     expect(a.edit_drive_link.state).toBe("available");
     expect(a.schedule.state).toBe("hidden");
+  });
+});
+
+describe("tickLockReason (UI)", () => {
+  it("is null when the person can tick", () => {
+    expect(tickLockReason(ev({ status: "covered" }), "set_photos_done", head)).toBeNull();
+  });
+  it("asks signed-out people to sign in", () => {
+    expect(tickLockReason(ev({ status: "covered" }), "set_photos_done", null)).toBe("Sign in to tick");
+    // ...but not when signing in wouldn't unlock it.
+    expect(tickLockReason(ev({ status: "scheduled" }), "set_photos_done", null)).toBe("Opens once it's covered");
+    expect(tickLockReason(ev({ status: "for_proofreading" }), "set_photos_done", null)).toBe("Locked at this stage");
+  });
+  it("says when a tick opens, or that its stage has passed", () => {
+    expect(tickLockReason(ev({ status: "scheduled" }), "set_photos_done", head)).toBe("Opens once it's covered");
+    expect(tickLockReason(ev({ status: "requested" }), "set_caption_done", head)).toBe("Opens once it's scheduled");
+    expect(tickLockReason(ev({ status: "for_proofreading" }), "set_caption_done", head)).toBe("Locked at this stage");
+    expect(tickLockReason(ev({ status: "cancelled" }), "set_photos_done", head)).toBe("Locked at this stage");
+  });
+  it("names who can tick it", () => {
+    expect(tickLockReason(ev({ status: "covered" }), "set_photos_done", stranger)).toBe("Assigned photo/video team or head");
+    expect(tickLockReason(ev({ status: "covered" }), "set_caption_done", stranger)).toBe("Assigned writer or head");
+    expect(tickLockReason(ev({ status: "requested" }), "set_coverage_confirmed", stranger)).toBe("Head only");
+  });
+  it("passes on a missing prerequisite", () => {
+    const e = ev({ status: "scheduled", coverage: "live" });
+    const reason = availability(e, head).set_coverage_confirmed.reason;
+    expect(reason).toBeTruthy();
+    expect(tickLockReason(e, "set_coverage_confirmed", head)).toBe(reason);
   });
 });
 
