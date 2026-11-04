@@ -77,7 +77,7 @@ export function ChartCard({
       <div className="mt-3 flex-1">{children}</div>
       {table && table.rows.length > 0 && (
         <details className="mt-3 text-sm">
-          <summary className="cursor-pointer rounded-sm text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <summary className="cursor-pointer rounded-sm py-3.5 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             Show as table
           </summary>
           <table className="mt-2 w-full text-left text-xs">
@@ -183,7 +183,7 @@ export function EventList({
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
         {href && (
-          <Link href={href.to} className="shrink-0 rounded-sm text-xs font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Link href={href.to} className="-my-3 inline-flex min-h-11 shrink-0 items-center rounded-sm text-xs font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {href.label}
           </Link>
         )}
@@ -264,7 +264,7 @@ export function WaitingBoard({ events, staff, today }: { events: EventRow[]; sta
               <h3 className="truncate text-sm font-semibold">{name.charAt(0).toUpperCase() + name.slice(1)}</h3>
               <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
                 {g.items.length} waiting
-                {g.overdue > 0 && <span className="font-semibold text-red-700"> · {g.overdue} overdue</span>}
+                {g.overdue > 0 && <span className="font-semibold text-red-700"> · {g.overdue} late</span>}
               </p>
             </div>
             <ul className="divide-y">

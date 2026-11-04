@@ -173,7 +173,7 @@ export function Board({ events, staff, me, today }: Props) {
       {narrowed && (
         <p className="mb-2 flex flex-wrap items-center gap-x-2 text-sm">
           <span>
-            {counts[view]} {filters.stuck && "stuck "}event{counts[view] === 1 ? "" : "s"}
+            {counts[view]} {filters.stuck && "late "}event{counts[view] === 1 ? "" : "s"}
             {filters.status && ` in ${STATUS_LABELS[filters.status]}`}
           </span>
           <button
@@ -296,9 +296,8 @@ function Column({
         role="listitem"
         aria-label={`${STATUS_LABELS[status]}, 0 events`}
         title={STATUS_LABELS[status]}
-        style={{ borderTopColor: STATUS_ACCENT[status] }}
         className={cn(
-          "flex w-11 shrink-0 snap-start flex-col items-center gap-3 rounded-xl border border-t-4 bg-muted/40 py-3",
+          "flex w-11 shrink-0 snap-start flex-col items-center gap-3 rounded-xl border bg-muted/40 py-3",
           legal === true && "border-green-500/60 bg-green-50/60",
           legal === false && "opacity-60",
           isOver && legal === true && "ring-2 ring-green-500",
@@ -316,9 +315,8 @@ function Column({
       id={`column-${status}`}
       role="listitem"
       aria-label={`${STATUS_LABELS[status]}, ${count} event${count === 1 ? "" : "s"}`}
-      style={{ borderTopColor: STATUS_ACCENT[status] }}
       className={cn(
-        "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border border-t-4 bg-muted/40 sm:w-72",
+        "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72",
         legal === true && "border-green-500/60 bg-green-50/60",
         legal === false && "opacity-60",
         isOver && legal === true && "ring-2 ring-green-500",

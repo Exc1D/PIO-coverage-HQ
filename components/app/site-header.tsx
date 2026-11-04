@@ -11,11 +11,11 @@ export function SiteHeader() {
     // Named so page transitions slide under it instead of moving it (see globals.css).
     <header
       style={{ viewTransitionName: "site-header" }}
-      className="sticky top-0 z-40 border-b border-black/10 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl backdrop-saturate-150 print:hidden"
+      className="sticky top-0 z-40 border-b border-black/10 bg-background pt-[env(safe-area-inset-top)] print:hidden"
     >
       {/* Phones: brand + account; sections are in the tab bar at the bottom. Larger screens: one row with the nav. */}
       <div className="mx-auto flex h-12 max-w-6xl items-center gap-x-3 px-4 sm:h-14">
-        <Link href="/" className="flex shrink-0 items-center rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring">
+        <Link href="/" className="flex min-h-11 shrink-0 items-center rounded-sm font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring">
           PIO Production
         </Link>
         <div className="hidden sm:block sm:flex-1">
@@ -51,7 +51,7 @@ async function SessionBadge() {
   const staff = await getCurrentStaff();
   if (!staff) {
     return (
-      <Button asChild size="sm" variant="outline" className="rounded-full">
+      <Button asChild size="sm" variant="outline" className="min-h-11 rounded-full px-4">
         <Link href="/login">Sign in</Link>
       </Button>
     );

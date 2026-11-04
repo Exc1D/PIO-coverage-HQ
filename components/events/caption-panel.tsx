@@ -187,7 +187,7 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
               id={`${id}-base`}
               value={base.id}
               onChange={(e) => setBaseId(Number(e.target.value))}
-              className="h-9 max-w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-11 max-w-full rounded-md border border-input bg-background px-2 text-sm"
             >
               {older.map((r) => (
                 <option key={r.id} value={r.id}>

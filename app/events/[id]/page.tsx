@@ -16,7 +16,7 @@ export default function EventPage({ params }: PageProps<"/events/[id]">) {
       <Link
         href="/board"
         transitionTypes={["nav-back"]}
-        className="-ml-1.5 mb-3 inline-flex items-center rounded-sm text-[17px] text-primary transition-opacity active:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="-ml-1.5 mb-1 inline-flex min-h-11 items-center rounded-sm text-[17px] text-primary transition-opacity active:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ChevronLeftIcon className="size-6" strokeWidth={2.25} aria-hidden /> Board
       </Link>

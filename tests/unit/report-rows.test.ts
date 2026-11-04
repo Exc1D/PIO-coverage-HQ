@@ -63,7 +63,7 @@ describe("report rows", () => {
       ["Grace S.", 0, 1, 0, 0, 1],
       ["Paolo D. (inactive)", 0, 0, 0, 1, 1],
     ]);
-    expect(rows.find((r) => r.name === "Grace S.")?.roles).toBe("proofreader");
+    expect(rows.find((r) => r.name === "Grace S.")?.roles).toBe("Proofreader");
     expect(peopleTotals(rows)).toEqual({
       written: 2,
       proofread: 1,
@@ -96,8 +96,8 @@ describe("report rows", () => {
       ["Regular", ""],
     ]);
     const rows = peopleRows([live], october, staffWithCrew);
-    expect(rows.find((r) => r.name === "Ben A.")).toMatchObject({ liveCamera: 1, roles: "cameraman", total: 1 });
-    expect(rows.find((r) => r.name === "Kim L.")).toMatchObject({ liveObs: 1, roles: "obs_tech", total: 1 });
+    expect(rows.find((r) => r.name === "Ben A.")).toMatchObject({ liveCamera: 1, roles: "Cameraman", total: 1 });
+    expect(rows.find((r) => r.name === "Kim L.")).toMatchObject({ liveObs: 1, roles: "OBS tech", total: 1 });
   });
 
   it("names files by period", () => {

@@ -66,7 +66,7 @@ function useLongPress(onLongPress: () => void) {
 /**
  * Peek at something without opening it. With a mouse, hovering (or keyboard focus) shows
  * `preview` in a card beside the trigger. On a phone or tablet, press and hold the trigger:
- * the page blurs and the preview pops up with an Open action, like an iOS context menu.
+ * the page dims and the preview pops up with an Open action, like an iOS context menu.
  * A plain tap or click still follows the link as usual.
  */
 export function Peek({
@@ -111,14 +111,14 @@ export function Peek({
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="ios-overlay fixed inset-0 z-50 bg-black/15 backdrop-blur-xl backdrop-saturate-150" />
+          <DialogPrimitive.Overlay className="ios-overlay fixed inset-0 z-50 bg-black/40" />
           <DialogPrimitive.Content
             aria-describedby={undefined}
             className="ios-peek fixed top-1/2 left-1/2 z-50 grid w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 gap-2 outline-none"
           >
             <DialogPrimitive.Title className="sr-only">Preview: {label}</DialogPrimitive.Title>
             <div className="max-h-[60dvh] overflow-y-auto rounded-2xl bg-popover p-4 text-popover-foreground shadow-2xl">{preview}</div>
-            <div className="w-56 overflow-hidden rounded-xl bg-popover/90 shadow-xl backdrop-blur-xl">
+            <div className="w-56 overflow-hidden rounded-xl bg-popover shadow-xl">
               <button
                 type="button"
                 autoFocus

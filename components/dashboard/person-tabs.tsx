@@ -10,9 +10,9 @@ export function PersonTabs({ tabs, initial }: { tabs: PersonTab[]; initial: stri
     <Tabs defaultValue={initial}>
       {/* Scrolls sideways on a phone rather than wrapping into a second row. */}
       <div className="-mx-4 overflow-x-auto px-4">
-        <TabsList aria-label="Work by person">
+        <TabsList aria-label="Work by person" className="group-data-[orientation=horizontal]/tabs:h-auto">
           {tabs.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} className="px-3">
+            <TabsTrigger key={t.value} value={t.value} className="min-h-11 px-3">
               {t.label}
             </TabsTrigger>
           ))}

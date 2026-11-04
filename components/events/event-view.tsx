@@ -318,14 +318,14 @@ export function EventView({
       >
         <dl className="grid gap-2 rounded-lg border p-3 text-sm">
           <Row label="Coverage" value={COVERAGE_LABELS[event.coverage]} />
-          <Row label="Source" value={event.source ? SOURCE_LABELS[event.source] : "—"} />
+          <Row label="Source" value={event.source ? SOURCE_LABELS[event.source] : "Not set"} />
           <Row label="Posting target" value={formatManila(manilaStartOfDay(event.due_date), "EEE, MMM d")} />
           {requesterHidden ? (
             <Row label="Requested by" value="Sign in to see" muted />
           ) : (
             <>
-              <Row label="Requested by" value={event.requested_by ?? "—"} />
-              <Row label="Contact" value={event.contact ?? "—"} />
+              <Row label="Requested by" value={event.requested_by ?? "Not set"} />
+              <Row label="Contact" value={event.contact ?? "Not set"} />
             </>
           )}
           {event.notes && <Row label="Notes" value={event.notes} block />}
@@ -464,7 +464,7 @@ function TeamRow({
             value={currentId ?? ""}
             onChange={(e) => onAssign(e.target.value || null)}
             className={cn(
-              "h-10 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
               !currentId && NEEDED_SLOTS.includes(slot) && "border-amber-400 text-amber-800",
             )}
           >

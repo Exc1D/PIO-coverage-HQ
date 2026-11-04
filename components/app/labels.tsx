@@ -94,7 +94,7 @@ export function OverdueFlag({ dueDate, className }: { dueDate: string; className
       title={`Past its posting target (${dueDate})`}
     >
       <FlagIcon aria-hidden className="size-3.5" />
-      Overdue
+      Late
     </span>
   );
 }
