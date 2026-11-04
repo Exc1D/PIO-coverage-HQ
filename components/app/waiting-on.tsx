@@ -23,8 +23,8 @@ export function partyName(p: Party, staffById: Map<string, Staff>): string {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
- * "Waiting on Ana R. · Finish the caption". `compact` (board cards) shows
- * only the names on one line, with the tasks in the tooltip.
+ * "Waiting on Ana R. · Finish the caption". `compact` (board cards) drops the
+ * box and heading and lists "Ana R.: Finish the caption" one per line.
  */
 export function WaitingOn({
   items,
@@ -41,21 +41,25 @@ export function WaitingOn({
 }) {
   if (items.length === 0) return null;
   const name = (w: Waiting) => (isMe(w.who, me) ? "you" : partyName(w.who, staffById));
-  const mine = items.some((w) => isMe(w.who, me));
 
   if (compact) {
-    const names = [...new Set(items.map(name))];
+    // Tasks shown inline, not in a tooltip: phones can't hover.
     return (
-      <p
-        className={cn("flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground", mine && "font-medium text-primary", className)}
-        title={items.map((w) => `${name(w)}: ${w.task}`).join("\n")}
-      >
-        <HourglassIcon aria-hidden className="size-3 shrink-0" />
-        <span className="truncate">Waiting on {names.join(", ")}</span>
-      </p>
+      <ul className={cn("grid gap-0.5 text-[13px] text-muted-foreground", className)}>
+        {items.map((w, i) => (
+          <li key={i} className={cn("flex min-w-0 items-start gap-1.5", isMe(w.who, me) && "text-primary")}>
+            <HourglassIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+            <span className="min-w-0">
+              <span className="sr-only">Waiting on </span>
+              <span className="font-medium">{isMe(w.who, me) ? "You" : cap(name(w))}:</span> {w.task}
+            </span>
+          </li>
+        ))}
+      </ul>
     );
   }
 
+  const mine = items.some((w) => isMe(w.who, me));
   return (
     <div className={cn("grid gap-1.5 rounded-lg border bg-muted/40 px-3 py-2", mine && "border-primary/40 bg-primary/[0.05]", className)}>
       <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

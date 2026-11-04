@@ -20,7 +20,7 @@ import { LiveChip, OverdueFlag, SourceChip } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
 import { WaitingOn } from "@/components/app/waiting-on";
 import { EventPeek, slotStaff } from "@/components/events/event-peek";
-import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, SOURCE_COLORS, type Slot } from "@/lib/constants";
+import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, type Slot } from "@/lib/constants";
 import { isStuck, TEAM_GAP_LABELS, teamGaps } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
@@ -37,7 +37,7 @@ type Props = {
   overlay?: boolean;
 };
 
-// Partial so a new slot still renders (with the fallback icon and tone) before it gets its own.
+// Partial so a new slot still renders (with the fallback icon) before it gets its own.
 const SLOT_ICON: Partial<Record<Slot, LucideIcon>> = {
   photographer: CameraIcon,
   videographer: VideoIcon,
@@ -47,17 +47,6 @@ const SLOT_ICON: Partial<Record<Slot, LucideIcon>> = {
   cameraman: ClapperboardIcon,
   obs_tech: MonitorPlayIcon,
 };
-const SLOT_TONE: Partial<Record<Slot, string>> = {
-  photographer: "bg-sky-50 text-sky-900 ring-sky-200",
-  videographer: "bg-violet-50 text-violet-900 ring-violet-200",
-  editor: "bg-rose-50 text-rose-900 ring-rose-200",
-  writer: "bg-amber-50 text-amber-900 ring-amber-200",
-  proofreader: "bg-emerald-50 text-emerald-900 ring-emerald-200",
-  cameraman: "bg-rose-50 text-rose-900 ring-rose-200",
-  obs_tech: "bg-fuchsia-50 text-fuchsia-900 ring-fuchsia-200",
-};
-const FALLBACK_TONE = "bg-muted text-foreground ring-border";
-
 function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; staffById: Map<string, Staff> }) {
   const person = slotStaff(event, slot, staffById);
   if (!person) return null;
@@ -65,14 +54,12 @@ function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; sta
   const name = person === "unknown" ? "Unknown" : person.display_name;
   const Icon = SLOT_ICON[slot] ?? UserIcon;
   return (
+    // Plain icon + name, not a coloured pill: colour on the card is kept for status (source, overdue, gaps).
     <span
-      className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
-        SLOT_TONE[slot] ?? FALLBACK_TONE,
-      )}
+      className="inline-flex max-w-full items-center gap-1"
       title={`${label}: ${person === "unknown" ? name : person.full_name}`}
     >
-      <Icon className="size-3 shrink-0 opacity-70" aria-hidden />
+      <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       <span className="sr-only">{label}: </span>
       <span className="truncate">{name}</span>
     </span>
@@ -94,6 +81,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
   });
   const avail = availability(event, me);
   const stuck = isStuck(event, today);
+  const gaps = teamGaps(event);
   const showTicks =
     hasRegular(event.coverage) && ["scheduled", "covered", "in_production", "for_proofreading"].includes(event.status);
 
@@ -101,7 +89,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
     const enabled = avail[cmd].state === "available";
     const id = `${event.id}-${field}${overlay ? "-overlay" : ""}`;
     return (
-      <label htmlFor={id} className={cn("flex items-center gap-1.5 text-xs", !enabled && "text-muted-foreground")}>
+      <label htmlFor={id} className={cn("flex min-h-11 items-center gap-2 text-[13px]", !enabled && "text-muted-foreground")}>
         <input
           type="checkbox"
           id={id}
@@ -109,7 +97,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
           disabled={!enabled}
           onChange={(e) => onToggle(event, field, e.target.checked)}
           aria-label={`${label} for ${event.title}`}
-          className="size-4 accent-primary disabled:opacity-60"
+          className="size-5 accent-primary disabled:opacity-60"
         />
         {label}
       </label>
@@ -120,14 +108,12 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
     <article
       ref={setNodeRef}
       className={cn(
-        "group relative rounded-xl border border-l-4 bg-card p-3 shadow-xs transition-[box-shadow,transform,opacity] duration-200 ease-[var(--ease-ios)] hover:-translate-y-px hover:shadow-md",
+        "group relative rounded-xl border bg-card p-3 shadow-xs transition-[box-shadow,transform,opacity] duration-200 ease-[var(--ease-ios)] hover:-translate-y-px hover:shadow-md",
         stuck && "border-red-300",
         isDragging && "scale-[0.98] opacity-40",
         // Picked up: lifts off the column with a little spring (globals.css).
         overlay && "ios-lift rotate-[1.5deg] scale-[1.03] cursor-grabbing shadow-2xl ring-1 ring-black/5",
       )}
-      // Left stripe in the source colour; the source chip below carries the same information as text.
-      style={{ borderLeftColor: event.source ? SOURCE_COLORS[event.source] : undefined }}
       aria-label={event.title}
     >
       <div className="flex items-start gap-2">
@@ -144,7 +130,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
               </Link>
             </Peek>
           )}
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             {formatEventDate(event)}
             {event.municipality && <> · {MUNICIPALITY_LABELS[event.municipality]}</>}
           </p>
@@ -152,7 +138,7 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
         {canDrag && !overlay && (
           <button
             type="button"
-            className="-mr-1 -mt-1 flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+            className="-mr-2 -mt-2 flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
             aria-label={`Move ${event.title}`}
             {...listeners}
             {...attributes}
@@ -167,27 +153,27 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
         <LiveChip coverage={event.coverage} />
         {stuck && <OverdueFlag dueDate={event.due_date} />}
         {event.status === "scheduled" && event.coverage_confirmed && (
-          <span className="inline-flex items-center gap-1 text-xs text-green-700" title="Coverage confirmed">
+          <span className="inline-flex items-center gap-1 text-[13px] text-green-700" title="Coverage confirmed">
             <CheckCircle2Icon className="size-3.5" aria-hidden /> Confirmed
           </span>
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1">
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
         {slotsFor(event.coverage).map((slot) => (
           <Assignee key={slot} slot={slot} event={event} staffById={staffById} />
         ))}
-        {teamGaps(event).map((gap) => (
-          <span key={gap} className="text-[11px] text-amber-700">
-            No {TEAM_GAP_LABELS[gap]}
+        {gaps.length > 0 && (
+          <span className="font-medium text-amber-800">
+            No {gaps.map((gap) => TEAM_GAP_LABELS[gap]).join(", no ")}
           </span>
-        ))}
+        )}
       </div>
 
       <WaitingOn items={waitingOn(event, today)} staffById={staffById} me={me} compact className="mt-2" />
 
       {showTicks && (
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2">
+        <div className="-mb-2 mt-2 flex flex-wrap gap-x-4 border-t">
           {tick("photos_done", "Photos/Video", "set_photos_done")}
           {tick("caption_done", "Caption", "set_caption_done")}
         </div>
