@@ -6,7 +6,7 @@ import { runEventCommand } from "@/app/actions/events";
 import { previewCommand } from "@/lib/command-preview";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS } from "@/lib/constants";
-import { OFFLINE_MESSAGE } from "@/lib/offline";
+import { NO_ANSWER_MESSAGE, OFFLINE_MESSAGE, SAVE_TIME_LIMIT_MS, withTimeLimit } from "@/lib/offline";
 import type { EventRow, Staff } from "@/lib/types";
 import { applyCommand, type Actor } from "@/lib/workflow";
 
@@ -42,7 +42,13 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
         showOptimistic?.({ ...preview.next, version: event.version + 1 });
         let res;
         try {
-          res = await runEventCommand(event.id, event.version, payload);
+          // Forms can't be closed mid-save, so a stalled request mustn't hold them forever. A retry
+          // after a late landing is safe: the version check turns it into a conflict, not a double save.
+          res = await withTimeLimit(runEventCommand(event.id, event.version, payload), SAVE_TIME_LIMIT_MS, {
+            ok: false,
+            code: "rejected",
+            message: NO_ANSWER_MESSAGE,
+          });
         } catch {
           // Network failure: the optimistic change rolls back when the transition ends.
           resolve(OFFLINE_MESSAGE);

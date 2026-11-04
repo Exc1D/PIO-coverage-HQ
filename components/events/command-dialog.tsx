@@ -136,113 +136,115 @@ export function CommandDialog({
     <Dialog open={open} onOpenChange={(o) => !o && !saving && close()}>
       <DialogContent className="sm:max-w-md">
         {type && (
-          <form onSubmit={submit} className="grid gap-4">
-            <DialogHeader>
-              <DialogTitle>{type === "mark_posted" && liveVideo ? "Add the live video" : TITLES[type]}</DialogTitle>
-              <DialogDescription className="line-clamp-2">{event.title}</DialogDescription>
-            </DialogHeader>
+          <form onSubmit={submit}>
+            <fieldset disabled={saving} className="grid min-w-0 gap-4">
+              <DialogHeader>
+                <DialogTitle>{type === "mark_posted" && liveVideo ? "Add the live video" : TITLES[type]}</DialogTitle>
+                <DialogDescription className="line-clamp-2">{event.title}</DialogDescription>
+              </DialogHeader>
 
-            {(type === "schedule_post" || type === "reschedule_post") && (
-              <div className="grid gap-2">
-                <Label htmlFor={`${id}-when`}>Post on (Manila time)</Label>
-                <Input id={`${id}-when`} name="when" type="datetime-local" required defaultValue={defaultPostTime(event)} className="h-11" />
-              </div>
-            )}
-
-            {type === "mark_posted" && (
-              <>
+              {(type === "schedule_post" || type === "reschedule_post") && (
                 <div className="grid gap-2">
-                  <Label htmlFor={`${id}-link`}>{liveVideo ? "Live video link on Facebook" : "Facebook post link"}</Label>
-                  <Input
-                    id={`${id}-link`}
-                    name="postLink"
-                    type="url"
-                    inputMode="url"
+                  <Label htmlFor={`${id}-when`}>Post on (Manila time)</Label>
+                  <Input id={`${id}-when`} name="when" type="datetime-local" required defaultValue={defaultPostTime(event)} className="h-11" />
+                </div>
+              )}
+
+              {type === "mark_posted" && (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor={`${id}-link`}>{liveVideo ? "Live video link on Facebook" : "Facebook post link"}</Label>
+                    <Input
+                      id={`${id}-link`}
+                      name="postLink"
+                      type="url"
+                      inputMode="url"
+                      required
+                      placeholder="https://www.facebook.com/…"
+                      pattern="https://.*(facebook\.com|fb\.watch)/.+"
+                      title="A facebook.com or fb.watch link"
+                      onChange={(e) => e.currentTarget.setCustomValidity("")}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor={`${id}-when`}>{liveVideo ? "Went live at (Manila time)" : "Posted at (Manila time)"}</Label>
+                    <Input id={`${id}-when`} name="when" type="datetime-local" required defaultValue={manilaLocalNow()} max={manilaLocalNow()} className="h-11" />
+                  </div>
+                </>
+              )}
+
+              {type === "step_back" && back && (
+                <p className="text-sm text-muted-foreground">
+                  From <strong>{STATUS_LABELS[event.status]}</strong> back to <strong>{STATUS_LABELS[back]}</strong>.
+                </p>
+              )}
+              {type === "restore" && (
+                <p className="text-sm text-muted-foreground">
+                  Returns to <strong>{STATUS_LABELS[event.cancelled_from_status ?? "requested"]}</strong>.
+                </p>
+              )}
+
+              {type === "step_back" && event.status === "for_proofreading" && (
+                <fieldset className="grid gap-2">
+                  <legend className="mb-1 text-sm font-medium">Send back for</legend>
+                  {(
+                    [
+                      ["caption", "Caption changes (unticks Caption done)"],
+                      ["photos", "Photo/video changes (unticks Photos/Video done)"],
+                      ["both", "Both"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label key={value} className="flex items-center gap-2 text-sm">
+                      <input type="radio" name="reset" value={value} defaultChecked={value === "caption"} className="size-4 accent-primary" />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
+
+              {type === "request_caption_changes" && (
+                <p className="text-sm text-muted-foreground">
+                  Moves the event back to <strong>In production</strong> and unticks <strong>Caption done</strong>. The
+                  writer sees your note above the caption. For small typos, use <strong>Correct caption</strong> instead.
+                </p>
+              )}
+              {type === "request_caption_changes" && (
+                <div className="grid gap-2">
+                  <Label htmlFor={`${id}-reason`}>What needs changing</Label>
+                  <Textarea
+                    id={`${id}-reason`}
+                    name="reason"
                     required
-                    placeholder="https://www.facebook.com/…"
-                    pattern="https://.*(facebook\.com|fb\.watch)/.+"
-                    title="A facebook.com or fb.watch link"
-                    onChange={(e) => e.currentTarget.setCustomValidity("")}
-                    className="h-11"
+                    maxLength={500}
+                    rows={4}
+                    placeholder="e.g. Use the governor's full title in the first line; confirm the barangay name"
                   />
                 </div>
+              )}
+
+              {(type === "step_back" || type === "cancel" || type === "restore") && (
                 <div className="grid gap-2">
-                  <Label htmlFor={`${id}-when`}>{liveVideo ? "Went live at (Manila time)" : "Posted at (Manila time)"}</Label>
-                  <Input id={`${id}-when`} name="when" type="datetime-local" required defaultValue={manilaLocalNow()} max={manilaLocalNow()} className="h-11" />
+                  <Label htmlFor={`${id}-reason`}>Reason</Label>
+                  <Textarea id={`${id}-reason`} name="reason" required maxLength={500} rows={3} placeholder="e.g. Caption needs the governor's full title" />
                 </div>
-              </>
-            )}
+              )}
 
-            {type === "step_back" && back && (
-              <p className="text-sm text-muted-foreground">
-                From <strong>{STATUS_LABELS[event.status]}</strong> back to <strong>{STATUS_LABELS[back]}</strong>.
-              </p>
-            )}
-            {type === "restore" && (
-              <p className="text-sm text-muted-foreground">
-                Returns to <strong>{STATUS_LABELS[event.cancelled_from_status ?? "requested"]}</strong>.
-              </p>
-            )}
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
 
-            {type === "step_back" && event.status === "for_proofreading" && (
-              <fieldset className="grid gap-2">
-                <legend className="mb-1 text-sm font-medium">Send back for</legend>
-                {(
-                  [
-                    ["caption", "Caption changes (unticks Caption done)"],
-                    ["photos", "Photo/video changes (unticks Photos/Video done)"],
-                    ["both", "Both"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <label key={value} className="flex items-center gap-2 text-sm">
-                    <input type="radio" name="reset" value={value} defaultChecked={value === "caption"} className="size-4 accent-primary" />
-                    {label}
-                  </label>
-                ))}
-              </fieldset>
-            )}
-
-            {type === "request_caption_changes" && (
-              <p className="text-sm text-muted-foreground">
-                Moves the event back to <strong>In production</strong> and unticks <strong>Caption done</strong>. The
-                writer sees your note above the caption. For small typos, use <strong>Correct caption</strong> instead.
-              </p>
-            )}
-            {type === "request_caption_changes" && (
-              <div className="grid gap-2">
-                <Label htmlFor={`${id}-reason`}>What needs changing</Label>
-                <Textarea
-                  id={`${id}-reason`}
-                  name="reason"
-                  required
-                  maxLength={500}
-                  rows={4}
-                  placeholder="e.g. Use the governor's full title in the first line; confirm the barangay name"
-                />
-              </div>
-            )}
-
-            {(type === "step_back" || type === "cancel" || type === "restore") && (
-              <div className="grid gap-2">
-                <Label htmlFor={`${id}-reason`}>Reason</Label>
-                <Textarea id={`${id}-reason`} name="reason" required maxLength={500} rows={3} placeholder="e.g. Caption needs the governor's full title" />
-              </div>
-            )}
-
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" disabled={saving} onClick={close}>
-                Never mind
-              </Button>
-              <Button type="submit" disabled={saving} variant={type === "cancel" ? "destructive" : "default"}>
-                {saving ? "Saving…" : SUBMIT[type]}
-              </Button>
-            </DialogFooter>
+              <DialogFooter className="gap-2">
+                <Button type="button" variant="outline" onClick={close}>
+                  Never mind
+                </Button>
+                <Button type="submit" variant={type === "cancel" ? "destructive" : "default"}>
+                  {saving ? "Saving…" : SUBMIT[type]}
+                </Button>
+              </DialogFooter>
+            </fieldset>
           </form>
         )}
       </DialogContent>

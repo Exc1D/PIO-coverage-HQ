@@ -502,6 +502,9 @@ describe("tickLockReason (UI)", () => {
   });
   it("asks signed-out people to sign in", () => {
     expect(tickLockReason(ev({ status: "covered" }), "set_photos_done", null)).toBe("Sign in to tick");
+    // ...but not when signing in wouldn't unlock it.
+    expect(tickLockReason(ev({ status: "scheduled" }), "set_photos_done", null)).toBe("Opens once it's covered");
+    expect(tickLockReason(ev({ status: "for_proofreading" }), "set_photos_done", null)).toBe("Locked at this stage");
   });
   it("says when a tick opens, or that its stage has passed", () => {
     expect(tickLockReason(ev({ status: "scheduled" }), "set_photos_done", head)).toBe("Opens once it's covered");
@@ -510,7 +513,7 @@ describe("tickLockReason (UI)", () => {
     expect(tickLockReason(ev({ status: "cancelled" }), "set_photos_done", head)).toBe("Locked at this stage");
   });
   it("names who can tick it", () => {
-    expect(tickLockReason(ev({ status: "covered" }), "set_photos_done", stranger)).toBe("Assigned team or head");
+    expect(tickLockReason(ev({ status: "covered" }), "set_photos_done", stranger)).toBe("Assigned photo/video team or head");
     expect(tickLockReason(ev({ status: "covered" }), "set_caption_done", stranger)).toBe("Assigned writer or head");
     expect(tickLockReason(ev({ status: "requested" }), "set_coverage_confirmed", stranger)).toBe("Head only");
   });

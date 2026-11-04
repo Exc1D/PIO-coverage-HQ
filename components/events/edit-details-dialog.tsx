@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { changedDetails } from "@/lib/command-preview";
 import type { CommandPayload } from "@/lib/commands";
-import type { Coverage, Municipality, Source } from "@/lib/constants";
 import type { EventRow } from "@/lib/types";
 import { EventFields } from "./event-fields";
 
@@ -18,32 +18,18 @@ export function EditDetailsDialog({
   /** Resolves to null once saved, otherwise to the reason it wasn't. */
   onSubmit: (payload: CommandPayload) => Promise<string | null>;
 }) {
+  // What the form opened with. A retry after a conflict gets a newer event, but the fields
+  // keep what was typed, so comparing against this leaves other people's changes alone.
+  const [opened] = useState(event);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    const str = (k: string) => String(f.get(k) ?? "");
-    const orNull = <T extends string>(k: string) => (str(k) === "" ? null : (str(k) as T));
+    const changes = changedDetails(opened, new FormData(e.currentTarget));
     setSaving(true);
     setError(null);
-    const problem = await onSubmit({
-      type: "edit_details",
-      changes: {
-        title: str("title"),
-        event_date: str("event_date"),
-        // DB times carry seconds ("09:00:00"); keep them when the minute is unchanged.
-        start_time: str("start_time") === event.start_time?.slice(0, 5) ? event.start_time : str("start_time"),
-        venue: str("venue"),
-        municipality: orNull<Municipality>("municipality"),
-        source: orNull<Source>("source"),
-        coverage: str("coverage") as Coverage,
-        requested_by: str("requested_by"),
-        contact: str("contact"),
-        notes: str("notes"),
-      },
-    });
+    const problem = await onSubmit({ type: "edit_details", changes });
     setSaving(false);
     if (problem) setError(problem);
     else onClose();
@@ -52,24 +38,26 @@ export function EditDetailsDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && !saving && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <form onSubmit={submit} className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>Edit event details</DialogTitle>
-          </DialogHeader>
-          <EventFields values={event} idPrefix="edit" requireSourceAndPlace={event.status !== "requested"} />
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
-              Discard changes
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </DialogFooter>
+        <form onSubmit={submit}>
+          <fieldset disabled={saving} className="grid min-w-0 gap-4">
+            <DialogHeader>
+              <DialogTitle>Edit event details</DialogTitle>
+            </DialogHeader>
+            <EventFields values={opened} idPrefix="edit" requireSourceAndPlace={event.status !== "requested"} />
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Discard changes
+              </Button>
+              <Button type="submit">
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

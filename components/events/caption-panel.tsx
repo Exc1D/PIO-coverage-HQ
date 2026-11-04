@@ -61,7 +61,6 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
   if (editing) {
     return (
       <form
-        className="grid gap-2"
         onSubmit={async (e) => {
           e.preventDefault();
           const f = new FormData(e.currentTarget);
@@ -76,48 +75,49 @@ export function CaptionPanel({ event, avail, revisions, feedback, nameOf, pendin
           else setEditing(false);
         }}
       >
-        <Label htmlFor={`${id}-caption`}>{proofreading ? "Correct the caption" : "Caption"}</Label>
-        <Textarea
-          id={`${id}-caption`}
-          name="caption"
-          defaultValue={text ?? ""}
-          rows={10}
-          maxLength={20000}
-          placeholder="Paste or write the caption exactly as it should be posted."
-          autoFocus
-        />
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {canSubmit && (
-            <Button type="submit" size="sm" name="intent" value="submit" disabled={saving !== null}>
-              {saving === "submit" ? "Saving…" : "Save and mark Caption done"}
-            </Button>
+        <fieldset disabled={saving !== null} className="grid min-w-0 gap-2">
+          <Label htmlFor={`${id}-caption`}>{proofreading ? "Correct the caption" : "Caption"}</Label>
+          <Textarea
+            id={`${id}-caption`}
+            name="caption"
+            defaultValue={text ?? ""}
+            rows={10}
+            maxLength={20000}
+            placeholder="Paste or write the caption exactly as it should be posted."
+            autoFocus
+          />
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
           )}
-          <Button type="submit" size="sm" name="intent" value="save" variant={canSubmit ? "outline" : "default"} disabled={saving !== null}>
-            {saving === "save" ? "Saving…" : proofreading ? "Save corrections" : "Save draft"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={saving !== null}
-            onClick={() => {
-              setError(null);
-              setEditing(false);
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
-        {canSubmit && (
-          <p className="text-xs text-muted-foreground">
-            Marking it done sends the event to the proofreader once the photos/video are done too.
-          </p>
-        )}
+          <div className="flex flex-wrap gap-2">
+            {canSubmit && (
+              <Button type="submit" size="sm" name="intent" value="submit">
+                {saving === "submit" ? "Saving…" : "Save and mark Caption done"}
+              </Button>
+            )}
+            <Button type="submit" size="sm" name="intent" value="save" variant={canSubmit ? "outline" : "default"}>
+              {saving === "save" ? "Saving…" : proofreading ? "Save corrections" : "Save draft"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setError(null);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+          {canSubmit && (
+            <p className="text-xs text-muted-foreground">
+              Marking it done sends the event to the proofreader once the photos/video are done too.
+            </p>
+          )}
+        </fieldset>
       </form>
     );
   }

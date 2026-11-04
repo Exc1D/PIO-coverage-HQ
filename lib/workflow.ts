@@ -419,7 +419,7 @@ type TickCommand = "set_coverage_confirmed" | "set_photos_done" | "set_caption_d
 
 const TICK_WHO: Record<TickCommand, string> = {
   set_coverage_confirmed: "Head only",
-  set_photos_done: "Assigned team or head",
+  set_photos_done: "Assigned photo/video team or head",
   set_caption_done: "Assigned writer or head",
 };
 
@@ -432,9 +432,9 @@ const TICK_OPENS: Record<TickCommand, { at: Status; label: string }> = {
 
 /** Why a tick box is locked for this person, in a few plain words, or null if they can tick it. */
 export function tickLockReason(event: WorkflowEvent, type: TickCommand, actor: Actor | null): string | null {
-  if (!actor) return "Sign in to tick";
-  const c = canPerform(event, type, actor);
-  if (c.ok) return null;
+  // Signed out, ask as the head (who can tick anything): only offer sign-in if it could unlock the box.
+  const c = canPerform(event, type, actor ?? { id: "", roles: ["head"] });
+  if (c.ok) return actor ? null : "Sign in to tick";
   if (c.code === "requirement") return c.message;
   if (c.code === "forbidden") return TICK_WHO[type];
   const steps = pipelineFor(event.coverage);

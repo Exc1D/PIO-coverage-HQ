@@ -49,3 +49,17 @@ export function previewCommand(p: CommandPayload, staff: readonly Staff[]): ToCo
   }
   return toCommand({ type: "edit_details", changes } as ParsedPayload, staff);
 }
+
+const DETAIL_FIELDS = ["title", "event_date", "start_time", "venue", "municipality", "source", "coverage", "requested_by", "contact", "notes"] as const;
+
+/** The event form's fields that differ from what it opened with. Empty fields read as "", missing values as null. */
+export function changedDetails(opened: Record<(typeof DETAIL_FIELDS)[number], string | null>, form: FormData) {
+  const changes: Record<string, string | null> = {};
+  for (const key of DETAIL_FIELDS) {
+    const value = String(form.get(key) ?? "");
+    // The time input shows minutes; the database keeps seconds too.
+    const was = key === "start_time" ? opened[key]?.slice(0, 5) : opened[key];
+    if (value !== (was ?? "")) changes[key] = value === "" && (key === "municipality" || key === "source") ? null : value;
+  }
+  return changes as Extract<CommandPayload, { type: "edit_details" }>["changes"];
+}

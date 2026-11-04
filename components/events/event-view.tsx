@@ -483,7 +483,6 @@ function DriveLink({
   if (editing) {
     return (
       <form
-        className="grid gap-2"
         onSubmit={async (e) => {
           e.preventDefault();
           setSaving(true);
@@ -494,28 +493,29 @@ function DriveLink({
           else setEditing(false);
         }}
       >
-        <Label htmlFor="drive">Google Drive folder link</Label>
-        <Input id="drive" name="drive" type="url" inputMode="url" defaultValue={url ?? ""} placeholder="https://drive.google.com/…" className="h-11" />
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={saving}>{saving ? "Saving…" : "Save link"}</Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={saving}
-            onClick={() => {
-              setError(null);
-              setEditing(false);
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
+        <fieldset disabled={saving} className="grid min-w-0 gap-2">
+          <Label htmlFor="drive">Google Drive folder link</Label>
+          <Input id="drive" name="drive" type="url" inputMode="url" defaultValue={url ?? ""} placeholder="https://drive.google.com/…" className="h-11" />
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button type="submit" size="sm">{saving ? "Saving…" : "Save link"}</Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setError(null);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </fieldset>
       </form>
     );
   }
