@@ -2,6 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import {
+  ArrowRightIcon,
   CameraIcon,
   CheckCircle2Icon,
   ClapperboardIcon,
@@ -19,14 +20,15 @@ import { memo } from "react";
 import { LiveChip, OverdueFlag, SourceChip } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
 import { WaitingOn } from "@/components/app/waiting-on";
+import { Button } from "@/components/ui/button";
 import { EventPeek, slotStaff } from "@/components/events/event-peek";
-import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, type Slot } from "@/lib/constants";
+import { hasRegular, MUNICIPALITY_LABELS, SLOT_LABELS, slotsFor, STATUS_LABELS, type Slot, type Status } from "@/lib/constants";
 import { isStuck, TEAM_GAP_LABELS, teamGaps } from "@/lib/metrics";
 import { formatEventDate } from "@/lib/format";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { waitingOn } from "@/lib/waiting";
-import { tickLockReason, type Actor } from "@/lib/workflow";
+import { dropCommand, nextStatus, tickLockReason, type Actor } from "@/lib/workflow";
 
 type Props = {
   event: EventRow;
@@ -34,6 +36,9 @@ type Props = {
   me: Actor | null;
   today: string;
   onToggle: (event: EventRow, field: "photos_done" | "caption_done", value: boolean) => void;
+  onMove: (event: EventRow, to: Status) => void;
+  /** A save is running. Tapping Move slides the next card under the finger, so a second tap mustn't land on it. */
+  pending?: boolean;
   overlay?: boolean;
 };
 
@@ -72,13 +77,15 @@ function Assignee({ slot, event, staffById }: { slot: Slot; event: EventRow; sta
  * cards that didn't change skip that render. On a board of ~160 cards this cut
  * the freeze when a card is picked up from ~670ms to ~150ms (4x CPU throttle).
  */
-export const EventCard = memo(function EventCard({ event, staffById, me, today, onToggle, overlay = false }: Props) {
+export const EventCard = memo(function EventCard({ event, staffById, me, today, onToggle, onMove, pending = false, overlay = false }: Props) {
   const canDrag = me !== null && event.status !== "cancelled";
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     disabled: !canDrag || overlay,
     data: { event },
   });
+  const next = overlay ? null : nextStatus(event.status, event.coverage);
+  const canMove = next !== null && dropCommand(event, next, me).ok;
   const stuck = isStuck(event, today);
   const gaps = teamGaps(event);
   const showTicks =
@@ -184,6 +191,18 @@ export const EventCard = memo(function EventCard({ event, staffById, me, today, 
           {tick("photos_done", "Photos/Video", "set_photos_done")}
           {tick("caption_done", "Caption", "set_caption_done")}
         </div>
+      )}
+
+      {canMove && (
+        <Button
+          variant="outline"
+          className="mt-3 h-11 w-full"
+          disabled={pending}
+          aria-label={`Move ${event.title} to ${STATUS_LABELS[next]}`}
+          onClick={() => onMove(event, next)}
+        >
+          Move to {STATUS_LABELS[next]} <ArrowRightIcon aria-hidden />
+        </Button>
       )}
     </article>
   );

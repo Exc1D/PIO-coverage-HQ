@@ -59,7 +59,7 @@ export function Board({ events, staff, me, today }: Props) {
   const filters = readFilters(params);
   const view = readView(params.get("view"), me);
   const staffById = new Map(staff.map((s) => [s.id, s]));
-  const { run: runCommand, attempt, actor } = useCommandRunner(staff, me);
+  const { run: runCommand, attempt, pending, actor } = useCommandRunner(staff, me);
   const [optimistic, applyOptimistic] = useOptimistic(events, (state: EventRow[], p: Patch) =>
     state.map((e) => (e.id === p.id ? { ...e, ...p.next } : e)),
   );
@@ -83,6 +83,17 @@ export function Board({ events, staff, me, today }: Props) {
   const onToggle = (ev: EventRow, field: "photos_done" | "caption_done", value: boolean) =>
     run(ev, { type: field === "photos_done" ? "set_photos_done" : "set_caption_done", value });
 
+  // A drop and the card's Move button are the same step: one place decides what it means.
+  const onMove = (event: EventRow, to: Status) => {
+    const r = dropCommand(event, to, actor);
+    if (!r.ok) {
+      if (r.code !== "no_change") toast.error(r.message);
+      return;
+    }
+    if (r.needsInput) setDialog({ event, type: r.type as InputCommand });
+    else run(event, { type: r.type } as CommandPayload);
+  };
+
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
   }
@@ -91,16 +102,10 @@ export function Board({ events, staff, me, today }: Props) {
     setActiveId(null);
     const event = optimistic.find((x) => x.id === e.active.id);
     const to = e.over?.id as Status | undefined;
-    if (!event || !to) return;
-    const r = dropCommand(event, to, actor);
-    if (!r.ok) {
-      if (r.code !== "no_change") toast.error(r.message);
-      return;
-    }
-    if (r.needsInput) setDialog({ event, type: r.type as InputCommand });
-    else run(event, { type: r.type } as CommandPayload);
+    if (event && to) onMove(event, to);
   }
 
+  const narrowed = filters.stuck || filters.status !== null;
   const filtered = optimistic.filter((e) => matchesFilters(e, filters, today));
   const mine = me ? filtered.filter((e) => isMyEvent(e, me, today)) : [];
   const visible = view === "mine" ? mine : filtered;
@@ -164,6 +169,24 @@ export function Board({ events, staff, me, today }: Props) {
           )}
         </div>
       )}
+      {narrowed && (
+        <p className="mb-2 flex flex-wrap items-center gap-x-2 text-sm">
+          <span>
+            {counts[view]} {filters.stuck && "stuck "}event{counts[view] === 1 ? "" : "s"}
+            {filters.status && ` in ${STATUS_LABELS[filters.status]}`}
+          </span>
+          <button
+            type="button"
+            className="min-h-11 font-medium underline underline-offset-4"
+            onClick={() => {
+              setParam("stuck", null);
+              setParam("status", null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      )}
       <nav
         ref={jumpStrip}
         aria-label="Jump to column"
@@ -201,8 +224,8 @@ export function Board({ events, staff, me, today }: Props) {
               status={status}
               count={cards.length}
               legal={active?.status === status ? null : legal}
-              // In "Mine", empty columns fold to a strip so your own cards are on screen first; they still take drops.
-              collapsed={view === "mine" && cards.length === 0}
+              // In "Mine" or a narrowed board, empty columns fold to a strip so the cards are on screen first; they still take drops.
+              collapsed={(view === "mine" || narrowed) && cards.length === 0}
             >
               {cards.length === 0 ? (
                 <p className="flex flex-col items-center gap-1 py-6 text-center text-xs text-muted-foreground">
@@ -218,6 +241,8 @@ export function Board({ events, staff, me, today }: Props) {
                     me={actor}
                     today={today}
                     onToggle={onToggle}
+                    onMove={onMove}
+                    pending={pending}
                   />
                 ))
               )}
@@ -228,7 +253,7 @@ export function Board({ events, staff, me, today }: Props) {
 
       <DragOverlay>
         {active ? (
-          <EventCard event={active} staffById={staffById} me={actor} today={today} onToggle={() => {}} overlay />
+          <EventCard event={active} staffById={staffById} me={actor} today={today} onToggle={() => {}} onMove={() => {}} overlay />
         ) : null}
       </DragOverlay>
 

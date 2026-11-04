@@ -122,24 +122,25 @@ export function PipelineBars({ counts }: { counts: Record<PipelineStatus, number
   const entries = Object.entries(counts) as [PipelineStatus, number][];
   const max = Math.max(1, ...entries.map(([, v]) => v));
   return (
-    <ul className="grid gap-1.5">
+    <ul className="-mx-2 grid">
       {entries.map(([status, value]) => (
-        <li key={status} className="grid grid-cols-[10.5rem_1fr_2rem] items-center gap-2 text-sm">
+        <li key={status}>
+          {/* The whole row is the link, so it's a thumb-sized target on a phone. */}
           <Link
-            href={`/board`}
-            className="truncate rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            href={`/board?view=all&status=${status}`}
+            className="grid min-h-11 grid-cols-[10.5rem_1fr_2rem] items-center gap-2 rounded-md px-2 text-sm transition-colors duration-150 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-accent active:duration-0"
           >
-            {STATUS_LABELS[status]}
+            <span className="truncate">{STATUS_LABELS[status]}</span>
+            <span className="h-[14px]" aria-hidden>
+              {value > 0 && (
+                <span
+                  className="block h-full rounded-r-[4px]"
+                  style={{ width: `${(value / max) * 100}%`, minWidth: 4, backgroundColor: BAR_COLOR }}
+                />
+              )}
+            </span>
+            <span className="text-right font-semibold tabular-nums">{value}</span>
           </Link>
-          <span className="h-[14px]" aria-hidden>
-            {value > 0 && (
-              <span
-                className="block h-full rounded-r-[4px]"
-                style={{ width: `${(value / max) * 100}%`, minWidth: 4, backgroundColor: BAR_COLOR }}
-              />
-            )}
-          </span>
-          <span className="text-right font-semibold tabular-nums">{value}</span>
         </li>
       ))}
     </ul>
@@ -157,6 +158,7 @@ export function EventList({
   empty,
   meta,
   href,
+  moreHref,
   staff,
   className,
 }: {
@@ -169,6 +171,8 @@ export function EventList({
   empty: string;
   meta: (e: EventRow) => React.ReactNode;
   href?: { label: string; to: string };
+  /** Where "and N more" leads, so the rest of the list is one tap away. */
+  moreHref?: string;
 }) {
   const staffById = new Map(staff.map((s) => [s.id, s]));
   return (
@@ -209,7 +213,19 @@ export function EventList({
               </Peek>
             </li>
           ))}
-          {events.length > 8 && <li className="px-4 py-2 text-xs text-muted-foreground">and {events.length - 8} more</li>}
+          {events.length > 8 &&
+            (moreHref ? (
+              <li>
+                <Link
+                  href={moreHref}
+                  className="flex min-h-11 items-center px-4 text-sm font-medium underline underline-offset-4 transition-colors duration-150 hover:bg-accent/60 focus-visible:bg-accent focus-visible:outline-none active:bg-accent active:duration-0"
+                >
+                  and {events.length - 8} more
+                </Link>
+              </li>
+            ) : (
+              <li className="px-4 py-2 text-xs text-muted-foreground">and {events.length - 8} more</li>
+            ))}
         </ul>
       )}
     </section>

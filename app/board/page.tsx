@@ -20,7 +20,9 @@ export default function BoardPage() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Pipeline</h1>
-          <p className="text-sm text-muted-foreground">Drag a card by its handle to move it a step.</p>
+          <Suspense fallback={null}>
+            <MoveHint />
+          </Suspense>
         </div>
         <Suspense fallback={null}>
           <NewEventButton />
@@ -31,6 +33,13 @@ export default function BoardPage() {
       </Suspense>
     </main>
   );
+}
+
+// Signed-out viewers can't move cards; the read-only notice speaks to them instead.
+async function MoveHint() {
+  const me = await getCurrentStaff();
+  if (!me) return null;
+  return <p className="text-sm text-muted-foreground">Tap Move on a card, or drag it by its handle.</p>;
 }
 
 async function NewEventButton() {

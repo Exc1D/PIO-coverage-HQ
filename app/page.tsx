@@ -176,6 +176,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
               </span>
             )}
             href={{ label: "Assign people", to: "/needs-assignment" }}
+            moreHref="/needs-assignment"
           />
         )}
         <EventList
@@ -184,6 +185,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
           events={stuck}
           staff={staff}
           empty="Nothing is overdue."
+          moreHref="/board?view=all&stuck=1"
           meta={(e) => (
             <>
               <StatusBadge status={e.status} />
