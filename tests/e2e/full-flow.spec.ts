@@ -14,7 +14,8 @@ async function expectStatus(page: Page, value: string) {
 
 /** The dashboard's "Posts published" tile and Ana's "written" credit for this week. */
 async function readDashboard(page: Page) {
-  await signIn(page, "Grace S.");
+  // As Ana: the work-by-person tabs open on the viewer's own kind of work, and hers is writing.
+  await signIn(page, "Ana R.");
   await page.goto("/?period=week");
   const posts = Number(await page.getByRole("group", { name: "Posts published" }).locator("[data-value]").getAttribute("data-value"));
   const written = page.getByRole("region", { name: "Articles written" });

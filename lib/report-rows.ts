@@ -2,7 +2,7 @@
 // export so the two can never disagree.
 
 import { staffName } from "./format";
-import { COVERAGE_SHORT, MUNICIPALITY_LABELS, SOURCE_LABELS, type Source } from "./constants";
+import { COVERAGE_SHORT, MUNICIPALITY_LABELS, ROLE_LABELS, SOURCE_LABELS, type Source } from "./constants";
 import { creditsByPerson, emptyCredit, postsGroupedBySource, type Credit, type Period } from "./metrics";
 import { formatManila, manilaStartOfDay } from "./time";
 import type { EventRow, Staff } from "./types";
@@ -72,7 +72,7 @@ export function peopleRows(events: readonly EventRow[], period: Period, staff: r
       return {
         id: s.id,
         name: s.display_name + (s.active ? "" : " (inactive)"),
-        roles: s.roles.filter((r) => (PEOPLE_ROLES as readonly string[]).includes(r)).join(", "),
+        roles: s.roles.filter((r) => (PEOPLE_ROLES as readonly string[]).includes(r)).map((r) => ROLE_LABELS[r]).join(", "),
         ...c,
         total: c.written + c.proofread + c.photographed + c.videographed + c.edited + c.liveCamera + c.liveObs,
       };

@@ -10,7 +10,7 @@ import type { Staff } from "@/lib/types";
 import { clearFilters, hasFilters, readFilters, RECENT_POSTED_DAYS, setParam } from "./board-filters";
 
 const field =
-  "h-10 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: boolean }) {
   const f = readFilters(new URLSearchParams(useSearchParams()));
@@ -25,7 +25,7 @@ export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: bool
 
   return (
     <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <FilterIcon className="size-4" aria-hidden />
         Filters
         {active && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">On</span>}
@@ -89,7 +89,7 @@ export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: bool
         <div className="flex flex-wrap items-end justify-between gap-x-3 lg:flex-col lg:items-stretch">
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" className="size-4 accent-primary" checked={f.stuck} onChange={(e) => setParam("stuck", e.target.checked ? "1" : null)} />
-            Stuck only
+            Late only
           </label>
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" className="size-4 accent-primary" checked={f.cancelled} onChange={(e) => setParam("cancelled", e.target.checked ? "1" : null)} />

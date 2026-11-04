@@ -41,7 +41,7 @@ export function EventDrawer({ id, title, children }: { id: string; title: React.
   return (
     <Sheet open={open} onOpenChange={(o) => !o && close()}>
       <SheetContent side="auto" onCloseAutoFocus={returnFocus} className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
-        <SheetHeader className="sticky top-0 z-10 flex-row items-center justify-between rounded-t-[22px] border-b bg-background/85 px-4 pt-5 pb-3 pr-14 backdrop-blur-xl backdrop-saturate-150 sm:rounded-none sm:pt-3">
+        <SheetHeader className="sticky top-0 z-10 flex-row items-center justify-between rounded-t-[22px] border-b bg-background px-4 pt-5 pb-3 pr-14 sm:rounded-none sm:pt-3">
           <SheetTitle className="text-sm font-medium text-muted-foreground">
             <span aria-hidden>Event</span>
             <span className="sr-only">{title}</span>
