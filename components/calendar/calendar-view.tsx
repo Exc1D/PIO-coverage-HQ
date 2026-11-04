@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { SourceChip, StatusBadge } from "@/components/app/labels";
 import { Peek } from "@/components/app/peek";
 import { byDay as groupByDay, type GridDay } from "@/lib/calendar";
@@ -58,12 +59,14 @@ function Chip({ item, alignRight }: { item: CalItem; alignRight: boolean }) {
         <Link
           href={`/events/${item.id}`}
           prefetch={false}
-          className="block truncate rounded-[4px] border-l-[3px] bg-muted/60 py-0.5 pl-1.5 pr-1 text-xs leading-5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          style={{ borderLeftColor: color }}
+          className="flex items-center gap-1 rounded-[4px] bg-muted/60 px-1 py-0.5 text-xs leading-5 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`${item.title}, ${item.source ? SOURCE_LABELS[item.source] : "no source"}, ${STATUS_LABELS[item.status]}${item.time ? `, ${item.time}` : ""}`}
         >
-          {item.time && <span className="mr-1 tabular-nums text-muted-foreground">{item.time.replace(/:00 /, " ").replace(" ", "").toLowerCase()}</span>}
-          {item.title}
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <span className="min-w-0 truncate">
+            {item.time && <span className="mr-1 tabular-nums text-muted-foreground">{item.time.replace(/:00 /, " ").replace(" ", "").toLowerCase()}</span>}
+            {item.title}
+          </span>
         </Link>
       </Peek>
     </li>
@@ -87,6 +90,16 @@ export function CalendarView({
   const initial = today.startsWith(month) ? today : `${month}-01`;
   const [selected, setSelected] = useState(initial);
   const dayItems = byDay.get(selected) ?? [];
+  const panel = useRef<HTMLElement>(null);
+
+  // On a phone the list sits below the month, often off screen: bring it into view, or the tap looks like it did nothing.
+  function pick(date: string, clicks: number) {
+    flushSync(() => setSelected(date));
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    panel.current?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+    // Enter or Space reports 0 clicks. Stacked below the month, that scroll can carry the focused day off screen, so focus follows it.
+    if (clicks === 0 && !window.matchMedia("(min-width: 1024px)").matches) panel.current?.focus({ preventScroll: true });
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
@@ -113,7 +126,7 @@ export function CalendarView({
                     <td
                       key={d.date}
                       className={cn(
-                        "h-16 border-b border-r align-top last:border-r-0 md:h-28",
+                        "relative h-16 border-b border-r align-top last:border-r-0 md:h-28",
                         !d.inMonth && "bg-muted/30",
                         isSelected && "bg-accent/70",
                       )}
@@ -121,11 +134,12 @@ export function CalendarView({
                       <div className="flex h-full flex-col gap-1 p-1">
                         <button
                           type="button"
-                          onClick={() => setSelected(d.date)}
+                          onClick={(e) => pick(d.date, e.detail)}
                           aria-label={label}
                           aria-pressed={isSelected}
+                          // The ::after stretches the tap target over the whole cell.
                           className={cn(
-                            "flex items-center gap-1 self-start rounded-md px-1 text-xs tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "flex items-center gap-1 self-start rounded-md px-1 text-xs tabular-nums after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                             !d.inMonth && "text-muted-foreground",
                           )}
                         >
@@ -141,23 +155,17 @@ export function CalendarView({
 
                         {/* Phones: dots and a count; tap the day to list its events below. */}
                         {list.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setSelected(d.date)}
-                            tabIndex={-1}
-                            aria-hidden
-                            className="flex flex-1 flex-wrap content-start items-center gap-0.5 px-1 md:hidden"
-                          >
+                          <div aria-hidden className="flex flex-1 flex-wrap content-start items-center gap-0.5 px-1 md:hidden">
                             {list.slice(0, 4).map((it) => (
                               <span key={it.id} className="size-2 rounded-full" style={{ backgroundColor: it.source ? SOURCE_COLORS[it.source] : "#a3a3a3" }} />
                             ))}
                             {list.length > 4 && <span className="text-[10px] text-muted-foreground">+{list.length - 4}</span>}
-                          </button>
+                          </div>
                         )}
 
                         {/* Larger screens: chips with hover details; click opens the event. */}
                         {list.length > 0 && (
-                          <ul className="hidden min-w-0 flex-col gap-0.5 md:flex">
+                          <ul className="relative z-10 hidden min-w-0 flex-col gap-0.5 md:flex">
                             {list.slice(0, MAX_CHIPS).map((it) => (
                               <Chip key={it.id} item={it} alignRight={col >= 4} />
                             ))}
@@ -165,7 +173,7 @@ export function CalendarView({
                               <li>
                                 <button
                                   type="button"
-                                  onClick={() => setSelected(d.date)}
+                                  onClick={(e) => pick(d.date, e.detail)}
                                   className="rounded-sm px-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 >
                                   +{list.length - MAX_CHIPS} more
@@ -184,7 +192,13 @@ export function CalendarView({
         </table>
       </div>
 
-      <section aria-live="polite" aria-labelledby="day-h" className="rounded-xl border bg-card">
+      <section
+        ref={panel}
+        tabIndex={-1}
+        aria-live="polite"
+        aria-labelledby="day-h"
+        className="scroll-mt-20 scroll-mb-[calc(3.25rem+env(safe-area-inset-bottom)+1rem)] rounded-xl border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:scroll-mb-4"
+      >
         <h2 id="day-h" className="border-b px-4 py-3 text-sm font-semibold">
           {formatManila(manilaStartOfDay(selected), "EEEE, MMMM d")}
           <span className="ml-1 font-normal text-muted-foreground">· {dayItems.length}</span>

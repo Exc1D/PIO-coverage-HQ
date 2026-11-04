@@ -21,19 +21,17 @@ export function StatTile({
   value,
   hint,
   delta,
-  tone = "default",
 }: {
   label: string;
   value: number;
   hint?: string;
   /** Change vs previous period; up is good for these tiles. */
   delta?: { value: number; against: string };
-  tone?: "default" | "alert";
 }) {
   const d = delta?.value ?? 0;
   const Icon = d > 0 ? ArrowUpRightIcon : d < 0 ? ArrowDownRightIcon : MinusIcon;
   return (
-    <div role="group" aria-label={label} className={cn("rounded-xl border bg-card p-4", tone === "alert" && value > 0 && "border-red-200 bg-red-50/40")}>
+    <div role="group" aria-label={label} className="rounded-xl border bg-card p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="mt-1 text-3xl font-semibold tracking-tight" data-value={value}>
         {value.toLocaleString("en-PH")}

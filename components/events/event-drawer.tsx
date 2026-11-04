@@ -12,7 +12,7 @@ const CLOSE_MS = 300;
  * An intercepted /events/[id]: a pull-down sheet on phones, a side panel on larger
  * screens. Closing goes back to the page underneath.
  */
-export function EventDrawer({ id, children }: { id: string; children: React.ReactNode }) {
+export function EventDrawer({ id, title, children }: { id: string; title: React.ReactNode; children: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(true);
   // Next keeps this route alive (hidden) after going back. Effects clean up when it's
@@ -27,11 +27,25 @@ export function EventDrawer({ id, children }: { id: string; children: React.Reac
     }, CLOSE_MS);
   }
 
+  // The drawer opens by route, so the dialog has no trigger to hand focus back to, and focus would fall to the page's top.
+  function returnFocus(e: Event) {
+    e.preventDefault();
+    // ponytail: an event listed twice gets its first visible link, not necessarily the one tapped.
+    for (const link of document.querySelectorAll<HTMLElement>(`a[href="/events/${id}"]`)) {
+      if (link.closest('[role="dialog"]')) continue;
+      link.focus();
+      if (document.activeElement === link) return;
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && close()}>
-      <SheetContent side="auto" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
+      <SheetContent side="auto" onCloseAutoFocus={returnFocus} className="w-full gap-0 overflow-y-auto p-0 sm:max-w-xl">
         <SheetHeader className="sticky top-0 z-10 flex-row items-center justify-between rounded-t-[22px] border-b bg-background/85 px-4 pt-5 pb-3 pr-14 backdrop-blur-xl backdrop-saturate-150 sm:rounded-none sm:pt-3">
-          <SheetTitle className="text-sm font-medium text-muted-foreground">Event</SheetTitle>
+          <SheetTitle className="text-sm font-medium text-muted-foreground">
+            <span aria-hidden>Event</span>
+            <span className="sr-only">{title}</span>
+          </SheetTitle>
           <SheetDescription className="sr-only">Event details, actions and activity</SheetDescription>
           {/* Plain anchor: a full load renders the page instead of re-opening the drawer. */}
           <a

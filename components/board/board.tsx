@@ -27,6 +27,7 @@ import { STATUS_LABELS, type Status } from "@/lib/constants";
 import { defaultView, isMyEvent, readView, viewColumns, viewsFor, type View } from "@/lib/focus";
 import type { EventRow, Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { worstFirst } from "@/lib/metrics";
 import { dropCommand } from "@/lib/workflow";
 import { matchesFilters, readFilters, setParam } from "./board-filters";
 import { EventCard } from "./event-card";
@@ -116,7 +117,7 @@ export function Board({ events, staff, me, today }: Props) {
   // The latest copy, not the one from when the dialog opened: after a conflict the page reloads
   // the event, and the dialog must describe and submit what is true now.
   const dialogEvent = dialog ? events.find((e) => e.id === dialog.event.id) ?? dialog.event : null;
-  const cardsIn = (status: Status) => visible.filter((e) => e.status === status);
+  const cardsIn = (status: Status) => worstFirst(visible.filter((e) => e.status === status), today);
   // Switching view or filters can drop the marked column, so fall back to the first.
   const currentColumn = inView && columns.includes(inView) ? inView : columns[0];
 
