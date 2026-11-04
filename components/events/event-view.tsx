@@ -91,6 +91,20 @@ export function EventView({
   const name = (id: string | null) => staffName(staff, id);
   const nameOrSomeone = (id: string | null | undefined) => name(id ?? null) ?? "someone";
   const stuck = isStuck(event, today);
+  const goTo = (id: string) => {
+    const heading = document.getElementById(id);
+    heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+    heading?.focus({ preventScroll: true });
+  };
+  // What clears a blocked action, if this person can do it. Otherwise the reason says who can.
+  const blockFix = (type: CommandType): { label: string; onClick: () => void } | null => {
+    if (type === "schedule" && avail.edit_details.state === "available") return { label: "Edit details", onClick: () => setEditing(true) };
+    if (type !== "mark_covered") return null;
+    // Coverage can't be ticked until a live stream has its crew, so the team comes first.
+    if (avail.set_coverage_confirmed.state === "blocked") return { label: "Go to Team", onClick: () => goTo("team-h") };
+    if (avail.set_coverage_confirmed.state === "available") return { label: "Go to Checklist", onClick: () => goTo("progress-h") };
+    return null;
+  };
   const Heading = headingLevel;
 
   const trigger = (type: CommandType) => (isInput(type) ? setDialog(type) : run({ type } as CommandPayload));
@@ -152,8 +166,9 @@ export function EventView({
           <div className="grid gap-2">
             {forward.map((a) => {
               const st = avail[a.type];
+              const fix = st.state === "blocked" ? blockFix(a.type) : null;
               return (
-                <div key={a.type} className="grid gap-1">
+                <div key={a.type} className="grid gap-2">
                   <Button
                     size="lg"
                     className="h-11 justify-center"
@@ -163,9 +178,14 @@ export function EventView({
                     {actionLabel(a)}
                   </Button>
                   {st.state === "blocked" && (
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <LockIcon className="size-3" aria-hidden /> {st.reason}
+                    <p className="flex items-start gap-2 text-sm font-medium">
+                      <LockIcon className="mt-0.5 size-4 shrink-0" aria-hidden /> {st.reason}
                     </p>
+                  )}
+                  {fix && (
+                    <Button variant="outline" className="h-11" onClick={fix.onClick}>
+                      {fix.label}
+                    </Button>
                   )}
                 </div>
               );
@@ -351,7 +371,7 @@ function Section({ title, id, action, children }: { title: string; id: string; a
   return (
     <section className="grid gap-2" aria-labelledby={id}>
       <div className="flex min-h-8 items-center justify-between gap-2">
-        <h3 id={id} className="text-sm font-semibold">
+        <h3 id={id} tabIndex={-1} className="scroll-mt-16 text-sm font-semibold outline-none">
           {title}
         </h3>
         {action}

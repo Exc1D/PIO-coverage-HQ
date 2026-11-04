@@ -83,7 +83,19 @@ describe("board filters", () => {
       from: null,
       to: "2026-10-31",
       cancelled: true,
+      stuck: false,
+      status: null,
     });
+  });
+
+  it("narrows to stuck events and to one stage", () => {
+    const stuck = readFilters(new URLSearchParams("stuck=1"));
+    expect(matchesFilters(ev({ status: "covered", due_date: "2026-10-19" }), stuck, today)).toBe(true);
+    expect(matchesFilters(ev({ status: "covered", due_date: "2026-10-20" }), stuck, today)).toBe(false);
+    const covered = readFilters(new URLSearchParams("status=covered"));
+    expect(matchesFilters(ev({ status: "covered" }), covered, today)).toBe(true);
+    expect(matchesFilters(ev({ status: "scheduled" }), covered, today)).toBe(false);
+    expect(readFilters(new URLSearchParams("status=bogus")).status).toBeNull();
   });
 
   it("filters by source, place, person and dates", () => {

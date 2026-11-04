@@ -1,6 +1,7 @@
 // Board filters live in the URL so a filtered board can be shared.
 
-import { MUNICIPALITIES, SLOTS, SOURCES, type Municipality, type Source } from "@/lib/constants";
+import { MUNICIPALITIES, PIPELINE, SLOTS, SOURCES, type Municipality, type Source, type Status } from "@/lib/constants";
+import { isStuck } from "@/lib/metrics";
 import { addDays, isDateString, manilaDate } from "@/lib/time";
 import type { EventRow } from "@/lib/types";
 
@@ -11,6 +12,8 @@ export type BoardFilters = {
   from: string | null;
   to: string | null;
   cancelled: boolean;
+  stuck: boolean;
+  status: Status | null;
 };
 
 /** Without a date range, the Posted column shows only recent posts. */
@@ -21,6 +24,7 @@ export function readFilters(params: URLSearchParams): BoardFilters {
   const municipality = params.get("municipality");
   const from = params.get("from");
   const to = params.get("to");
+  const status = params.get("status");
   return {
     source: (SOURCES as readonly string[]).includes(source ?? "") ? (source as Source) : null,
     municipality: (MUNICIPALITIES as readonly string[]).includes(municipality ?? "") ? (municipality as Municipality) : null,
@@ -28,11 +32,13 @@ export function readFilters(params: URLSearchParams): BoardFilters {
     from: from && isDateString(from) ? from : null,
     to: to && isDateString(to) ? to : null,
     cancelled: params.get("cancelled") === "1",
+    stuck: params.get("stuck") === "1",
+    status: PIPELINE.includes(status as Status) ? (status as Status) : null,
   };
 }
 
 export function hasFilters(f: BoardFilters): boolean {
-  return Boolean(f.source || f.municipality || f.person || f.from || f.to || f.cancelled);
+  return Boolean(f.source || f.municipality || f.person || f.from || f.to || f.cancelled || f.stuck || f.status);
 }
 
 export function matchesFilters(e: EventRow, f: BoardFilters, today: string): boolean {
@@ -41,6 +47,8 @@ export function matchesFilters(e: EventRow, f: BoardFilters, today: string): boo
   if (f.person && !SLOTS.some((slot) => e[`${slot}_id`] === f.person)) return false;
   if (f.from && e.event_date < f.from) return false;
   if (f.to && e.event_date > f.to) return false;
+  if (f.stuck && !isStuck(e, today)) return false;
+  if (f.status && e.status !== f.status) return false;
   if (e.status === "cancelled" && !f.cancelled) return false;
   if (e.status === "posted" && !f.from && !f.to) {
     const since = addDays(today, -RECENT_POSTED_DAYS);
