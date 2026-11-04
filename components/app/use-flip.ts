@@ -3,6 +3,8 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
 
 type Point = { x: number; y: number };
+/** An item something else is carrying to its spot, and when that trip ends (`performance.now()` time). */
+export type Landing = { id: string; until: number };
 
 export const MOVE_MS = 240;
 export const MOVE_EASING = "cubic-bezier(0.25, 1, 0.5, 1)"; // ease-out-quart; the Web Animations API can't read CSS variables.
@@ -24,6 +26,11 @@ export function flipOffset(before: Point | undefined, after: Point): Point | "ne
   return x || y ? { x, y } : null;
 }
 
+/** How long an item must stay hidden while its landing finishes. */
+export function landingMs(landing: Landing | null | undefined, id: string, now: number) {
+  return landing?.id === id ? Math.max(0, landing.until - now) : 0;
+}
+
 function onScreen(r: { left: number; right: number; top: number; bottom: number }) {
   return r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight;
 }
@@ -35,20 +42,20 @@ function onScreen(r: { left: number; right: number; top: number; bottom: number 
  * still travels. `useOptimistic` updates are urgent, not transitions, so React's <ViewTransition> sits
  * these out.
  *
- * `landingRef` names an item something else is already carrying to its new spot (a dropped card's drag
- * overlay). It stays hidden for that trip instead of sliding too, so there's only ever one copy on screen.
+ * `landingRef` names an item something else is already carrying to its spot (a dropped card's drag
+ * overlay). It stays hidden until that trip ends, moved or not, so there's only ever one copy on screen.
+ * It goes by the clock rather than the next render: the overlay clearing and the card moving can commit
+ * separately, and a move confirmed later in a dialog should slide as usual.
  *
  * ponytail: an item that moves again mid-slide restarts from its old layout spot, a small jump. It shows
  * when a save is rejected within the slide. Read the running transform if that ever bothers anyone.
  */
-export function useFlip<T extends HTMLElement>(landingRef?: RefObject<string | null>) {
+export function useFlip<T extends HTMLElement>(landingRef?: RefObject<Landing | null>) {
   const container = useRef<T>(null);
   const last = useRef<{ width: number; at: Map<string, Point> } | null>(null);
 
   // No deps on purpose: any render can move things, and an unchanged layout costs only the reads.
   useLayoutEffect(() => {
-    const landingId = landingRef?.current;
-    if (landingRef) landingRef.current = null;
     if (!container.current) return;
     const items = [...container.current.querySelectorAll<HTMLElement>("[data-flip-id]")];
     const at = new Map(items.map((el) => [el.dataset.flipId as string, { x: el.offsetLeft, y: el.offsetTop }]));
@@ -57,14 +64,16 @@ export function useFlip<T extends HTMLElement>(landingRef?: RefObject<string | n
     // A rotated phone or resized window moves everything, and that isn't a change worth showing.
     if (!prev || prev.width !== window.innerWidth || prefersReducedMotion()) return;
 
+    const now = performance.now();
     for (const el of items) {
       const id = el.dataset.flipId as string;
-      const offset = flipOffset(prev.at.get(id), at.get(id) as Point);
-      if (!offset) continue;
-      if (id === landingId) {
-        el.animate({ opacity: [0, 0] }, MOVE_MS);
+      const hideMs = landingMs(landingRef?.current, id, now);
+      if (hideMs) {
+        el.animate({ opacity: [0, 0] }, hideMs);
         continue;
       }
+      const offset = flipOffset(prev.at.get(id), at.get(id) as Point);
+      if (!offset) continue;
       const r = el.getBoundingClientRect();
       if (offset === "new") {
         if (onScreen(r)) el.animate({ opacity: [0, 1] }, { duration: MOVE_MS, easing: MOVE_EASING });

@@ -21,7 +21,9 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<FormSkeleton />}>
-            <LoginLoader searchParams={searchParams} />
+            <div className="ios-reveal">
+              <LoginLoader searchParams={searchParams} />
+            </div>
           </Suspense>
         </CardContent>
       </Card>

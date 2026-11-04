@@ -14,6 +14,7 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { InboxIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -22,7 +23,7 @@ import { toast } from "sonner";
 import { CommandDialog, type InputCommand } from "@/components/events/command-dialog";
 import { useCommandRunner } from "@/components/events/use-command-runner";
 import { STATUS_ACCENT } from "@/components/app/labels";
-import { MOVE_EASING, MOVE_MS, prefersReducedMotion, scrollBehavior, useFlip } from "@/components/app/use-flip";
+import { type Landing, MOVE_EASING, MOVE_MS, prefersReducedMotion, scrollBehavior, useFlip } from "@/components/app/use-flip";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS, type Status } from "@/lib/constants";
 import { defaultView, isMyEvent, readView, viewColumns, viewsFor, type View } from "@/lib/focus";
@@ -74,7 +75,7 @@ export function Board({ events, staff, me, today }: Props) {
   const [dialog, setDialog] = useState<{ event: EventRow; type: InputCommand } | null>(null);
   const [inView, setInView] = useState<Status | null>(null);
   const jumpStrip = useRef<HTMLElement>(null);
-  const dropped = useRef<string | null>(null);
+  const dropped = useRef<Landing | null>(null);
   const columnsRow = useFlip<HTMLDivElement>(dropped);
 
   const sensors = useSensors(
@@ -107,9 +108,13 @@ export function Board({ events, staff, me, today }: Props) {
     setActiveId(String(e.active.id));
   }
 
-  function onDragEnd(e: DragEndEvent) {
+  function endDrag(id: UniqueIdentifier) {
     setActiveId(null);
-    dropped.current = String(e.active.id);
+    dropped.current = { id: String(id), until: performance.now() + MOVE_MS };
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    endDrag(e.active.id);
     const event = optimistic.find((x) => x.id === e.active.id);
     const to = e.over?.id as Status | undefined;
     if (event && to) onMove(event, to);
@@ -152,7 +157,7 @@ export function Board({ events, staff, me, today }: Props) {
       sensors={sensors}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={(e) => endDrag(e.active.id)}
       collisionDetection={collisionDetection}
       autoScroll={AUTO_SCROLL}
       accessibility={{
