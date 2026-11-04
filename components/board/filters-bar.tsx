@@ -13,15 +13,18 @@ const field =
   "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: boolean }) {
-  const f = readFilters(new URLSearchParams(useSearchParams()));
+  const params = new URLSearchParams(useSearchParams());
+  if (viewOnly) params.delete("person"); // The board ignores it too, so it can't count as a filter here.
+  const f = readFilters(params);
   const active = hasFilters(f);
   // Opens by itself when the page loads filtered; after that only the person opens or
   // closes it, so clearing the last filter doesn't fold the panel away mid-edit. Arriving from a
   // dashboard link (stuck, or one stage) stays folded: on a phone the panel would push the cards off screen.
   const [open, setOpen] = useState(hasFilters({ ...f, stuck: false, status: null }));
   // Signed-out viewers only get filters when a shared link already set some, so the cards come first on a phone.
-  const [show] = useState(!viewOnly || active);
-  if (!show) return null;
+  const [show, setShow] = useState(!viewOnly || active);
+  if (active && !show) setShow(true); // A later navigation set some.
+  if (!show && !active) return null;
 
   return (
     <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>

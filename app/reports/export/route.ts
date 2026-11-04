@@ -8,7 +8,8 @@ import { periodSlug } from "@/lib/report-rows";
 
 // GET /reports/export?kind=month|week&date=yyyy-MM-dd&table=posts|people
 export async function GET(request: NextRequest) {
-  if (!(await getCurrentStaff())) redirect("/login?next=/reports"); // Credits every person by name.
+  // Credits every person by name. Back to the report for this period, whose download links work once signed in.
+  if (!(await getCurrentStaff())) redirect(`/login?next=${encodeURIComponent(`/reports${request.nextUrl.search}`)}`);
   const params = Object.fromEntries(request.nextUrl.searchParams);
   const period = reportPeriod(params, new Date());
   const table = params.table === "people" ? "people" : "posts";

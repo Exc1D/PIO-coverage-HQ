@@ -57,6 +57,7 @@ const AUTO_SCROLL = { acceleration: 2, threshold: { x: 0.15, y: 0.2 } };
 
 export function Board({ events, staff, me, today }: Props) {
   const params = new URLSearchParams(useSearchParams());
+  if (!me) params.delete("person"); // Signed out, nobody can be picked out by their id.
   const filters = readFilters(params);
   const view = readView(params.get("view"), me);
   const staffById = new Map(staff.map((s) => [s.id, s]));

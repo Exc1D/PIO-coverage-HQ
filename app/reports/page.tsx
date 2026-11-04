@@ -36,9 +36,9 @@ const td = "px-2 py-1.5 align-top";
 
 async function Report({ searchParams }: { searchParams: PageProps<"/reports">["searchParams"] }) {
   await connection();
-  if (!(await getCurrentStaff())) redirect("/login?next=/reports"); // Credits every person by name.
   const now = new Date();
   const period = reportPeriod(await searchParams, now);
+  if (!(await getCurrentStaff())) redirect(`/login?next=${encodeURIComponent(`/reports?${qs(period)}`)}`); // Credits every person by name.
   const prev = previousPeriod(period);
   const next = nextPeriod(period);
   const isFuture = next.startDate > manilaDate(now);
