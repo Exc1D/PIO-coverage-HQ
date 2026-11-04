@@ -1,11 +1,13 @@
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { PrintButton } from "@/components/reports/print-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentStaff } from "@/lib/auth/session";
 import { SOURCE_COLORS } from "@/lib/constants";
 import { loadReport } from "@/lib/data/reports";
 import { nextPeriod, previousPeriod, type Period } from "@/lib/metrics";
@@ -36,6 +38,7 @@ async function Report({ searchParams }: { searchParams: PageProps<"/reports">["s
   await connection();
   const now = new Date();
   const period = reportPeriod(await searchParams, now);
+  if (!(await getCurrentStaff())) redirect(`/login?next=${encodeURIComponent(`/reports?${qs(period)}`)}`); // Credits every person by name.
   const prev = previousPeriod(period);
   const next = nextPeriod(period);
   const isFuture = next.startDate > manilaDate(now);

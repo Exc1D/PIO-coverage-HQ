@@ -4,8 +4,9 @@ import { z } from "zod";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
 import { openCaptionFeedback } from "@/lib/activity";
-import { getActivity, getCaptionRevisions, getEvent, redactForViewer } from "@/lib/data/events";
+import { getActivity, getCaptionRevisions, getEvent } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
+import { redactForViewer, staffForViewer } from "@/lib/format";
 import { manilaDate } from "@/lib/time";
 import { ActivityTimeline } from "./activity-timeline";
 import { EventView } from "./event-view";
@@ -27,12 +28,12 @@ export async function EventTitle({ id }: { id: string }) {
 export async function EventDetail({ id, headingLevel }: { id: string; headingLevel: "h1" | "h2" }) {
   if (!z.uuid().safeParse(id).success) notFound();
   const signedIn = getCurrentStaff();
-  // Caption history is a working tool for staff; viewers see only the current
-  // caption. Only that query waits for the session; the rest start right away.
+  // Caption history and the activity log are working tools for staff, and their free
+  // text can name people. Only those queries wait for the session; the rest start right away.
   const [me, event, activity, staff, revisions] = await Promise.all([
     signedIn,
     loadEvent(id),
-    getActivity(id),
+    signedIn.then((me) => (me ? getActivity(id) : [])),
     listStaff(),
     signedIn.then((me) => (me ? getCaptionRevisions(id) : [])),
   ]);
@@ -42,7 +43,7 @@ export async function EventDetail({ id, headingLevel }: { id: string; headingLev
     <div className="grid gap-8">
       <EventView
         event={redactForViewer(event, me !== null)}
-        staff={staff}
+        staff={staffForViewer(staff, me !== null)}
         me={me}
         today={manilaDate(new Date())}
         requesterHidden={me === null && Boolean(event.requested_by || event.contact)}
@@ -50,7 +51,7 @@ export async function EventDetail({ id, headingLevel }: { id: string; headingLev
         captionRevisions={revisions}
         captionFeedback={me ? openCaptionFeedback(activity) : null}
       />
-      <ActivityTimeline activity={activity} staff={staff} />
+      {me && <ActivityTimeline activity={activity} staff={staff} />}
     </div>
   );
 }

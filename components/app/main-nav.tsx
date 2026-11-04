@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClockIcon, CalendarDaysIcon, ChartPieIcon, FileTextIcon, SquareKanbanIcon, UserPlusIcon, type LucideIcon } from "lucide-react";
+import { CalendarClockIcon, CalendarDaysIcon, ChartPieIcon, FileTextIcon, HouseIcon, SquareKanbanIcon, UserPlusIcon, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type NavLink = { href: string; label: string; icon: LucideIcon };
 
 const DASHBOARD: NavLink = { href: "/", label: "Dashboard", icon: ChartPieIcon };
+const HOME: NavLink = { href: "/", label: "Home", icon: HouseIcon };
 const MY_WORK: NavLink = { href: "/me", label: "My work", icon: CalendarClockIcon };
 const BOARD: NavLink = { href: "/board", label: "Board", icon: SquareKanbanIcon };
 const CALENDAR: NavLink = { href: "/calendar", label: "Calendar", icon: CalendarDaysIcon };
@@ -16,13 +17,13 @@ const REPORTS: NavLink = { href: "/reports", label: "Reports", icon: FileTextIco
 
 /**
  * Who's looking decides the sections (five at most, for the phone tab bar).
- * Staff get My work in place of Assign, which only the head uses; viewers and
- * the head keep Assign (the head's own work is in the account menu).
+ * Staff get My work in place of Assign, which only the head uses (the head's
+ * own work is in the account menu). Signed-out viewers only get what they can read.
  */
 export type NavAudience = "viewer" | "staff" | "head";
 
 const LINKS: Record<NavAudience, NavLink[]> = {
-  viewer: [DASHBOARD, BOARD, CALENDAR, ASSIGN, REPORTS],
+  viewer: [HOME, BOARD, CALENDAR],
   head: [DASHBOARD, BOARD, CALENDAR, ASSIGN, REPORTS],
   staff: [DASHBOARD, MY_WORK, BOARD, CALENDAR, REPORTS],
 };
@@ -35,7 +36,7 @@ const isCurrent = (pathname: string | null, href: string) =>
 
 type Props = { static?: boolean; audience?: NavAudience };
 
-export function MainNav({ static: isStatic, audience = "viewer" }: Props) {
+export function MainNav({ static: isStatic, audience = "head" }: Props) {
   return isStatic ? <NavLinks pathname={null} links={LINKS[audience]} /> : <LiveNav links={LINKS[audience]} />;
 }
 
@@ -68,7 +69,7 @@ function NavLinks({ pathname, links }: { pathname: string | null; links: NavLink
   );
 }
 
-export function TabBar({ static: isStatic, audience = "viewer" }: Props) {
+export function TabBar({ static: isStatic, audience = "head" }: Props) {
   return isStatic ? <TabBarLinks pathname={null} links={LINKS[audience]} /> : <LiveTabBar links={LINKS[audience]} />;
 }
 

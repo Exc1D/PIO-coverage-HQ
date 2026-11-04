@@ -12,13 +12,19 @@ import { clearFilters, hasFilters, readFilters, RECENT_POSTED_DAYS, setParam } f
 const field =
   "h-11 w-full rounded-md border border-input bg-background px-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-export function FiltersBar({ staff }: { staff: Staff[] }) {
-  const f = readFilters(new URLSearchParams(useSearchParams()));
+export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: boolean }) {
+  const params = new URLSearchParams(useSearchParams());
+  if (viewOnly) params.delete("person"); // The board ignores it too, so it can't count as a filter here.
+  const f = readFilters(params);
   const active = hasFilters(f);
   // Opens by itself when the page loads filtered; after that only the person opens or
   // closes it, so clearing the last filter doesn't fold the panel away mid-edit. Arriving from a
   // dashboard link (stuck, or one stage) stays folded: on a phone the panel would push the cards off screen.
   const [open, setOpen] = useState(hasFilters({ ...f, stuck: false, status: null }));
+  // Signed-out viewers only get filters when a shared link already set some, so the cards come first on a phone.
+  const [show, setShow] = useState(!viewOnly || active);
+  if (active && !show) setShow(true); // A later navigation set some.
+  if (!show && !active) return null;
 
   return (
     <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
@@ -61,18 +67,20 @@ export function FiltersBar({ staff }: { staff: Staff[] }) {
             ))}
           </select>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="f-person">Person</Label>
-          <select id="f-person" className={field} value={f.person ?? ""} onChange={(e) => setParam("person", e.target.value || null)}>
-            <option value="">Everyone</option>
-            {staff.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.display_name}
-                {s.active ? "" : " (inactive)"}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!viewOnly && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="f-person">Person</Label>
+            <select id="f-person" className={field} value={f.person ?? ""} onChange={(e) => setParam("person", e.target.value || null)}>
+              <option value="">Everyone</option>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.display_name}
+                  {s.active ? "" : " (inactive)"}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="grid gap-1.5">
           <Label htmlFor="f-from">Event date from</Label>
           <input id="f-from" type="date" className={field} value={f.from ?? ""} max={f.to ?? undefined} onChange={(e) => setParam("from", e.target.value || null)} />

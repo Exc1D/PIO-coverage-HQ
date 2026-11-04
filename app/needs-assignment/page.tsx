@@ -1,8 +1,8 @@
 import { CheckCircle2Icon } from "lucide-react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ViewOnlyNotice } from "@/components/app/view-only-notice";
 import { NeedsAssignmentList } from "@/components/assign/needs-assignment-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
@@ -42,9 +42,10 @@ function workload(events: EventRow[]): Record<string, Record<string, number>> {
 
 async function Loader() {
   await connection();
+  const me = await getCurrentStaff();
+  if (!me) redirect("/login?next=/needs-assignment"); // Staff names and workloads.
   const today = manilaDate(new Date());
-  const [me, events, staff] = await Promise.all([
-    getCurrentStaff(),
+  const [events, staff] = await Promise.all([
     listEventsByDate(today, addDays(today, NEEDS_ASSIGNMENT_DAYS)),
     listStaff(),
   ]);
@@ -56,7 +57,6 @@ async function Loader() {
 
   return (
     <div className="grid gap-6">
-      {!me && <ViewOnlyNotice returnTo="/needs-assignment" />}
       {me && !me.roles.includes("head") && (
         <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">Only the head can assign people.</p>
       )}

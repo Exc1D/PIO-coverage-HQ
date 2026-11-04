@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { CalendarView, type CalItem } from "@/components/calendar/calendar-view";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentStaff } from "@/lib/auth/session";
 import { gridRange, isMonthString, monthGrid, monthOf, shiftMonth } from "@/lib/calendar";
 import { hasLive, MUNICIPALITY_LABELS, SOURCE_COLORS, SOURCE_LABELS, SOURCES } from "@/lib/constants";
 import { listEventsByDate, listPostedInPeriod } from "@/lib/data/events";
@@ -61,13 +62,15 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
   const month = isMonthString(rawMonth) ? rawMonth : monthOf(today);
   const { from, to } = gridRange(month);
 
-  const [events, staff] = await Promise.all([
+  const [me, events, staff] = await Promise.all([
+    getCurrentStaff(),
     view === "events"
       ? listEventsByDate(from, to)
       : listPostedInPeriod({ start: manilaStartOfDay(from), end: manilaStartOfDay(addDays(to, 1)) }),
     listStaff(),
   ]);
-  const items = events.map((e) => toItem(e, view, staff));
+  // Signed-out viewers get no staff names.
+  const items = events.map((e) => ({ ...toItem(e, view, staff), ...(me ? {} : { people: "" }) }));
   const href = (v: View, m: string) => `/calendar?${new URLSearchParams({ view: v, month: m })}`;
   const inMonth = items.filter((i) => i.day.startsWith(month)).length;
 

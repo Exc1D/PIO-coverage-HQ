@@ -7,10 +7,12 @@ import { LazyPersonBars, LazySourceDonut } from "@/components/dashboard/lazy-cha
 import { ChartCard, EmptyChart, EventList, PipelineBars, StatTile, WaitingBoard } from "@/components/dashboard/parts";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
 import { PersonTabs, type PersonTab } from "@/components/dashboard/person-tabs";
+import { ViewOnlyNotice } from "@/components/app/view-only-notice";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentStaff } from "@/lib/auth/session";
 import { SOURCE_COLORS, SOURCE_LABELS, SOURCES, STATUS_LABELS, type Role } from "@/lib/constants";
-import { listEventsForDashboard } from "@/lib/data/events";
+import { listEventsByDate, listEventsForDashboard } from "@/lib/data/events";
 import { listStaff } from "@/lib/data/staff";
 import {
   daysOverdue,
@@ -24,14 +26,16 @@ import {
   type Credit,
   type Period,
 } from "@/lib/metrics";
-import { staffName } from "@/lib/format";
+import { redactForViewer, staffForViewer, staffName } from "@/lib/format";
 import { dashboardPeriod } from "@/lib/period-params";
-import { manilaDate } from "@/lib/time";
+import { addDays, manilaDate } from "@/lib/time";
 import type { Staff } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { isMe, waitingOn } from "@/lib/waiting";
 
-export const metadata: Metadata = { title: "HQ Dashboard" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getCurrentStaff()) ? "HQ Dashboard" : "Coverage this week" };
+}
 
 export default function DashboardPage({ searchParams }: PageProps<"/">) {
   return (
@@ -59,9 +63,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
   await connection();
   const now = new Date();
   const today = manilaDate(now);
+  const me = await getCurrentStaff();
+  if (!me) return <SignedOutHome today={today} />;
   const period = dashboardPeriod(await searchParams, now);
   const prev = previousPeriod(period);
-  const [me, events, staff] = await Promise.all([getCurrentStaff(), listEventsForDashboard([period, prev]), listStaff()]);
+  const [events, staff] = await Promise.all([listEventsForDashboard([period, prev]), listStaff()]);
 
   const s = summarize(events, period, today);
   const p = summarize(events, prev, today);
@@ -112,16 +118,14 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
     { value: "live", roles: ["cameraman", "obs_tech"], label: "Live", content: personCard("Live streams", "Cameraman and OBS tech credits", live) },
   ];
   // Opens on the viewer's own kind of work.
-  const myTab = personTabs.find((t) => me?.roles.some((r) => t.roles.includes(r)));
+  const myTab = personTabs.find((t) => me.roles.some((r) => t.roles.includes(r)));
 
   // Assigning is the head's job, so others don't need the list.
-  const showNeeds = !me || me.roles.includes("head");
-  const onMe = me
-    ? events
-        .map((e) => ({ event: e, tasks: waitingOn(e, today).filter((w) => isMe(w.who, me)).map((w) => w.task) }))
-        .filter((x) => x.tasks.length > 0)
-        .sort((a, b) => Number(isStuck(b.event, today)) - Number(isStuck(a.event, today)) || a.event.due_date.localeCompare(b.event.due_date))
-    : [];
+  const showNeeds = me.roles.includes("head");
+  const onMe = events
+    .map((e) => ({ event: e, tasks: waitingOn(e, today).filter((w) => isMe(w.who, me)).map((w) => w.task) }))
+    .filter((x) => x.tasks.length > 0)
+    .sort((a, b) => Number(isStuck(b.event, today)) - Number(isStuck(a.event, today)) || a.event.due_date.localeCompare(b.event.due_date));
   const tasksFor = new Map(onMe.map((x) => [x.event.id, x.tasks]));
 
   return (
@@ -135,24 +139,22 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
         <PeriodSwitcher period={period} />
       </div>
 
-      {/* Signed in: what needs you comes first. */}
-      {me && (
-        <EventList
-          title="Waiting on you"
-          description="Most days late first"
-          events={onMe.map((x) => x.event)}
-          staff={staff}
-          empty="Nothing is waiting on you right now."
-          meta={(e) => (
-            <>
-              <span className="font-medium text-primary">{tasksFor.get(e.id)?.join(" · ")}</span>
-              {isStuck(e, today) && <OverdueFlag dueDate={e.due_date} />}
-            </>
-          )}
-          href={{ label: "My work", to: "/me" }}
-          className="border-primary/30"
-        />
-      )}
+      {/* What needs you comes first. */}
+      <EventList
+        title="Waiting on you"
+        description="Most days late first"
+        events={onMe.map((x) => x.event)}
+        staff={staff}
+        empty="Nothing is waiting on you right now."
+        meta={(e) => (
+          <>
+            <span className="font-medium text-primary">{tasksFor.get(e.id)?.join(" · ")}</span>
+            {isStuck(e, today) && <OverdueFlag dueDate={e.due_date} />}
+          </>
+        )}
+        href={{ label: "My work", to: "/me" }}
+        className="border-primary/30"
+      />
 
       {/* What's next, in one line. The period's results sit lower down, above the charts. */}
       <p className="flex flex-wrap gap-x-5 text-sm">
@@ -287,6 +289,34 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/">["searc
         </div>
         <PersonTabs tabs={personTabs} initial={myTab?.value ?? "written"} />
       </section>
+    </div>
+  );
+}
+
+/** Staff who haven't signed in and organisers checking on an event: what's coming up, and the way to the board. */
+async function SignedOutHome({ today }: { today: string }) {
+  const [events, staff] = await Promise.all([listEventsByDate(today, addDays(today, 6)), listStaff()]);
+  return (
+    <div className="mx-auto grid w-full max-w-2xl grid-cols-[minmax(0,1fr)] gap-4">
+      <h1 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-3xl">Coverage this week</h1>
+      <EventList
+        title="Next 7 days"
+        description="Events the office is covering, and the stage each is at"
+        events={upcoming(events, today).map((e) => redactForViewer(e, false))}
+        staff={staffForViewer(staff, false)}
+        empty="No events in the next 7 days."
+        moreHref="/calendar"
+        meta={(e) => <StatusBadge status={e.status} />}
+      />
+      <div className="flex flex-wrap gap-3">
+        <Button asChild size="lg">
+          <Link href="/board">See the pipeline board</Link>
+        </Button>
+        <Button asChild size="lg" variant="outline">
+          <Link href="/request">Request coverage</Link>
+        </Button>
+      </div>
+      <ViewOnlyNotice returnTo="/" />
     </div>
   );
 }
