@@ -22,7 +22,9 @@ async function actor(): Promise<Staff | Extract<CommandResult, { ok: false }>> {
     return await requireStaff();
   } catch (e) {
     if (e instanceof AuthError) return { ok: false, code: "auth", message: e.message };
-    throw e;
+    // A throw here would reach the browser as a failed request, which reads as a connection problem.
+    console.error("sign-in check failed", e);
+    return { ok: false, code: "error", message: "We couldn’t check your sign-in. Nothing changed, so please try again." };
   }
 }
 
@@ -39,7 +41,13 @@ export async function runEventCommand(eventId: string, version: number, payload:
     return { ok: false, code: "rejected", message: "Invalid request." };
   }
 
-  const [event, staff] = await Promise.all([getEvent(eventId), listStaffFresh()]);
+  // A throw here would reach the browser as a failed request, which reads as a connection problem.
+  const read = await Promise.all([getEvent(eventId), listStaffFresh()]).catch((e: unknown) => {
+    console.error("runEventCommand read failed", e);
+    return null;
+  });
+  if (!read) return { ok: false, code: "error", message: "That change couldn’t be saved. Nothing changed, so please try again." };
+  const [event, staff] = read;
   if (!event) return { ok: false, code: "not_found", message: "This event no longer exists." };
   if (event.version !== version) {
     refresh();
@@ -119,15 +127,15 @@ const createSchema = detailsSchema.extend({
 });
 
 export async function createEventAction(_prev: CreateEventState, formData: FormData): Promise<CreateEventState> {
-  const me = await actor();
-  if ("ok" in me) return { error: me.message };
-  if (!me.roles.includes("head")) return { error: "Only the head can add events here. Others can use the request form." };
-
   const raw = Object.fromEntries(
     ["title", "event_date", "start_time", "venue", "municipality", "source", "coverage", "requested_by", "contact", "notes"].map(
       (k) => [k, String(formData.get(k) ?? "")],
     ),
   );
+  const me = await actor();
+  if ("ok" in me) return { error: me.message, values: raw };
+  if (!me.roles.includes("head")) return { error: "Only the head can add events here. Others can use the request form." };
+
   const parsed = createSchema.safeParse(raw);
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values: raw };
 
