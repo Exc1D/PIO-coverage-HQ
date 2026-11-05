@@ -22,4 +22,11 @@ describe("findStaffByName", () => {
     expect(findStaffByName(staff, "Rico Mendoza")).toBeNull();
     expect(findStaffByName(staff, "Rico Me.")).toBe(rico2);
   });
+
+  it("lets a short name win over someone else's identical full name, so a short name always signs its owner in", () => {
+    const ana = { id: "4", full_name: "Ana Reyes Cruz", display_name: "Ana Reyes" };
+    const other = { id: "5", full_name: "Ana Reyes", display_name: "Ana R." };
+    expect(findStaffByName([other, ana], "Ana Reyes")).toBe(ana);
+    expect(findStaffByName([other, ana], "Ana R.")).toBe(other);
+  });
 });
