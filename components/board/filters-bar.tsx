@@ -22,15 +22,19 @@ export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: bool
   // closes it, so clearing the last filter doesn't fold the panel away mid-edit. Arriving from a
   // dashboard link (stuck, or one stage) stays folded: on a phone the panel would push the cards off screen.
   const [open, setOpen] = useState(hasFilters({ ...f, stuck: false, status: null }));
-  // Signed-out viewers only get filters when a shared link already set some, so the cards come first on a phone.
-  const [show, setShow] = useState(!viewOnly || active);
-  if (active && !show) setShow(true); // A later navigation set some.
-  // Not tied to the URL while typing: the URL updates a moment later, which would drop typed letters.
-  // It only needs emptying when something else takes the search off the URL, like the nav link to this page.
-  const search = useRef<HTMLInputElement>(null);
   const urlSearch = params.get("q");
+  // Signed-out viewers only get filters once a shared link or a search needs them, so the cards come first on a phone.
+  // Stays once shown, so emptying the box mid-edit doesn't make the page jump.
+  const wantFilters = active || !!urlSearch;
+  const [show, setShow] = useState(!viewOnly || wantFilters);
+  if (wantFilters && !show) setShow(true); // A later navigation or search set some.
+  // Not tied to the URL while typing: the URL updates a moment later, which would drop typed letters.
+  // Instead it catches up when something else changes the search, like the nav link to this page.
+  // The location, not urlSearch, because it is already current while someone types.
+  const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (search.current && !new URLSearchParams(window.location.search).has("q")) search.current.value = "";
+    const q = new URLSearchParams(window.location.search).get("q") ?? "";
+    if (search.current && search.current.value !== q) search.current.value = q;
   }, [urlSearch]);
 
   return (
@@ -47,7 +51,7 @@ export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: bool
           onChange={(e) => setParam("q", e.target.value || null)}
         />
       </div>
-      {(show || active) && <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      {show && <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <FilterIcon className="size-4" aria-hidden />
         Filters
