@@ -207,7 +207,7 @@ export function EventView({
             <Tick
               id="coverage"
               label="Coverage confirmed"
-              hint={tickLockReason(event, "set_coverage_confirmed", actor) ?? "Head"}
+              hint={tickLockReason(event, "set_coverage_confirmed", actor) ?? "Ticked by the head"}
               checked={event.coverage_confirmed}
               enabled={avail.set_coverage_confirmed.state === "available" && !pending}
               onChange={(v) => run({ type: "set_coverage_confirmed", value: v })}
@@ -217,7 +217,7 @@ export function EventView({
                 <Tick
                   id="photos"
                   label="Photos/Video done"
-                  hint={tickLockReason(event, "set_photos_done", actor) ?? "Photographer, videographer or editor"}
+                  hint={tickLockReason(event, "set_photos_done", actor) ?? "Ticked by the photographer, videographer, editor or head"}
                   checked={event.photos_done}
                   enabled={avail.set_photos_done.state === "available" && !pending}
                   onChange={(v) => run({ type: "set_photos_done", value: v })}
@@ -225,7 +225,7 @@ export function EventView({
                 <Tick
                   id="caption"
                   label="Caption done"
-                  hint={tickLockReason(event, "set_caption_done", actor) ?? "Writer"}
+                  hint={tickLockReason(event, "set_caption_done", actor) ?? "Ticked by the writer or head"}
                   checked={event.caption_done}
                   enabled={avail.set_caption_done.state === "available" && !pending}
                   onChange={(v) => run({ type: "set_caption_done", value: v })}

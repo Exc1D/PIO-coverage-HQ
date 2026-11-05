@@ -188,6 +188,12 @@ export function Board({ events, staff, me, today }: Props) {
           )}
         </div>
       )}
+      <p role="status" className="mb-2 text-sm empty:hidden">
+        {filters.q &&
+          (counts[view] === 0
+            ? `No events match “${filters.q}”. Check the spelling or the filters.`
+            : `${counts[view]} ${counts[view] === 1 ? "event matches" : "events match"} “${filters.q}”`)}
+      </p>
       {narrowed && (
         <p className="mb-2 flex flex-wrap items-center gap-x-2 text-sm">
           <span>
@@ -247,7 +253,7 @@ export function Board({ events, staff, me, today }: Props) {
               count={cards.length}
               legal={active?.status === status ? null : legal}
               // In "Mine" or a narrowed board, empty columns fold to a strip so the cards are on screen first; they still take drops.
-              collapsed={(view === "mine" || narrowed) && cards.length === 0}
+              collapsed={(view === "mine" || narrowed || filters.q !== null) && cards.length === 0}
             >
               {cards.length === 0 ? (
                 <p className="flex flex-col items-center gap-1 py-6 text-center text-xs text-muted-foreground">

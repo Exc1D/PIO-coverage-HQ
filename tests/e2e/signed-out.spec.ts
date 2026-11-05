@@ -13,3 +13,23 @@ test("a person filter in a link does nothing while signed out", async ({ page })
   await expect(page.getByRole("listitem", { name: /^Requested,/ })).toBeVisible();
   await expect(page.getByText("Filters", { exact: true })).toHaveCount(0);
 });
+
+test("searching while signed out offers the filters, so cancelled events can be found", async ({ page }) => {
+  await page.goto("/board");
+  const filters = page.getByText("Filters", { exact: true });
+  await expect(filters).toHaveCount(0);
+  const search = page.getByRole("searchbox", { name: "Search events by name" });
+  await search.fill("no such event");
+  await expect(filters).toBeVisible();
+  await search.fill(""); // Stays put, so the page doesn't jump while someone retypes.
+  await expect(filters).toBeVisible();
+});
+
+test("the search box follows a search changed from outside it", async ({ page }) => {
+  await page.goto("/board");
+  const search = page.getByRole("searchbox", { name: "Search events by name" });
+  await search.fill("first"); // Typing is what stops the browser updating the box by itself.
+  await expect(page).toHaveURL(/q=first$/);
+  await page.evaluate(() => window.history.pushState(null, "", "/board?q=second"));
+  await expect(search).toHaveValue("second");
+});

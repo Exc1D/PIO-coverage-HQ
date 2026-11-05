@@ -34,7 +34,7 @@ export type Source = (typeof SOURCES)[number];
 
 export const SOURCE_LABELS: Record<Source, string> = {
   provincial_government: "Provincial Government",
-  other_lgu: "Other LGU",
+  other_lgu: "Other local government",
   community: "Community",
   private: "Private",
 };

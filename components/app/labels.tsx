@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 export const SOURCE_SHORT: Record<Source, string> = {
   provincial_government: "Provincial Gov't",
-  other_lgu: "Other LGU",
+  other_lgu: "Other local gov't",
   community: "Community",
   private: "Private",
 };
