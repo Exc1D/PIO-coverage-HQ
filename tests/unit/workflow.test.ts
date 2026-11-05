@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   COMMAND_TYPES,
+  UNDO_WINDOW_MS,
+  applyUndo,
   applyCommand,
   availability,
   canPerform,
@@ -727,5 +729,87 @@ describe("live coverage", () => {
       type: "step_back",
       needsInput: true,
     });
+  });
+});
+
+describe("applyUndo", () => {
+  const moved = (e: WorkflowEvent, c: Command, a: Actor) => ok(run(e, c, a));
+  // The activity row the database would hold for the move just made.
+  const lastRow = (r: Success, actorId: string, createdAt = NOW.toISOString()) => ({
+    ...r.activity[r.activity.length - 1],
+    actor_id: actorId,
+    created_at: createdAt,
+  });
+  const undo = (r: Success, a: Actor, row = lastRow(r, a.id)) => applyUndo(r.next, row, a, NOW);
+
+  it("returns a forward move to where it came from and logs it as a move back", () => {
+    const r = moved(ev(), { type: "schedule" }, head);
+    const u = ok(undo(r, head));
+    expect(u.patch).toEqual({ status: "requested" });
+    expect(u.activity).toEqual([
+      { action: "step_back", from_status: "scheduled", to_status: "requested", details: { reason: "Undid the move" } },
+    ]);
+  });
+
+  it("lets non-heads undo their own move, though they can't step back", () => {
+    const e = ev({ status: "scheduled", coverage_confirmed: true });
+    const r = moved(e, { type: "mark_covered" }, photog);
+    const u = ok(undo(r, photog));
+    expect(u.patch).toEqual({ status: "scheduled" });
+    expect(u.next.coverage_confirmed).toBe(true);
+  });
+
+  it("clears what approving set, including a proofreader the approval claimed", () => {
+    const base = { status: "for_proofreading" as const, photos_done: true, caption_done: true };
+    const claimed = moved(ev(base), { type: "approve" }, proof);
+    expect(ok(undo(claimed, proof)).patch).toEqual({
+      proofreader_id: null,
+      approved_by_id: null,
+      status: "for_proofreading",
+    });
+    const kept = moved(ev({ ...base, proofreader_id: "proof" }), { type: "approve" }, proof);
+    expect(ok(undo(kept, proof)).patch).toEqual({ approved_by_id: null, status: "for_proofreading" });
+  });
+
+  it("clears the post time and the post link", () => {
+    const at = new Date("2026-10-22T04:00:00Z");
+    const scheduled = moved(
+      ev({ status: "approved", approved_by_id: "proof" }),
+      { type: "schedule_post", scheduledPostAt: at },
+      admin,
+    );
+    expect(ok(undo(scheduled, admin)).patch).toEqual({ scheduled_post_at: null, status: "approved" });
+    const posted = moved(
+      ev({ status: "scheduled_for_posting", approved_by_id: "proof", scheduled_post_at: at.toISOString() }),
+      { type: "mark_posted", postLink: "https://www.facebook.com/pio/posts/1" },
+      admin,
+    );
+    expect(ok(undo(posted, admin)).patch).toEqual({
+      posted_at: null,
+      post_link: null,
+      status: "scheduled_for_posting",
+    });
+  });
+
+  it("refuses when there is nothing to undo", () => {
+    err(applyUndo(ev(), undefined, head, NOW), "no_change");
+  });
+
+  it("refuses another person's move, even for the head", () => {
+    const r = moved(ev(), { type: "schedule" }, head);
+    err(undo(r, head, lastRow(r, "photog")), "forbidden");
+  });
+
+  it("refuses once the moment has passed", () => {
+    const r = moved(ev(), { type: "schedule" }, head);
+    const stale = new Date(NOW.getTime() - UNDO_WINDOW_MS - 1).toISOString();
+    err(undo(r, head, lastRow(r, "head", stale)), "wrong_status");
+  });
+
+  it("refuses when the last entry isn't a forward move or the card has moved on", () => {
+    const r = moved(ev(), { type: "schedule" }, head);
+    err(undo(r, head, { ...lastRow(r, "head"), action: "auto_advance" }), "wrong_status");
+    err(undo(r, head, { ...lastRow(r, "head"), to_status: "covered" }), "wrong_status");
+    err(undo(r, head, { ...lastRow(r, "head"), from_status: null }), "wrong_status");
   });
 });

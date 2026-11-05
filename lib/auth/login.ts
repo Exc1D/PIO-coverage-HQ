@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db/server";
-import { getStaffAuthRecord } from "@/lib/data/staff";
+import { getStaffAuthRecord, listStaffFresh } from "@/lib/data/staff";
 import { clientIpHash } from "./ip";
 import {
   IP_THRESHOLD,
@@ -10,12 +10,14 @@ import {
   minutesUntil,
   type Attempt,
 } from "./lockout";
+import { findStaffByName } from "./name-match";
 import { verifyAgainstDummy, verifyPin } from "./pin";
 import { createSession } from "./session";
 
 export type LoginResult = { ok: true } | { ok: false; message: string };
 
-const WRONG = "That PIN didn't match. Check the name and try again.";
+// One answer for a wrong PIN, an unknown name and a locked person, so sign-in never confirms a real name.
+const REFUSED = "That name and PIN didn't match. After too many wrong tries sign-in pauses for a while; the head can clear it.";
 
 type AttemptRow = { success: boolean; cleared_by_id: string | null; created_at: string };
 
@@ -37,7 +39,7 @@ async function recentAttempts(column: "staff_id" | "ip_hash", value: string, now
 
 function lockedMessage(until: Date, now: Date): string {
   const m = minutesUntil(until, now);
-  return `Too many wrong PINs. Try again in ${m} minute${m === 1 ? "" : "s"}, or ask the head to clear the lock.`;
+  return `Too many wrong tries from this network. Try again in ${m} minute${m === 1 ? "" : "s"}.`;
 }
 
 /**
@@ -46,13 +48,15 @@ function lockedMessage(until: Date, now: Date): string {
  * The attempt is recorded as a failure *before* the lockout is checked, so
  * concurrent guesses see each other: the k-th parallel attempt counts at
  * least k failures, which caps PIN checks at the threshold even under a burst.
- * An attempt refused because of a lock is removed again so it doesn't extend
- * the lock; a correct PIN flips its row to success.
+ * An attempt refused by the network lock is removed again so it doesn't extend
+ * that lock. One refused by a person's lock leaves that person's count but stays
+ * on the network's, as an unknown name's would. A correct PIN flips its row to success.
  */
-export async function attemptLogin(staffId: string, pin: string): Promise<LoginResult> {
+export async function attemptLogin(name: string, pin: string): Promise<LoginResult> {
   const now = new Date();
   const ipHash = await clientIpHash();
-  const staff = await getStaffAuthRecord(staffId);
+  const match = findStaffByName(await listStaffFresh({ activeOnly: true }), name);
+  const staff = match && (await getStaffAuthRecord(match.id));
   const known = staff !== null && staff.active;
 
   const { data: reserved, error: insertError } = await db()
@@ -69,24 +73,19 @@ export async function attemptLogin(staffId: string, pin: string): Promise<LoginR
   ]);
   const ipState = lockoutState(ipAttempts, now, IP_THRESHOLD + 1);
   const staffState = lockoutState(staffAttempts, now, STAFF_THRESHOLD + 1);
-  const lock = ipState.locked ? ipState : staffState.locked ? staffState : null;
-  if (lock) {
+  if (ipState.locked) {
     await db().from("pin_attempts").delete().eq("id", reserved.id);
-    return { ok: false, message: lockedMessage(lock.until, now) };
+    return { ok: false, message: lockedMessage(ipState.until, now) };
   }
+  if (staffState.locked) await db().from("pin_attempts").update({ staff_id: null }).eq("id", reserved.id);
 
-  if (!known) {
+  if (!known || staffState.locked) {
     await verifyAgainstDummy(pin);
-    return { ok: false, message: WRONG };
+    return { ok: false, message: REFUSED };
   }
 
   const success = await verifyPin(pin, staff.pin_hash);
-  if (!success) {
-    if (staffState.failures >= STAFF_THRESHOLD) {
-      return { ok: false, message: lockedMessage(new Date(now.getTime() + LOCKOUT_WINDOW_MS), now) };
-    }
-    return { ok: false, message: WRONG };
-  }
+  if (!success) return { ok: false, message: REFUSED };
 
   const { error } = await db().from("pin_attempts").update({ success: true }).eq("id", reserved.id);
   if (error) throw new Error(`Could not record sign-in attempt: ${error.message}`);

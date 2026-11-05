@@ -6,10 +6,10 @@ import { detailsSchema, parseCommand } from "@/lib/commands";
 import { AuthError, requireStaff } from "@/lib/auth/session";
 import { db, DB_ERRORS } from "@/lib/db/server";
 import { fieldErrors } from "@/lib/form-errors";
-import { getEvent } from "@/lib/data/events";
+import { getActivity, getEvent } from "@/lib/data/events";
 import { listStaffFresh } from "@/lib/data/staff";
 import type { EventRow, Staff } from "@/lib/types";
-import { applyCommand } from "@/lib/workflow";
+import { applyCommand, applyUndo, type Success } from "@/lib/workflow";
 
 export type CommandResult =
   | { ok: true; version: number }
@@ -51,13 +51,38 @@ export async function runEventCommand(eventId: string, version: number, payload:
 
   const result = applyCommand(event, parsed.command, me, new Date());
   if (!result.ok) return { ok: false, code: "rejected", message: result.message };
+  return saveChange(event.id, version, result, me.id);
+}
 
+/** Take back the forward move this person just made, from the Undo button on its toast. */
+export async function undoLastMove(eventId: string, version: number): Promise<CommandResult> {
+  const me = await actor();
+  if ("ok" in me) return me;
+
+  if (!idSchema.safeParse(eventId).success || !Number.isInteger(version)) {
+    return { ok: false, code: "rejected", message: "Invalid request." };
+  }
+
+  const event = await getEvent(eventId);
+  if (!event) return { ok: false, code: "not_found", message: "This event no longer exists." };
+  if (event.version !== version) {
+    refresh();
+    return { ok: false, code: "conflict", message: "Someone else just updated this event. It has been reloaded; please try again." };
+  }
+
+  const [last] = await getActivity(eventId);
+  const result = applyUndo(event, last, me, new Date());
+  if (!result.ok) return { ok: false, code: "rejected", message: result.message };
+  return saveChange(event.id, version, result, me.id);
+}
+
+async function saveChange(eventId: string, version: number, result: Success, actorId: string): Promise<CommandResult> {
   const { data, error } = await db()
     .rpc("apply_event_change", {
-      p_event_id: event.id,
+      p_event_id: eventId,
       p_expected_version: version,
       p_patch: result.patch,
-      p_activity: result.activity.map((a) => ({ ...a, actor_id: me.id })),
+      p_activity: result.activity.map((a) => ({ ...a, actor_id: actorId })),
     })
     .single<EventRow>();
 

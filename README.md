@@ -34,7 +34,7 @@ Source colours are the same everywhere: **Provincial Government** blue, **Other 
 ## How access works
 
 - **Anyone with the link can view** this week's coverage, the board, calendars and events, with staff shown as "Team member" and no activity log. Reports, Assign and the full dashboard need a sign-in, because they name people.
-- **To change anything**, staff pick their name and enter a personal 4–6 digit **PIN**. That sets a signed, httpOnly session cookie for 8 hours. Every change is attributed to that person in the event's activity log.
+- **To change anything**, staff type their name (full or short, so the sign-in page never lists staff) and a personal 4–6 digit **PIN**. That sets a signed, httpOnly session cookie for 8 hours. Every change is attributed to that person in the event's activity log.
 - **Navigation by role:** signed-out viewers see Home, Board and Calendar. The head sees Dashboard, Board, Calendar, Assign and Reports. Other staff get **My work** in place of Assign, which only the head uses.
 - **Account menu:** once signed in, the avatar at the right of the header holds everything account-related: your name and roles, **My work**, **Staff** (head only) and **Sign out**. Signed out, it's a single **Sign in** button.
 - **Lockout:** 5 wrong PINs for one person, or 20 from one IP address, lock sign-in for 15 minutes. The head can clear a person's lock from Staff.

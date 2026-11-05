@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { runEventCommand } from "@/app/actions/events";
+import { runEventCommand, undoLastMove } from "@/app/actions/events";
 import { previewCommand } from "@/lib/command-preview";
 import type { CommandPayload } from "@/lib/commands";
 import { STATUS_LABELS } from "@/lib/constants";
@@ -19,6 +19,26 @@ import { applyCommand, type Actor } from "@/lib/workflow";
 export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
   const [pending, startTransition] = useTransition();
   const actor: Actor | null = me ? { id: me.id, roles: me.roles } : null;
+
+  /** Take back a forward move from its toast. `before` is the event as it was before the move. */
+  function undo(before: EventRow, version: number, showOptimistic?: (next: Partial<EventRow>) => void) {
+    startTransition(async () => {
+      showOptimistic?.({ ...before, version: version + 1 });
+      let res;
+      try {
+        res = await withTimeLimit(undoLastMove(before.id, version), SAVE_TIME_LIMIT_MS, {
+          ok: false,
+          code: "rejected",
+          message: NO_ANSWER_MESSAGE,
+        });
+      } catch {
+        toast.error(OFFLINE_MESSAGE);
+        return;
+      }
+      if (res.ok) toast.success(`Moved back to ${STATUS_LABELS[before.status]}`);
+      else toast.error(res.message);
+    });
+  }
 
   /**
    * Resolves to null once saved (or nothing changed), otherwise to the reason it
@@ -58,8 +78,19 @@ export function useCommandRunner(staff: readonly Staff[], me: Staff | null) {
           resolve(res.message);
           return;
         }
-        if (successMessage) toast.success(successMessage);
-        else if (preview.next.status !== event.status) toast.success(`Moved to ${STATUS_LABELS[preview.next.status]}`);
+        const message =
+          successMessage ?? (preview.next.status !== event.status ? `Moved to ${STATUS_LABELS[preview.next.status]}` : null);
+        if (message) {
+          const { version } = res;
+          // Only a plain forward move can be undone; applyUndo enforces the same on the server.
+          const undoable = preview.activity.at(-1)?.action === "transition";
+          toast.success(
+            message,
+            undoable
+              ? { duration: 10_000, action: { label: "Undo", onClick: () => undo(event, version, showOptimistic) } }
+              : undefined,
+          );
+        }
         resolve(null);
       });
     });

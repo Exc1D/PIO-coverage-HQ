@@ -460,6 +460,16 @@ function move(d: Draft, to: Status, action: string, details: Record<string, unkn
   d.activity.push({ action, from_status: from, to_status: to, details });
 }
 
+/** Blank what reaching the current late stage recorded, ahead of leaving it backwards. */
+function clearStageFields(d: Draft) {
+  if (d.next.status === "approved") set(d, "approved_by_id", null);
+  if (d.next.status === "scheduled_for_posting") set(d, "scheduled_post_at", null);
+  if (d.next.status === "posted") {
+    set(d, "posted_at", null);
+    set(d, "post_link", null);
+  }
+}
+
 /** Automatic advance once both photos and caption are done. */
 function autoAdvance(d: Draft) {
   if (d.next.status === "in_production" && d.next.photos_done && d.next.caption_done) {
@@ -498,6 +508,33 @@ function changed(event: WorkflowEvent, patch: Patch): Record<string, { from: unk
     out[key] = { from: event[key], to: patch[key] };
   }
   return out;
+}
+
+/** How long after a forward move its author may still take it back. The toast offers it for less. */
+export const UNDO_WINDOW_MS = 60_000;
+
+/**
+ * Take back the forward move the actor just made, using the event's latest activity row.
+ * Separate from `step_back`, which is head-only and needs a reason: this covers only a
+ * person's own move from moments ago, and any later change makes it no longer the latest row.
+ */
+export function applyUndo(
+  event: WorkflowEvent,
+  last: (ActivityEntry & { actor_id: string | null; created_at: string }) | undefined,
+  actor: Actor,
+  now: Date,
+): Result {
+  if (!last) return fail("no_change", "There's nothing to undo.");
+  if (last.actor_id !== actor.id) return fail("forbidden", "Only the person who made this move can undo it.");
+  const tooLate = now.getTime() - new Date(last.created_at).getTime() > UNDO_WINDOW_MS;
+  if (last.action !== "transition" || !last.from_status || last.to_status !== event.status || tooLate) {
+    return fail("wrong_status", "This move can't be undone any more.");
+  }
+  const d: Draft = { next: { ...event }, patch: {}, activity: [] };
+  if (last.details.claimed_proofreader) set(d, "proofreader_id", null);
+  clearStageFields(d);
+  move(d, last.from_status, "step_back", { reason: "Undid the move" });
+  return { ok: true, patch: d.patch, next: d.next, activity: d.activity };
 }
 
 /**
@@ -556,7 +593,7 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
     case "approve":
       if (!event.proofreader_id) set(d, "proofreader_id", actor.id);
       set(d, "approved_by_id", actor.id);
-      move(d, "approved", "transition");
+      move(d, "approved", "transition", event.proofreader_id ? {} : { claimed_proofreader: true });
       break;
 
     case "request_caption_changes": {
@@ -645,17 +682,8 @@ export function applyCommand(event: WorkflowEvent, cmd: Command, actor: Actor, n
           details.reset = reset;
           break;
         }
-        case "approved":
-          set(d, "approved_by_id", null);
-          break;
-        case "scheduled_for_posting":
-          set(d, "scheduled_post_at", null);
-          break;
-        case "posted":
-          set(d, "posted_at", null);
-          set(d, "post_link", null);
-          break;
       }
+      clearStageFields(d);
       move(d, to, "step_back", details);
       break;
     }

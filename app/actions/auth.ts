@@ -21,21 +21,21 @@ export type FormState =
   | undefined;
 
 const loginSchema = z.object({
-  staffId: z.uuid("Pick your name."),
+  name: z.string().trim().min(1, "Enter your name.").max(120),
   pin: pinSchema,
   next: z.string().optional(),
 });
 
 export async function signInAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = loginSchema.safeParse({
-    staffId: formData.get("staffId"),
+    name: formData.get("name"),
     pin: formData.get("pin"),
     next: formData.get("next") ?? undefined,
   });
-  const values = { staffId: String(formData.get("staffId") ?? "") };
+  const values = { name: String(formData.get("name") ?? "") };
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values };
 
-  const result = await attemptLogin(parsed.data.staffId, parsed.data.pin);
+  const result = await attemptLogin(parsed.data.name, parsed.data.pin);
   if (!result.ok) return { error: result.message, values };
   redirect(safeNext(parsed.data.next));
 }

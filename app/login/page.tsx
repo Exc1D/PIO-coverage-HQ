@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { SignInForm } from "@/components/app/auth-forms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listStaffFresh, staffCount } from "@/lib/data/staff";
-import { safeNext } from "@/lib/safe-next";
+import { staffCount } from "@/lib/data/staff";
+import { isStaffOnlyPath, safeNext } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -15,9 +15,11 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       <Card>
         <CardHeader>
           <CardTitle>
-            <h1 className="text-xl">Sign in to make changes</h1>
+            <h1 className="text-xl">Sign in</h1>
           </CardTitle>
-          <CardDescription>Anyone with the link can view. Pick your name and enter your PIN to edit.</CardDescription>
+          <Suspense fallback={<Skeleton className="h-5 w-full" />}>
+            <LoginIntro searchParams={searchParams} />
+          </Suspense>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<FormSkeleton />}>
@@ -31,11 +33,23 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
   );
 }
 
+const nextParam = (params: Awaited<PageProps<"/login">["searchParams"]>) =>
+  safeNext(Array.isArray(params.next) ? params.next[0] : params.next);
+
+async function LoginIntro({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
+  return (
+    <CardDescription>
+      {isStaffOnlyPath(nextParam(await searchParams))
+        ? "This page is for staff only. Enter your name and PIN to open it."
+        : "Anyone with the link can view. Enter your name and PIN to make changes."}
+    </CardDescription>
+  );
+}
+
 async function LoginLoader({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
-  const [staff, count, params] = await Promise.all([listStaffFresh({ activeOnly: true }), staffCount(), searchParams]);
+  const [count, params] = await Promise.all([staffCount(), searchParams]);
   if (count === 0) redirect("/setup");
-  const next = safeNext(Array.isArray(params.next) ? params.next[0] : params.next);
-  return <SignInForm staff={staff.map((s) => ({ id: s.id, display_name: s.display_name }))} next={next} />;
+  return <SignInForm next={nextParam(params)} />;
 }
 
 function FormSkeleton() {
