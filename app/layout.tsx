@@ -18,7 +18,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Lets the translucent header and tab bar run under the notch and home indicator.
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  themeColor: "#fdfdff",
 };
 
 export default function RootLayout({ children, drawer }: LayoutProps<"/">) {

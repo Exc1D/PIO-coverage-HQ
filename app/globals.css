@@ -5,26 +5,29 @@
 
 :root {
   --radius: 0.75rem;
-  /* iOS "grouped" canvas: the page sits on light grey, cards and bars are white. */
-  --canvas: oklch(0.968 0.003 286);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  /* iOS "grouped" canvas: the page sits on light grey, cards and bars are near-white.
+     Neutrals carry a trace of the primary blue (hue 257). */
+  --canvas: oklch(0.968 0.004 257);
+  --background: oklch(0.995 0.002 257);
+  --foreground: oklch(0.145 0.008 257);
+  --card: oklch(0.995 0.002 257);
+  --card-foreground: oklch(0.145 0.008 257);
+  --popover: oklch(0.995 0.002 257);
+  --popover-foreground: oklch(0.145 0.008 257);
   /* System-style blue (#0071e3): white text on it passes WCAG AA. */
   --primary: oklch(0.556 0.204 256.9);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.48 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0.002 257);
+  --secondary: oklch(0.97 0.004 257);
+  --secondary-foreground: oklch(0.205 0.008 257);
+  --muted: oklch(0.97 0.004 257);
+  --muted-foreground: oklch(0.47 0.012 257);
+  --accent: oklch(0.97 0.004 257);
+  --accent-foreground: oklch(0.205 0.008 257);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.922 0.005 257);
+  /* Field outlines: 4.6:1 on cards, 4.2:1 on the canvas (WCAG 1.4.11 asks for 3:1). Staff read these
+     outdoors, so they stay well above the minimum. --border is only for decorative dividers. */
+  --input: oklch(0.56 0.012 257);
   --ring: oklch(0.556 0.204 256.9);
 
   /* Motion: --ease-ios is a fast start and a long settle, with no overshoot. This is a tool people
