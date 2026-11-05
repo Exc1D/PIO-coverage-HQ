@@ -63,14 +63,19 @@ export async function undoLastMove(eventId: string, version: number): Promise<Co
     return { ok: false, code: "rejected", message: "Invalid request." };
   }
 
-  const event = await getEvent(eventId);
+  // A throw here would reach the browser as a failed request, which reads as a connection problem.
+  const read = await Promise.all([getEvent(eventId), getActivity(eventId)]).catch((e: unknown) => {
+    console.error("undoLastMove read failed", e);
+    return null;
+  });
+  if (!read) return { ok: false, code: "error", message: "That move couldn’t be undone. Nothing changed, so please try again." };
+  const [event, [last]] = read;
   if (!event) return { ok: false, code: "not_found", message: "This event no longer exists." };
   if (event.version !== version) {
     refresh();
     return { ok: false, code: "conflict", message: "Someone else just updated this event. It has been reloaded; please try again." };
   }
 
-  const [last] = await getActivity(eventId);
   const result = applyUndo(event, last, me, new Date());
   if (!result.ok) return { ok: false, code: "rejected", message: result.message };
   return saveChange(event.id, version, result, me.id);
