@@ -85,6 +85,7 @@ describe("board filters", () => {
       cancelled: true,
       stuck: false,
       status: null,
+      q: null,
     });
   });
 
@@ -116,6 +117,34 @@ describe("board filters", () => {
     expect(
       matchesFilters(ev({ status: "posted", posted_at: "2026-09-30T02:00:00Z", event_date: "2026-09-29" }), readFilters(new URLSearchParams("from=2026-09-01")), today),
     ).toBe(true);
+  });
+});
+
+describe("board search", () => {
+  const today = "2026-10-20";
+  const ev = (o: Partial<EventRow>) => ({ status: "scheduled", source: "community", municipality: "daet", event_date: "2026-10-22", posted_at: null, ...o }) as EventRow;
+  const search = (q: string) => readFilters(new URLSearchParams({ q }));
+
+  it("ignores a blank search box", () => {
+    expect(search("   ").q).toBeNull();
+  });
+
+  it("finds an event by any part of its name, in any case or word order", () => {
+    const e = ev({ title: "Mayor's Visit to Labo" });
+    expect(matchesFilters(e, search("visit"), today)).toBe(true);
+    expect(matchesFilters(e, search("  LABO mayor "), today)).toBe(true);
+    expect(matchesFilters(e, search("daet"), today)).toBe(false);
+  });
+
+  it("finds a name with an accent when it is typed without one", () => {
+    expect(matchesFilters(ev({ title: "Peñafrancia Fiesta" }), search("penafrancia"), today)).toBe(true);
+  });
+
+  it("finds an older post, but still respects the other filters", () => {
+    const old = ev({ title: "Old Parade", status: "posted", posted_at: "2026-09-01T02:00:00Z" });
+    expect(matchesFilters(old, search("parade"), today)).toBe(true);
+    expect(matchesFilters(old, readFilters(new URLSearchParams("q=parade&source=private")), today)).toBe(false);
+    expect(matchesFilters(ev({ title: "Parade", status: "cancelled" }), search("parade"), today)).toBe(false);
   });
 });
 

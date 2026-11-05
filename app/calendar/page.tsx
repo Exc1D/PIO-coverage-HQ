@@ -90,7 +90,7 @@ async function CalendarLoader({ searchParams }: { searchParams: PageProps<"/cale
           {(
             [
               ["events", "Events"],
-              ["published", "Published"],
+              ["published", "Posts"],
             ] as const
           ).map(([v, label]) => (
             <Link

@@ -1,9 +1,10 @@
 "use client";
 
-import { FilterIcon, XIcon } from "lucide-react";
+import { FilterIcon, SearchIcon, XIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MUNICIPALITIES, MUNICIPALITY_LABELS, PIPELINE, SOURCES, SOURCE_LABELS, STATUS_LABELS } from "@/lib/constants";
 import type { Staff } from "@/lib/types";
@@ -24,10 +25,29 @@ export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: bool
   // Signed-out viewers only get filters when a shared link already set some, so the cards come first on a phone.
   const [show, setShow] = useState(!viewOnly || active);
   if (active && !show) setShow(true); // A later navigation set some.
-  if (!show && !active) return null;
+  // Not tied to the URL while typing: the URL updates a moment later, which would drop typed letters.
+  // It only needs emptying when something else takes the search off the URL, like the nav link to this page.
+  const search = useRef<HTMLInputElement>(null);
+  const urlSearch = params.get("q");
+  useEffect(() => {
+    if (search.current && !new URLSearchParams(window.location.search).has("q")) search.current.value = "";
+  }, [urlSearch]);
 
   return (
-    <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <div className="grid gap-2">
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Input
+          ref={search}
+          type="search"
+          aria-label="Search events by name"
+          placeholder="Search events by name"
+          className="h-11 bg-background pl-9"
+          defaultValue={urlSearch ?? ""}
+          onChange={(e) => setParam("q", e.target.value || null)}
+        />
+      </div>
+      {(show || active) && <details className="group rounded-lg border bg-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <FilterIcon className="size-4" aria-hidden />
         Filters
@@ -108,6 +128,7 @@ export function FiltersBar({ staff, viewOnly }: { staff: Staff[]; viewOnly: bool
           Posted shows the last {RECENT_POSTED_DAYS} days unless you pick dates.
         </p>
       </div>
-    </details>
+    </details>}
+    </div>
   );
 }
