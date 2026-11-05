@@ -27,7 +27,9 @@ async function head(): Promise<Staff | { error: string }> {
     return await requireHead();
   } catch (e) {
     if (e instanceof AuthError) return { error: e.message };
-    throw e;
+    // A throw here would reach the browser as a failed request, which reads as a connection problem.
+    console.error("sign-in check failed", e);
+    return { error: "We couldn’t check your sign-in. Nothing changed, so please try again." };
   }
 }
 
@@ -54,9 +56,9 @@ function readForm(formData: FormData) {
 const keepValues = (r: ReturnType<typeof readForm>) => ({ full_name: r.full_name, display_name: r.display_name, roles: r.roles });
 
 export async function createStaffAction(_prev: StaffFormState, formData: FormData): Promise<StaffFormState> {
-  const me = await head();
-  if ("error" in me) return { error: me.error };
   const raw = readForm(formData);
+  const me = await head();
+  if ("error" in me) return { error: me.error, values: keepValues(raw) };
   const parsed = namesSchema.and(pinPair).safeParse(raw);
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values: keepValues(raw) };
 
@@ -77,13 +79,18 @@ export async function createStaffAction(_prev: StaffFormState, formData: FormDat
 }
 
 export async function updateStaffAction(staffId: string, _prev: StaffFormState, formData: FormData): Promise<StaffFormState> {
-  const me = await head();
-  if ("error" in me) return { error: me.error };
   const raw = readForm(formData);
+  const me = await head();
+  if ("error" in me) return { error: me.error, values: keepValues(raw) };
   const parsed = namesSchema.safeParse(raw);
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values: keepValues(raw) };
 
-  const rule = checkStaffChange(me.id, await listStaffFresh(), staffId, { type: "roles", roles: parsed.data.roles as Role[] });
+  const staff = await listStaffFresh().catch((e: unknown) => {
+    console.error("update staff read failed", e);
+    return null;
+  });
+  if (!staff) return { error: "Couldn’t save the changes. Please try again.", values: keepValues(raw) };
+  const rule = checkStaffChange(me.id, staff, staffId, { type: "roles", roles: parsed.data.roles as Role[] });
   if (!rule.ok) return { error: rule.message, values: keepValues(raw) };
 
   const { error } = await db()
@@ -141,17 +148,34 @@ export async function resetPinAction(staffId: string, _prev: StaffFormState, for
     console.error("reset PIN failed", e);
     return { error: "Couldn’t reset the PIN. Please try again." };
   }
-  await clearLockout(staffId, me.id);
+  // The PIN is already saved, so a failure here mustn't read as a failed reset or skip the new session.
+  const lockCleared = await clearLockout(staffId, me.id).then(
+    () => true,
+    (e: unknown) => {
+      console.error("clear lock after PIN reset failed", e);
+      return false;
+    },
+  );
   // Resetting your own PIN keeps you signed in on this device.
   if (staffId === me.id) await createSession(me.id, version);
   refresh();
-  return { ok: true, message: "PIN reset. They’ve been signed out everywhere and any lock is cleared." };
+  return {
+    ok: true,
+    message: lockCleared
+      ? "PIN reset. They’ve been signed out everywhere and any lock is cleared."
+      : "PIN reset and they’ve been signed out everywhere, but a lock couldn’t be cleared. Use Clear lock if they can’t sign in.",
+  };
 }
 
 export async function setActiveAction(staffId: string, active: boolean): Promise<SimpleResult> {
   const me = await head();
   if ("error" in me) return { ok: false, message: me.error };
-  const rule = checkStaffChange(me.id, await listStaffFresh(), staffId, { type: "active", active });
+  const staff = await listStaffFresh().catch((e: unknown) => {
+    console.error("set active read failed", e);
+    return null;
+  });
+  if (!staff) return { ok: false, message: "Couldn’t save the change. Please try again." };
+  const rule = checkStaffChange(me.id, staff, staffId, { type: "active", active });
   if (!rule.ok) return { ok: false, message: rule.message };
 
   try {
@@ -174,7 +198,12 @@ export async function clearLockAction(staffId: string): Promise<SimpleResult> {
   const me = await head();
   if ("error" in me) return { ok: false, message: me.error };
   if (!z.uuid().safeParse(staffId).success) return { ok: false, message: "Invalid request." };
-  await clearLockout(staffId, me.id);
+  try {
+    await clearLockout(staffId, me.id);
+  } catch (e) {
+    console.error("clear lock failed", e);
+    return { ok: false, message: "Couldn’t clear the lock. Please try again." };
+  }
   refresh();
   return { ok: true, message: "Lock cleared. They can sign in again." };
 }
